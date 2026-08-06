@@ -1,0 +1,34 @@
+.pp-split-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+}
+
+@media (min-width: 992px) {
+    .pp-split-layout {
+        grid-template-columns: 380px 1fr;
+        align-items: start;
+    }
+}
+
+.pp-panel-left .pp-card-body {
+    padding: 0;
+}
+
+.pp-selected-name {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--pp-primary-dark);
+    margin-bottom: 0.25rem;
+}
+
+.pp-selected-meta {
+    font-size: 0.8125rem;
+    color: var(--pp-text-muted);
+    margin-bottom: 1rem;
+}
+
+.pp-no-selection {
+    color: var(--pp-text-muted);
+    font-size: 0.875rem;
+}

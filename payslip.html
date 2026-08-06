@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Payslip — PayrollPro</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="css/payrollpro.css" rel="stylesheet">
+</head>
+<body class="pp-app pp-app-shell">
+
+    <div id="pp-sidebar-mount"></div>
+
+    <div class="pp-shell-main">
+        <div id="pp-topbar-mount"></div>
+
+        <main class="pp-content">
+            <header class="pp-content-header">
+                <h1 class="pp-content-title">Staff Module</h1>
+                <p class="pp-content-subtitle">View your payslip, deductions, benefits, and 13th-month pay.</p>
+            </header>
+
+            <nav class="pp-staff-tabs" aria-label="Staff module sections">
+                <a href="#" class="pp-staff-tab active" data-panel="payslip" id="tabPayslip">
+                    <i class="bi bi-receipt"></i> Payslip
+                </a>
+                <a href="#" class="pp-staff-tab" data-panel="thirteenth" id="tabThirteenth">
+                    <i class="bi bi-gift"></i> 13th Month Pay
+                </a>
+                <a href="#" class="pp-staff-tab" data-panel="benefits" id="tabBenefits">
+                    <i class="bi bi-heart-pulse"></i> Benefits
+                </a>
+            </nav>
+
+            <!-- Payslip panel -->
+            <div class="pp-staff-panel" id="panelPayslip">
+                <div class="pp-payslip-toolbar pp-no-print">
+                    <div>
+                        <label for="payslipPeriod" class="pp-form-label">Pay Period</label>
+                        <select class="form-select pp-form-select pp-payslip-period-select" id="payslipPeriod"></select>
+                    </div>
+                    <button type="button" class="btn btn-pp-outline" id="btnDownloadPdf">
+                        <i class="bi bi-file-earmark-pdf me-1"></i> Download as PDF
+                    </button>
+                </div>
+
+                <article class="pp-payslip-document" id="payslipDocument" aria-label="Employee payslip">
+                    <header class="pp-payslip-header">
+                        <div class="pp-payslip-inst-logo" aria-hidden="true"><i class="bi bi-mortarboard"></i></div>
+                        <div class="pp-payslip-inst-name">STI Balayan</div>
+                        <div class="pp-payslip-doc-title">Statement of Earnings and Deductions</div>
+                    </header>
+
+                    <div class="pp-payslip-employee-info">
+                        <div>
+                            <div class="pp-payslip-info-label">Employee Name</div>
+                            <div class="pp-payslip-info-value" id="psName">—</div>
+                        </div>
+                        <div>
+                            <div class="pp-payslip-info-label">Employee Number</div>
+                            <div class="pp-payslip-info-value" id="psId">—</div>
+                        </div>
+                        <div>
+                            <div class="pp-payslip-info-label">Pay Period</div>
+                            <div class="pp-payslip-info-value" id="psPeriod">—</div>
+                        </div>
+                        <div>
+                            <div class="pp-payslip-info-label">Pay Date</div>
+                            <div class="pp-payslip-info-value" id="psPayDate">—</div>
+                        </div>
+                    </div>
+
+                    <section class="pp-payslip-section" aria-labelledby="earningsTitle">
+                        <h2 class="pp-payslip-section-title" id="earningsTitle">Earnings</h2>
+                        <div class="pp-payslip-row">
+                            <span>Rate (<span id="psRateType">—</span>)</span>
+                            <span class="pp-payslip-amount" id="psRate">—</span>
+                        </div>
+                        <div class="pp-payslip-row sub">
+                            <span id="psUnitsLabel">Units / Hours worked</span>
+                            <span class="pp-payslip-amount" id="psUnits">—</span>
+                        </div>
+                        <div class="pp-payslip-row subtotal">
+                            <span>Gross Pay</span>
+                            <span class="pp-payslip-amount" id="psGross">—</span>
+                        </div>
+                    </section>
+
+                    <section class="pp-payslip-section" aria-labelledby="deductionsTitle">
+                        <h2 class="pp-payslip-section-title" id="deductionsTitle">Deductions</h2>
+                        <div class="pp-payslip-row">
+                            <span>BIR Tax</span>
+                            <span class="pp-payslip-amount" id="psBir">—</span>
+                        </div>
+                        <div class="pp-payslip-row">
+                            <span>PhilHealth</span>
+                            <span class="pp-payslip-amount" id="psPhilhealth">—</span>
+                        </div>
+                        <div class="pp-payslip-row">
+                            <span>Pag-IBIG</span>
+                            <span class="pp-payslip-amount" id="psPagibig">—</span>
+                        </div>
+                        <div class="pp-payslip-row">
+                            <span>Loan Repayment</span>
+                            <span class="pp-payslip-amount" id="psLoan">—</span>
+                        </div>
+                        <div class="pp-payslip-row subtotal">
+                            <span>Total Deductions</span>
+                            <span class="pp-payslip-amount" id="psDedTotal">—</span>
+                        </div>
+                    </section>
+
+                    <section class="pp-payslip-section" aria-labelledby="benefitsTitle">
+                        <h2 class="pp-payslip-section-title" id="benefitsTitle">Benefits</h2>
+                        <div id="psBenefitsList"></div>
+                        <div class="pp-payslip-row subtotal">
+                            <span>Total Benefits</span>
+                            <span class="pp-payslip-amount" id="psBenefitsTotal">—</span>
+                        </div>
+                    </section>
+
+                    <div class="pp-payslip-net">
+                        <span class="pp-payslip-net-label">Net Pay</span>
+                        <span class="pp-payslip-net-amount" id="psNet">—</span>
+                    </div>
+
+                    <p class="pp-payslip-footer-note">
+                        This is a system-generated payslip. For discrepancies, contact the Payroll Office within 5 working days of receipt.<br>
+                        Online Payroll System Using a Biometric Scanner
+                    </p>
+                </article>
+            </div>
+
+            <!-- 13th Month Pay panel -->
+            <div class="pp-staff-panel d-none" id="panelThirteenth">
+                <div class="pp-widget">
+                    <div class="pp-widget-header">
+                        <h2 class="pp-widget-title">13th Month Pay — 2026</h2>
+                    </div>
+                    <div class="pp-widget-body">
+                        <div class="pp-payslip-employee-info mb-4" style="max-width:480px;">
+                            <div>
+                                <div class="pp-payslip-info-label">Employee</div>
+                                <div class="pp-payslip-info-value">Dr. Maria Santos</div>
+                            </div>
+                            <div>
+                                <div class="pp-payslip-info-label">Total Basic Salary (Jan–Jun)</div>
+                                <div class="pp-payslip-info-value pp-payslip-amount" style="text-align:left;">₱153,000.00</div>
+                            </div>
+                        </div>
+                        <div class="pp-payslip-row">
+                            <span>13th Month Pay (1/12 of total basic)</span>
+                            <span class="pp-payslip-amount">₱12,750.00</span>
+                        </div>
+                        <div class="pp-payslip-row">
+                            <span>Less: BIR Tax (withheld)</span>
+                            <span class="pp-payslip-amount">₱1,275.00</span>
+                        </div>
+                        <div class="pp-payslip-net mt-4">
+                            <span class="pp-payslip-net-label">Net 13th Month Pay</span>
+                            <span class="pp-payslip-net-amount">₱11,475.00</span>
+                        </div>
+                        <p class="text-muted small mt-3 mb-0">Scheduled release: December 15, 2026</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Benefits panel -->
+            <div class="pp-staff-panel d-none" id="panelBenefits">
+                <div class="pp-widget">
+                    <div class="pp-widget-header">
+                        <h2 class="pp-widget-title">Employee Benefits Summary</h2>
+                    </div>
+                    <div class="pp-widget-body">
+                        <div class="pp-table-wrap">
+                            <table class="pp-table pp-table-financial">
+                                <thead>
+                                    <tr>
+                                        <th>Benefit</th>
+                                        <th>Description</th>
+                                        <th class="col-money">Monthly Amount</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><strong>Chalk Allowance</strong></td>
+                                        <td class="text-muted">Faculty teaching supplies</td>
+                                        <td class="col-money">₱500.00</td>
+                                        <td><span class="pp-badge pp-badge-present">Active</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Internet Allowance</strong></td>
+                                        <td class="text-muted">Remote learning support</td>
+                                        <td class="col-money">₱800.00</td>
+                                        <td><span class="pp-badge pp-badge-present">Active</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>PhilHealth</strong></td>
+                                        <td class="text-muted">Employer contribution (employer share)</td>
+                                        <td class="col-money">₱680.00</td>
+                                        <td><span class="pp-badge pp-badge-present">Active</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Pag-IBIG</strong></td>
+                                        <td class="text-muted">Employer contribution (employer share)</td>
+                                        <td class="col-money">₱200.00</td>
+                                        <td><span class="pp-badge pp-badge-present">Active</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/payrollpro-layout.js"></script>
+    <script src="js/payslip.js"></script>
+</body>
+</html>

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Leave — PayrollPro</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="css/payrollpro.css" rel="stylesheet">
+</head>
+<body class="pp-app pp-app-shell">
+
+    <div id="pp-sidebar-mount"></div>
+
+    <div class="pp-shell-main">
+        <div id="pp-topbar-mount"></div>
+
+        <main class="pp-content">
+            <div class="pp-page-toolbar">
+                <header class="pp-content-header mb-0">
+                    <h1 class="pp-content-title">My Leave</h1>
+                    <p class="pp-content-subtitle">File leave requests and track your remaining balance by category.</p>
+                </header>
+                <button type="button" class="btn btn-pp-primary" data-bs-toggle="modal" data-bs-target="#leaveFormModal">
+                    <i class="bi bi-calendar-plus me-1"></i> File a Leave Request
+                </button>
+            </div>
+
+            <!-- Leave balance summary -->
+            <section aria-labelledby="balanceTitle">
+                <h2 class="visually-hidden" id="balanceTitle">Leave Balance</h2>
+                <div class="pp-leave-balance-row" id="leaveBalanceRow"></div>
+            </section>
+
+            <!-- Request history -->
+            <section class="pp-section-card" aria-labelledby="historyTitle">
+                <div class="pp-section-card-header">
+                    <h2 class="pp-section-card-title" id="historyTitle">Leave Request History</h2>
+                </div>
+                <div class="pp-table-wrap border-0 rounded-0">
+                    <table class="pp-table" id="leaveHistoryTable">
+                        <thead>
+                            <tr>
+                                <th>Category</th>
+                                <th>Date Range</th>
+                                <th>Days</th>
+                                <th>Status</th>
+                                <th>Filed Date</th>
+                                <th class="col-actions">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leaveHistoryBody"></tbody>
+                    </table>
+                    <div class="pp-empty-state d-none" id="leaveEmptyState">You have not filed any leave requests yet.</div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- File Leave Modal -->
+    <div class="modal fade pp-modal" id="leaveFormModal" tabindex="-1" aria-labelledby="leaveFormTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title" id="leaveFormTitle">File a Leave Request</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="leaveForm" novalidate>
+                    <div class="modal-body">
+                        <p class="small text-muted mb-3">Your request will be sent to Payroll for approval. Approved leave will reflect in your attendance record.</p>
+
+                        <div class="mb-3">
+                            <label for="leaveCategory" class="pp-form-label">Leave Category</label>
+                            <select class="form-select pp-form-select" id="leaveCategory" required>
+                                <option value="" disabled selected>Select leave type…</option>
+                                <option value="Sick">Sick Leave</option>
+                                <option value="Vacation">Vacation Leave</option>
+                                <option value="Maternity">Maternity Leave</option>
+                                <option value="Paternity">Paternity Leave</option>
+                            </select>
+                            <div class="invalid-feedback">Please select a leave category.</div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-6">
+                                <label for="leaveDateFrom" class="pp-form-label">Date From</label>
+                                <input type="date" class="form-control pp-form-control" id="leaveDateFrom" required>
+                                <div class="invalid-feedback">Enter a start date.</div>
+                            </div>
+                            <div class="col-6">
+                                <label for="leaveDateTo" class="pp-form-label">Date To</label>
+                                <input type="date" class="form-control pp-form-control" id="leaveDateTo" required>
+                                <div class="invalid-feedback">Enter an end date.</div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="leaveReason" class="pp-form-label">Reason</label>
+                            <textarea class="form-control pp-form-control" id="leaveReason" rows="3" placeholder="Briefly describe the reason for your leave…" required></textarea>
+                            <div class="invalid-feedback">Please provide a reason.</div>
+                        </div>
+
+                        <div class="alert alert-light border small mb-0 d-none" id="leaveDaysPreview" role="status"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-pp-outline" data-bs-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-pp-primary">Submit Request</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/payrollpro-layout.js"></script>
+    <script src="js/leave-application.js"></script>
+</body>
+</html>

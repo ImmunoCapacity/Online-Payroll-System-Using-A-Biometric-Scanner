@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Time Record — PayrollPro</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="css/payrollpro.css" rel="stylesheet">
+</head>
+<body class="pp-app pp-app-shell">
+
+    <!-- Shared app shell with sidebar and topbar -->
+    <div id="pp-sidebar-mount"></div>
+
+    <div class="pp-shell-main">
+        <div id="pp-topbar-mount"></div>
+
+        <main class="pp-content">
+            <header class="pp-content-header">
+                <div>
+                    <h1 class="pp-content-title">Daily Time Record</h1>
+                    <p class="pp-content-subtitle">Real-time attendance logs from the ZKTeco scanner. Late marking applies after a 15-minute grace period.</p>
+                </div>
+                <button type="button" class="btn btn-pp-outline" data-bs-toggle="modal" data-bs-target="#manualEntryModal">
+                    <i class="bi bi-pencil-square me-1"></i> Manual Entry
+                </button>
+            </header>
+
+        <!-- Summary cards -->
+        <div class="pp-summary-row" aria-label="Today's attendance summary">
+            <div class="pp-summary-card present">
+                <div class="pp-summary-label">Total Present Today</div>
+                <div class="pp-summary-value" id="summaryPresent">0</div>
+            </div>
+            <div class="pp-summary-card late">
+                <div class="pp-summary-label">Total Late</div>
+                <div class="pp-summary-value" id="summaryLate">0</div>
+            </div>
+            <div class="pp-summary-card absent">
+                <div class="pp-summary-label">Total Absent</div>
+                <div class="pp-summary-value" id="summaryAbsent">0</div>
+            </div>
+        </div>
+
+        <!-- Filter bar -->
+        <div class="pp-filter-bar" role="search">
+            <div class="pp-filter-group">
+                <label for="filterDate" class="pp-form-label">Date</label>
+                <input type="date" class="form-control pp-form-control" id="filterDate">
+            </div>
+            <div class="pp-filter-group">
+                <label for="filterType" class="pp-form-label">Employee Type</label>
+                <select class="form-select pp-form-select" id="filterType">
+                    <option value="all">All</option>
+                    <option value="Faculty">Faculty</option>
+                    <option value="Admin">Admin</option>
+                </select>
+            </div>
+            <div class="pp-filter-group search">
+                <label for="filterSearch" class="pp-form-label">Search</label>
+                <div class="pp-search-input">
+                    <i class="bi bi-search"></i>
+                    <input type="search" class="form-control pp-form-control" id="filterSearch" placeholder="Search by employee name…">
+                </div>
+            </div>
+        </div>
+
+        <!-- DTR table -->
+        <div class="pp-table-wrap">
+            <table class="pp-table" id="dtrTable">
+                <thead>
+                    <tr>
+                        <th>Employee Name</th>
+                        <th>Employee Type</th>
+                        <th>Time In</th>
+                        <th>Time Out</th>
+                        <th>Total Hours</th>
+                        <th>Status</th>
+                        <th class="text-center" title="Present during scheduled teaching period (Faculty only)">
+                            <i class="bi bi-mortarboard"></i> Teaching
+                        </th>
+                    </tr>
+                </thead>
+                <tbody id="dtrBody"></tbody>
+            </table>
+            <div class="pp-empty-state d-none" id="emptyTable">No records match the current filters.</div>
+        </div>
+        </main>
+    </div>
+
+    <!-- Manual Entry Modal -->
+    <div class="modal fade pp-modal" id="manualEntryModal" tabindex="-1" aria-labelledby="manualEntryTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title" id="manualEntryTitle">Manual Time Entry</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="manualEntryForm" novalidate>
+                    <div class="modal-body">
+                        <p class="small text-muted mb-3">Use when the biometric scanner is offline or a scan was not captured.</p>
+
+                        <div class="mb-3">
+                            <label for="manualEmployee" class="pp-form-label">Employee</label>
+                            <input
+                                type="text"
+                                class="form-control pp-form-control"
+                                id="manualEmployeeSearch"
+                                placeholder="Type to search employees…"
+                                autocomplete="off"
+                                list="employeeDatalist"
+                            >
+                            <datalist id="employeeDatalist"></datalist>
+                            <input type="hidden" id="manualEmployee" required>
+                            <div class="invalid-feedback">Please select an employee from the list.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="manualDate" class="pp-form-label">Date</label>
+                            <input type="date" class="form-control pp-form-control" id="manualDate" required>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-6">
+                                <label for="manualTimeIn" class="pp-form-label">Time In</label>
+                                <input type="time" class="form-control pp-form-control" id="manualTimeIn" required>
+                            </div>
+                            <div class="col-6">
+                                <label for="manualTimeOut" class="pp-form-label">Time Out</label>
+                                <input type="time" class="form-control pp-form-control" id="manualTimeOut">
+                            </div>
+                        </div>
+
+                        <div class="mb-0">
+                            <label for="manualReason" class="pp-form-label">Reason for manual entry</label>
+                            <textarea
+                                class="form-control pp-form-control"
+                                id="manualReason"
+                                rows="3"
+                                placeholder="e.g. Scanner offline, missed punch, device malfunction"
+                                required
+                            ></textarea>
+                            <div class="invalid-feedback">Please provide a reason for this manual entry.</div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-pp-outline" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-pp-primary">Save Entry</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/payrollpro-layout.js"></script>
+    <script src="js/dtr.js"></script>
+</body>
+</html>
