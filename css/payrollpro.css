@@ -600,7 +600,7 @@ body.pp-app-shell {
 .pp-sidebar {
     width: 260px;
     flex-shrink: 0;
-    background: var(--pp-surface);
+    background: #72a1e4;
     border-right: 1px solid var(--pp-border);
     display: flex;
     flex-direction: column;
@@ -640,6 +640,7 @@ body.pp-app-shell {
     flex-shrink: 0;
 }
 
+
 .pp-sidebar-brand-text {
     font-weight: 700;
     font-size: 1.0625rem;
@@ -648,7 +649,7 @@ body.pp-app-shell {
 }
 
 .pp-sidebar-brand-text span {
-    color: var(--pp-accent);
+    color: #ffffff;
 }
 
 .pp-sidebar-nav {
@@ -666,7 +667,7 @@ body.pp-app-shell {
     border-radius: var(--pp-radius-sm);
     font-size: 0.875rem;
     font-weight: 500;
-    color: var(--pp-text-muted);
+    color: #ffffff;
     text-decoration: none;
     transition: background 0.12s, color 0.12s;
 }
@@ -676,6 +677,7 @@ body.pp-app-shell {
     width: 1.25rem;
     text-align: center;
     flex-shrink: 0;
+    color: #ffffff;
 }
 
 .pp-sidebar-link:hover {
@@ -697,7 +699,7 @@ body.pp-app-shell {
     padding: 0.875rem 1.25rem;
     border-top: 1px solid var(--pp-border);
     font-size: 0.6875rem;
-    color: var(--pp-text-muted);
+    color: #ffffff;
     line-height: 1.4;
 }
 
@@ -2331,4 +2333,103 @@ body.pp-app-shell {
         background: var(--pp-accent-light);
         border-left: none;
     }
+}
+
+/* =========================
+   USER PROFILE DROPDOWN
+   ========================= */
+
+.pp-topbar-user-wrapper {
+    position: relative;
+}
+
+.pp-topbar-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: none;
+    background: transparent;
+    padding: 4px 6px;
+    cursor: pointer;
+    border-radius: 8px;
+}
+
+.pp-topbar-user:hover {
+    background: #F1F5F9;
+}
+
+.pp-user-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 230px;
+    background: #ffffff;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+    padding: 8px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-6px);
+    transition: all 0.18s ease;
+    z-index: 1100;
+}
+
+.pp-user-dropdown.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.pp-user-dropdown-header {
+    padding: 10px 12px;
+}
+
+.pp-user-dropdown-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1E293B;
+}
+
+.pp-user-dropdown-role {
+    font-size: 12px;
+    color: #64748B;
+    margin-top: 2px;
+}
+
+.pp-user-dropdown-divider {
+    height: 1px;
+    background: #E2E8F0;
+    margin: 6px 0;
+}
+
+.pp-user-dropdown-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: none;
+    background: transparent;
+    color: #334155;
+    text-decoration: none;
+    font-size: 14px;
+    border-radius: 7px;
+    cursor: pointer;
+    text-align: left;
+}
+
+.pp-user-dropdown-item:hover {
+    background: #F1F5F9;
+    color: #4169A1;
+}
+
+.pp-user-dropdown-item i {
+    width: 18px;
+    font-size: 16px;
+}
+
+.pp-logout-button:hover {
+    background: #FEF2F2;
+    color: #B91C1C;
 }

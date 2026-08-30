@@ -1,0 +1,1558 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        Payroll Staff Dashboard — STI Balayan
+    </title>
+
+
+    <!-- =========================================================
+         BOOTSTRAP
+         ========================================================= -->
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+
+
+    <!-- =========================================================
+         BOOTSTRAP ICONS
+         ========================================================= -->
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+        rel="stylesheet"
+    >
+
+
+    <!-- =========================================================
+         MAIN SYSTEM CSS
+         ========================================================= -->
+
+    <link
+        href="css/payrollpro.css"
+        rel="stylesheet"
+    >
+
+
+    <!-- =========================================================
+         PAYROLL STAFF DASHBOARD CSS
+         ========================================================= -->
+
+    <style>
+
+        /* =====================================================
+           PAGE
+           ===================================================== */
+
+        body {
+            background: #f5f7fb;
+        }
+
+
+        /* =====================================================
+           WELCOME / HEADER
+           ===================================================== */
+
+        .staff-welcome {
+            margin-bottom: 20px;
+        }
+
+        .staff-welcome h1 {
+            font-size: 24px;
+            font-weight: 700;
+            color: #26364a;
+            margin-bottom: 4px;
+        }
+
+        .staff-welcome p {
+            color: #7b8794;
+            margin: 0;
+            font-size: 13px;
+        }
+
+
+        /* =====================================================
+           SUMMARY CARDS
+           ===================================================== */
+
+        .attendance-card {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid #e8edf3;
+            height: 100%;
+
+            box-shadow:
+                0 2px 8px rgba(
+                    30,
+                    50,
+                    70,
+                    0.04
+                );
+        }
+
+
+        .attendance-card-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            margin-bottom: 14px;
+        }
+
+
+        .attendance-icon {
+            width: 40px;
+            height: 40px;
+
+            border-radius: 10px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            background: #edf5ff;
+
+            color: #4385d7;
+
+            font-size: 18px;
+        }
+
+
+        .attendance-card-label {
+            color: #7c8997;
+
+            font-size: 12px;
+
+            font-weight: 500;
+
+            margin-bottom: 3px;
+        }
+
+
+        .attendance-card-value {
+            color: #26364a;
+
+            font-size: 24px;
+
+            font-weight: 700;
+
+            line-height: 1.1;
+        }
+
+
+        .attendance-card-note {
+            font-size: 11px;
+
+            color: #8a96a3;
+        }
+
+
+        /* =====================================================
+           PANELS
+           ===================================================== */
+
+        .staff-panel {
+            background: #ffffff;
+
+            border: 1px solid #e8edf3;
+
+            border-radius: 12px;
+
+            box-shadow:
+                0 2px 8px rgba(
+                    30,
+                    50,
+                    70,
+                    0.04
+                );
+
+            overflow: hidden;
+
+            height: 100%;
+        }
+
+
+        .staff-panel-header {
+            padding: 15px 17px;
+
+            border-bottom: 1px solid #edf0f4;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: space-between;
+        }
+
+
+        .staff-panel-title {
+            font-size: 15px;
+
+            font-weight: 700;
+
+            color: #26364a;
+
+            margin: 0;
+        }
+
+
+        .staff-panel-subtitle {
+            font-size: 11px;
+
+            color: #8995a3;
+
+            margin-top: 2px;
+        }
+
+
+        .staff-panel-body {
+            padding: 17px;
+        }
+
+
+        /* =====================================================
+           ATTENDANCE TABLE
+           ===================================================== */
+
+        .attendance-table {
+            width: 100%;
+
+            border-collapse: collapse;
+        }
+
+
+        .attendance-table th {
+            font-size: 10px;
+
+            text-transform: uppercase;
+
+            letter-spacing: 0.4px;
+
+            color: #8995a3;
+
+            font-weight: 600;
+
+            padding: 10px 9px;
+
+            border-bottom: 1px solid #edf0f4;
+
+            background: #ffffff;
+        }
+
+
+        .attendance-table td {
+            padding: 11px 9px;
+
+            font-size: 12px;
+
+            color: #536171;
+
+            border-bottom: 1px solid #f0f2f5;
+        }
+
+
+        .attendance-table tr:last-child td {
+            border-bottom: none;
+        }
+
+
+        .employee-name {
+            font-weight: 600;
+
+            color: #35465a;
+        }
+
+
+        .employee-number {
+            font-size: 10px;
+
+            color: #9aa4af;
+
+            margin-top: 1px;
+        }
+
+
+        /* =====================================================
+           STATUS BADGES
+           ===================================================== */
+
+        .status-badge {
+            display: inline-flex;
+
+            align-items: center;
+
+            padding: 4px 8px;
+
+            border-radius: 20px;
+
+            font-size: 10px;
+
+            font-weight: 600;
+        }
+
+
+        .status-present {
+            background: #e9f7ef;
+
+            color: #278451;
+        }
+
+
+        .status-late {
+            background: #fff5df;
+
+            color: #b8790b;
+        }
+
+
+        .status-absent {
+            background: #fdebec;
+
+            color: #c44c56;
+        }
+
+
+        .status-leave {
+            background: #eeeafd;
+
+            color: #6f5ab8;
+        }
+
+
+        /* =====================================================
+           QUICK ACTIONS
+           ===================================================== */
+
+        .quick-action {
+            width: 100%;
+
+            border: 1px solid #e6ebf1;
+
+            background: #ffffff;
+
+            border-radius: 10px;
+
+            padding: 11px;
+
+            display: flex;
+
+            align-items: center;
+
+            text-decoration: none;
+
+            transition: 0.2s ease;
+        }
+
+
+        .quick-action:hover {
+            background: #f7faff;
+
+            border-color: #cfdff2;
+
+            transform: translateY(-1px);
+        }
+
+
+        .quick-action-icon {
+            width: 36px;
+            height: 36px;
+
+            border-radius: 9px;
+
+            background: #edf5ff;
+
+            color: #4385d7;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            margin-right: 10px;
+
+            font-size: 16px;
+
+            flex-shrink: 0;
+        }
+
+
+        .quick-action-text {
+            color: #35465a;
+
+            font-size: 12px;
+
+            font-weight: 600;
+        }
+
+
+        .quick-action-description {
+            color: #929daa;
+
+            font-size: 10px;
+
+            margin-top: 2px;
+        }
+
+
+        /* =====================================================
+           ATTENDANCE OVERVIEW
+           ===================================================== */
+
+        .overview-row {
+            display: flex;
+
+            align-items: center;
+
+            justify-content: space-between;
+
+            padding: 9px 0;
+
+            border-bottom: 1px solid #f0f2f5;
+        }
+
+
+        .overview-row:last-child {
+            border-bottom: none;
+        }
+
+
+        .overview-label {
+            display: flex;
+
+            align-items: center;
+
+            gap: 8px;
+
+            color: #586677;
+
+            font-size: 12px;
+        }
+
+
+        .overview-dot {
+            width: 8px;
+            height: 8px;
+
+            border-radius: 50%;
+
+            background: #7bb88f;
+        }
+
+
+        .overview-dot.late {
+            background: #e4ae4d;
+        }
+
+
+        .overview-dot.absent {
+            background: #d56c74;
+        }
+
+
+        .overview-dot.leave {
+            background: #8976c5;
+        }
+
+
+        .overview-value {
+            font-size: 12px;
+
+            font-weight: 700;
+
+            color: #35465a;
+        }
+
+
+        /* =====================================================
+           ACTIVITY
+           ===================================================== */
+
+        .activity-item {
+            display: flex;
+
+            align-items: flex-start;
+
+            padding: 10px 0;
+
+            border-bottom: 1px solid #f0f2f5;
+        }
+
+
+        .activity-item:first-child {
+            padding-top: 0;
+        }
+
+
+        .activity-item:last-child {
+            border-bottom: none;
+
+            padding-bottom: 0;
+        }
+
+
+        .activity-icon {
+            width: 30px;
+            height: 30px;
+
+            border-radius: 8px;
+
+            background: #edf5ff;
+
+            color: #4385d7;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            margin-right: 9px;
+
+            flex-shrink: 0;
+
+            font-size: 14px;
+        }
+
+
+        .activity-text {
+            font-size: 11px;
+
+            color: #566576;
+
+            line-height: 1.4;
+        }
+
+
+        .activity-time {
+            display: block;
+
+            color: #9aa4af;
+
+            font-size: 9px;
+
+            margin-top: 2px;
+        }
+
+
+        /* =====================================================
+           VIEW ALL
+           ===================================================== */
+
+        .view-all {
+            color: #4385d7;
+
+            font-size: 11px;
+
+            font-weight: 600;
+
+            text-decoration: none;
+        }
+
+
+        .view-all:hover {
+            text-decoration: underline;
+        }
+
+
+        /* =====================================================
+           RESPONSIVE
+           ===================================================== */
+
+        @media (max-width: 768px) {
+
+            .staff-welcome h1 {
+                font-size: 21px;
+            }
+
+            .attendance-table {
+                min-width: 600px;
+            }
+
+            .table-responsive {
+                overflow-x: auto;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body class="pp-app pp-app-shell">
+
+
+    <!-- =========================================================
+         SIDEBAR
+         ========================================================= -->
+
+    <div id="pp-sidebar-mount"></div>
+
+
+    <!-- =========================================================
+         MAIN SHELL
+         ========================================================= -->
+
+    <div class="pp-shell-main">
+
+
+        <!-- =====================================================
+             TOPBAR
+             ===================================================== -->
+
+        <div id="pp-topbar-mount"></div>
+
+
+        <!-- =====================================================
+             DASHBOARD CONTENT
+             ===================================================== -->
+
+        <main class="pp-content">
+
+
+            <!-- =================================================
+                 WELCOME
+                 ================================================= -->
+
+            <header class="staff-welcome">
+
+                <h1>
+                    Payroll Staff Dashboard
+                </h1>
+
+                <p id="currentDate">
+                    Loading date...
+                </p>
+
+            </header>
+
+
+            <!-- =================================================
+                 SUMMARY CARDS
+                 ================================================= -->
+
+            <div
+                class="pp-stat-row"
+                aria-label="Attendance summary"
+            >
+
+
+                <!-- TOTAL EMPLOYEES -->
+
+                <div class="pp-stat-card">
+
+                    <div
+                        class="pp-stat-card-icon employees"
+                        aria-hidden="true"
+                    >
+
+                        <i class="bi bi-people-fill"></i>
+
+                    </div>
+
+
+                    <div class="pp-stat-label">
+                        Total Employees
+                    </div>
+
+
+                    <div
+                        class="pp-stat-value"
+                        id="totalEmployees"
+                    >
+                        120
+                    </div>
+
+
+                    <div class="pp-stat-meta">
+                        Active employees
+                    </div>
+
+                </div>
+
+
+                <!-- PRESENT -->
+
+                <div class="pp-stat-card">
+
+                    <div
+                        class="pp-stat-card-icon present"
+                        aria-hidden="true"
+                    >
+
+                        <i class="bi bi-person-check-fill"></i>
+
+                    </div>
+
+
+                    <div class="pp-stat-label">
+                        Present Today
+                    </div>
+
+
+                    <div
+                        class="pp-stat-value"
+                        id="presentToday"
+                    >
+                        96
+                    </div>
+
+
+                    <div
+                        class="pp-stat-meta"
+                        id="presentPercentage"
+                    >
+                        80% of employees
+                    </div>
+
+                </div>
+
+
+                <!-- LATE -->
+
+                <div class="pp-stat-card">
+
+                    <div
+                        class="pp-stat-card-icon payroll"
+                        aria-hidden="true"
+                    >
+
+                        <i class="bi bi-clock-fill"></i>
+
+                    </div>
+
+
+                    <div class="pp-stat-label">
+                        Late Today
+                    </div>
+
+
+                    <div
+                        class="pp-stat-value"
+                        id="lateToday"
+                    >
+                        8
+                    </div>
+
+
+                    <div class="pp-stat-meta">
+                        Requires monitoring
+                    </div>
+
+                </div>
+
+
+                <!-- ABSENT -->
+
+                <div class="pp-stat-card">
+
+                    <div
+                        class="pp-stat-card-icon leave"
+                        aria-hidden="true"
+                    >
+
+                        <i class="bi bi-person-x-fill"></i>
+
+                    </div>
+
+
+                    <div class="pp-stat-label">
+                        Absent Today
+                    </div>
+
+
+                    <div
+                        class="pp-stat-value"
+                        id="absentToday"
+                    >
+                        6
+                    </div>
+
+
+                    <div class="pp-stat-meta">
+                        Excluding approved leave
+                    </div>
+
+                </div>
+
+
+            </div>
+
+
+            <!-- =================================================
+                 ATTENDANCE + OVERVIEW
+                 ================================================= -->
+
+            <div class="pp-dash-grid mt-3">
+
+
+                <!-- =================================================
+                     TODAY'S ATTENDANCE
+                     ================================================= -->
+
+                <section
+                    class="pp-widget"
+                    aria-labelledby="attendanceTitle"
+                >
+
+
+                    <div class="pp-widget-header">
+
+                        <div>
+
+                            <h2
+                                class="pp-widget-title"
+                                id="attendanceTitle"
+                            >
+                                Today's Attendance
+                            </h2>
+
+                            <div class="staff-panel-subtitle">
+                                Latest attendance records from the
+                                biometric device
+                            </div>
+
+                        </div>
+
+
+                        <a
+                            href="dtr.html"
+                            class="view-all"
+                        >
+                            View DTR
+                        </a>
+
+                    </div>
+
+
+                    <div class="pp-widget-body p-0">
+
+                        <div class="table-responsive">
+
+                            <table class="attendance-table">
+
+                                <thead>
+
+                                    <tr>
+
+                                        <th>
+                                            Employee
+                                        </th>
+
+                                        <th>
+                                            Time In
+                                        </th>
+
+                                        <th>
+                                            Time Out
+                                        </th>
+
+                                        <th>
+                                            Hours
+                                        </th>
+
+                                        <th>
+                                            Status
+                                        </th>
+
+                                    </tr>
+
+                                </thead>
+
+
+                                <tbody>
+
+
+                                    <tr>
+
+                                        <td>
+
+                                            <div class="employee-name">
+                                                Juan Dela Cruz
+                                            </div>
+
+                                            <div class="employee-number">
+                                                EMP-0001
+                                            </div>
+
+                                        </td>
+
+                                        <td>
+                                            7:54 AM
+                                        </td>
+
+                                        <td>
+                                            —
+                                        </td>
+
+                                        <td>
+                                            0.0
+                                        </td>
+
+                                        <td>
+
+                                            <span
+                                                class="status-badge status-present"
+                                            >
+                                                Present
+                                            </span>
+
+                                        </td>
+
+                                    </tr>
+
+
+                                    <tr>
+
+                                        <td>
+
+                                            <div class="employee-name">
+                                                Maria Santos
+                                            </div>
+
+                                            <div class="employee-number">
+                                                EMP-0002
+                                            </div>
+
+                                        </td>
+
+                                        <td>
+                                            8:18 AM
+                                        </td>
+
+                                        <td>
+                                            —
+                                        </td>
+
+                                        <td>
+                                            0.0
+                                        </td>
+
+                                        <td>
+
+                                            <span
+                                                class="status-badge status-late"
+                                            >
+                                                Late
+                                            </span>
+
+                                        </td>
+
+                                    </tr>
+
+
+                                    <tr>
+
+                                        <td>
+
+                                            <div class="employee-name">
+                                                Ana Reyes
+                                            </div>
+
+                                            <div class="employee-number">
+                                                EMP-0003
+                                            </div>
+
+                                        </td>
+
+                                        <td>
+                                            7:48 AM
+                                        </td>
+
+                                        <td>
+                                            —
+                                        </td>
+
+                                        <td>
+                                            0.0
+                                        </td>
+
+                                        <td>
+
+                                            <span
+                                                class="status-badge status-present"
+                                            >
+                                                Present
+                                            </span>
+
+                                        </td>
+
+                                    </tr>
+
+
+                                    <tr>
+
+                                        <td>
+
+                                            <div class="employee-name">
+                                                Mark Garcia
+                                            </div>
+
+                                            <div class="employee-number">
+                                                EMP-0004
+                                            </div>
+
+                                        </td>
+
+                                        <td>
+                                            —
+                                        </td>
+
+                                        <td>
+                                            —
+                                        </td>
+
+                                        <td>
+                                            0.0
+                                        </td>
+
+                                        <td>
+
+                                            <span
+                                                class="status-badge status-absent"
+                                            >
+                                                Absent
+                                            </span>
+
+                                        </td>
+
+                                    </tr>
+
+
+                                    <tr>
+
+                                        <td>
+
+                                            <div class="employee-name">
+                                                Carla Mendoza
+                                            </div>
+
+                                            <div class="employee-number">
+                                                EMP-0005
+                                            </div>
+
+                                        </td>
+
+                                        <td>
+                                            8:02 AM
+                                        </td>
+
+                                        <td>
+                                            —
+                                        </td>
+
+                                        <td>
+                                            0.0
+                                        </td>
+
+                                        <td>
+
+                                            <span
+                                                class="status-badge status-present"
+                                            >
+                                                Present
+                                            </span>
+
+                                        </td>
+
+                                    </tr>
+
+
+                                </tbody>
+
+                            </table>
+
+                        </div>
+
+                    </div>
+
+                </section>
+
+
+                <!-- =================================================
+                     ATTENDANCE OVERVIEW
+                     ================================================= -->
+
+                <section
+                    class="pp-widget"
+                    aria-labelledby="overviewTitle"
+                >
+
+
+                    <div class="pp-widget-header">
+
+                        <div>
+
+                            <h2
+                                class="pp-widget-title"
+                                id="overviewTitle"
+                            >
+                                Attendance Overview
+                            </h2>
+
+                            <div class="staff-panel-subtitle">
+                                Today's employee status
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="pp-widget-body">
+
+
+                        <div class="overview-row">
+
+                            <div class="overview-label">
+
+                                <span class="overview-dot"></span>
+
+                                Present
+
+                            </div>
+
+                            <div
+                                class="overview-value"
+                                id="overviewPresent"
+                            >
+                                96
+                            </div>
+
+                        </div>
+
+
+                        <div class="overview-row">
+
+                            <div class="overview-label">
+
+                                <span class="overview-dot late"></span>
+
+                                Late
+
+                            </div>
+
+                            <div
+                                class="overview-value"
+                                id="overviewLate"
+                            >
+                                8
+                            </div>
+
+                        </div>
+
+
+                        <div class="overview-row">
+
+                            <div class="overview-label">
+
+                                <span class="overview-dot absent"></span>
+
+                                Absent
+
+                            </div>
+
+                            <div
+                                class="overview-value"
+                                id="overviewAbsent"
+                            >
+                                6
+                            </div>
+
+                        </div>
+
+
+                        <div class="overview-row">
+
+                            <div class="overview-label">
+
+                                <span class="overview-dot leave"></span>
+
+                                On Leave
+
+                            </div>
+
+                            <div
+                                class="overview-value"
+                                id="overviewLeave"
+                            >
+                                10
+                            </div>
+
+                        </div>
+
+
+                    </div>
+
+                </section>
+
+
+            </div>
+
+
+            <!-- =================================================
+                 QUICK ACTIONS + RECENT ACTIVITY
+                 ================================================= -->
+
+            <div class="pp-dash-grid mt-3">
+
+
+                <!-- =================================================
+                     QUICK ACTIONS
+                     ================================================= -->
+
+                <section
+                    class="pp-widget"
+                    aria-labelledby="actionsTitle"
+                >
+
+
+                    <div class="pp-widget-header">
+
+                        <div>
+
+                            <h2
+                                class="pp-widget-title"
+                                id="actionsTitle"
+                            >
+                                Quick Actions
+                            </h2>
+
+                            <div class="staff-panel-subtitle">
+                                Frequently used payroll staff functions
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="pp-widget-body">
+
+                        <div class="row g-2">
+
+
+                            <!-- DTR -->
+
+                            <div class="col-12 col-md-6">
+
+                                <a
+                                    href="dtr.html"
+                                    class="quick-action"
+                                >
+
+                                    <div class="quick-action-icon">
+
+                                        <i class="bi bi-clock-history"></i>
+
+                                    </div>
+
+
+                                    <div>
+
+                                        <div class="quick-action-text">
+                                            Daily Time Record
+                                        </div>
+
+                                        <div class="quick-action-description">
+                                            View and manage attendance
+                                        </div>
+
+                                    </div>
+
+                                </a>
+
+                            </div>
+
+
+                            <!-- EMPLOYEE RECORDS -->
+
+                            <div class="col-12 col-md-6">
+
+                                <a
+                                    href="employee-records.html"
+                                    class="quick-action"
+                                >
+
+                                    <div class="quick-action-icon">
+
+                                        <i class="bi bi-people"></i>
+
+                                    </div>
+
+
+                                    <div>
+
+                                        <div class="quick-action-text">
+                                            Employee Records
+                                        </div>
+
+                                        <div class="quick-action-description">
+                                            View employee information
+                                        </div>
+
+                                    </div>
+
+                                </a>
+
+                            </div>
+
+
+                            <!-- LEAVE -->
+
+                            <div class="col-12 col-md-6">
+
+                                <a
+                                    href="leave-loan-approval.html"
+                                    class="quick-action"
+                                >
+
+                                    <div class="quick-action-icon">
+
+                                        <i class="bi bi-calendar-check"></i>
+
+                                    </div>
+
+
+                                    <div>
+
+                                        <div class="quick-action-text">
+                                            Leave Management
+                                        </div>
+
+                                        <div class="quick-action-description">
+                                            Review employee leave
+                                        </div>
+
+                                    </div>
+
+                                </a>
+
+                            </div>
+
+
+                            <!-- REPORTS -->
+
+                            <div class="col-12 col-md-6">
+
+                                <a
+                                    href="#"
+                                    class="quick-action"
+                                >
+
+                                    <div class="quick-action-icon">
+
+                                        <i class="bi bi-file-earmark-bar-graph"></i>
+
+                                    </div>
+
+
+                                    <div>
+
+                                        <div class="quick-action-text">
+                                            Attendance Reports
+                                        </div>
+
+                                        <div class="quick-action-description">
+                                            Generate attendance reports
+                                        </div>
+
+                                    </div>
+
+                                </a>
+
+                            </div>
+
+
+                        </div>
+
+                    </div>
+
+                </section>
+
+
+                <!-- =================================================
+                     RECENT ACTIVITY
+                     ================================================= -->
+
+                <section
+                    class="pp-widget"
+                    aria-labelledby="activityTitle"
+                >
+
+
+                    <div class="pp-widget-header">
+
+                        <div>
+
+                            <h2
+                                class="pp-widget-title"
+                                id="activityTitle"
+                            >
+                                Recent Activity
+                            </h2>
+
+                            <div class="staff-panel-subtitle">
+                                Latest attendance activity
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="pp-widget-body">
+
+
+                        <!-- ACTIVITY 1 -->
+
+                        <div class="activity-item">
+
+                            <div class="activity-icon">
+
+                                <i class="bi bi-fingerprint"></i>
+
+                            </div>
+
+
+                            <div class="activity-text">
+
+                                Juan Dela Cruz recorded a time-in.
+
+                                <span class="activity-time">
+                                    7:54 AM
+                                </span>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- ACTIVITY 2 -->
+
+                        <div class="activity-item">
+
+                            <div class="activity-icon">
+
+                                <i class="bi bi-clock"></i>
+
+                            </div>
+
+
+                            <div class="activity-text">
+
+                                Maria Santos was marked late.
+
+                                <span class="activity-time">
+                                    8:18 AM
+                                </span>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- ACTIVITY 3 -->
+
+                        <div class="activity-item">
+
+                            <div class="activity-icon">
+
+                                <i class="bi bi-calendar-check"></i>
+
+                            </div>
+
+
+                            <div class="activity-text">
+
+                                Leave request updated.
+
+                                <span class="activity-time">
+                                    9:10 AM
+                                </span>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- ACTIVITY 4 -->
+
+                        <div class="activity-item">
+
+                            <div class="activity-icon">
+
+                                <i class="bi bi-file-earmark-text"></i>
+
+                            </div>
+
+
+                            <div class="activity-text">
+
+                                Attendance report generated.
+
+                                <span class="activity-time">
+                                    10:25 AM
+                                </span>
+
+                            </div>
+
+                        </div>
+
+
+                    </div>
+
+                </section>
+
+
+            </div>
+
+
+        </main>
+
+    </div>
+
+
+    <!-- =========================================================
+         BOOTSTRAP JS
+         ========================================================= -->
+
+    <script
+        src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+    ></script>
+
+
+    <!-- =========================================================
+         SHARED LAYOUT JS
+         ========================================================= -->
+
+    <script
+        src="js/payrollpro-layout.js"
+    ></script>
+
+
+    <!-- =========================================================
+         PAYROLL STAFF DASHBOARD JS
+         ========================================================= -->
+
+    <script
+        src="js/payroll-staff-dashboard.js"
+    ></script>
+
+
+</body>
+
+</html>
