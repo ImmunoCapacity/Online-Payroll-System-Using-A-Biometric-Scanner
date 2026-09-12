@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>System Administrator Dashboard — STI Balayan</title>
+
+    <!-- Bootstrap -->
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+
+    <!-- Bootstrap Icons -->
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+        rel="stylesheet"
+    >
+
+    <!-- Main System CSS -->
+    <link href="css/payrollpro.css" rel="stylesheet">
+</head>
+
+<body class="pp-app pp-app-shell">
+
+    <!-- =========================================================
+         SIDEBAR
+         ========================================================= -->
+
+    <div id="pp-sidebar-mount"></div>
+
+
+    <!-- =========================================================
+         MAIN CONTENT
+         ========================================================= -->
+
+    <div class="pp-shell-main">
+
+        <!-- Topbar -->
+        <div id="pp-topbar-mount"></div>
+
+
+        <!-- =====================================================
+             DASHBOARD CONTENT
+             ===================================================== -->
+
+        <main class="pp-content">
+
+            <!-- Page Header -->
+            <header class="pp-content-header">
+
+                <h1 class="pp-content-title">
+                    System Administrator Dashboard
+                </h1>
+
+                <p class="pp-content-subtitle">
+                    System overview and administrative controls.
+                </p>
+
+            </header>
+
+
+            <!-- =================================================
+                 SUMMARY CARDS
+                 ================================================= -->
+
+            <div class="pp-stat-row" aria-label="System summary">
+
+                <!-- Total Employees -->
+                <div class="pp-stat-card">
+
+                    <div class="pp-stat-card-icon employees"
+                         aria-hidden="true">
+
+                        <i class="bi bi-people-fill"></i>
+
+                    </div>
+
+                    <div class="pp-stat-label">
+                        Total Employees
+                    </div>
+
+                    <div class="pp-stat-value">
+                        248
+                    </div>
+
+                    <div class="pp-stat-meta">
+                        142 Faculty · 106 Admin Staff
+                    </div>
+
+                </div>
+
+
+                <!-- System Users -->
+                <div class="pp-stat-card">
+
+                    <div class="pp-stat-card-icon payroll"
+                         aria-hidden="true">
+
+                        <i class="bi bi-person-badge-fill"></i>
+
+                    </div>
+
+                    <div class="pp-stat-label">
+                        System Users
+                    </div>
+
+                    <div class="pp-stat-value">
+                        12
+                    </div>
+
+                    <div class="pp-stat-meta">
+                        All registered system accounts
+                    </div>
+
+                </div>
+
+
+                <!-- Active Users -->
+                <div class="pp-stat-card">
+
+                    <div class="pp-stat-card-icon present"
+                         aria-hidden="true">
+
+                        <i class="bi bi-person-check-fill"></i>
+
+                    </div>
+
+                    <div class="pp-stat-label">
+                        Active Users
+                    </div>
+
+                    <div class="pp-stat-value">
+                        10
+                    </div>
+
+                    <div class="pp-stat-meta">
+                        2 accounts inactive
+                    </div>
+
+                </div>
+
+
+                <!-- Biometric Device -->
+                <div class="pp-stat-card">
+
+                    <div class="pp-stat-card-icon leave"
+                         aria-hidden="true">
+
+                        <i class="bi bi-fingerprint"></i>
+
+                    </div>
+
+                    <div class="pp-stat-label">
+                        Biometric Device
+                    </div>
+
+                    <div class="pp-stat-value text-status">
+                        Online
+                    </div>
+
+                    <div class="pp-stat-meta">
+                        ZKTeco K40 connected
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- =================================================
+                 SYSTEM OVERVIEW + BIOMETRIC DEVICE
+                 ================================================= -->
+
+            <div class="pp-dash-grid">
+
+                <!-- System Overview -->
+                <section class="pp-widget"
+                         aria-labelledby="systemOverviewTitle">
+
+                    <div class="pp-widget-header">
+
+                        <h2 class="pp-widget-title"
+                            id="systemOverviewTitle">
+
+                            System Overview
+
+                        </h2>
+
+                    </div>
+
+
+                    <div class="pp-widget-body">
+
+                        <div class="row g-3">
+
+                            <!-- Faculty -->
+                            <div class="col-md-6">
+
+                                <div class="border rounded p-3 h-100">
+
+                                    <div class="d-flex align-items-center gap-3">
+
+                                        <div class="rounded-circle
+                                                    d-flex
+                                                    align-items-center
+                                                    justify-content-center"
+                                             style="
+                                                width:42px;
+                                                height:42px;
+                                                background:#eef4ff;
+                                                color:#1f4fa3;
+                                             ">
+
+                                            <i class="bi bi-mortarboard-fill"></i>
+
+                                        </div>
+
+                                        <div>
+
+                                            <div class="text-muted small">
+                                                Faculty
+                                            </div>
+
+                                            <div class="fw-bold fs-5">
+                                                142
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+
+                            <!-- Admin Staff -->
+                            <div class="col-md-6">
+
+                                <div class="border rounded p-3 h-100">
+
+                                    <div class="d-flex align-items-center gap-3">
+
+                                        <div class="rounded-circle
+                                                    d-flex
+                                                    align-items-center
+                                                    justify-content-center"
+                                             style="
+                                                width:42px;
+                                                height:42px;
+                                                background:#eef4ff;
+                                                color:#1f4fa3;
+                                             ">
+
+                                            <i class="bi bi-person-workspace"></i>
+
+                                        </div>
+
+                                        <div>
+
+                                            <div class="text-muted small">
+                                                Administrative Staff
+                                            </div>
+
+                                            <div class="fw-bold fs-5">
+                                                106
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+
+                            <!-- Active Employees -->
+                            <div class="col-md-6">
+
+                                <div class="border rounded p-3 h-100">
+
+                                    <div class="d-flex align-items-center gap-3">
+
+                                        <div class="rounded-circle
+                                                    d-flex
+                                                    align-items-center
+                                                    justify-content-center"
+                                             style="
+                                                width:42px;
+                                                height:42px;
+                                                background:#eef4ff;
+                                                color:#1f4fa3;
+                                             ">
+
+                                            <i class="bi bi-person-check"></i>
+
+                                        </div>
+
+                                        <div>
+
+                                            <div class="text-muted small">
+                                                Active Employees
+                                            </div>
+
+                                            <div class="fw-bold fs-5">
+                                                248
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+
+                            <!-- Inactive Employees -->
+                            <div class="col-md-6">
+
+                                <div class="border rounded p-3 h-100">
+
+                                    <div class="d-flex align-items-center gap-3">
+
+                                        <div class="rounded-circle
+                                                    d-flex
+                                                    align-items-center
+                                                    justify-content-center"
+                                             style="
+                                                width:42px;
+                                                height:42px;
+                                                background:#fff8e6;
+                                                color:#b77900;
+                                             ">
+
+                                            <i class="bi bi-person-x"></i>
+
+                                        </div>
+
+                                        <div>
+
+                                            <div class="text-muted small">
+                                                Inactive Employees
+                                            </div>
+
+                                            <div class="fw-bold fs-5">
+                                                0
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </section>
+
+
+                <!-- Biometric Device -->
+                <section class="pp-widget"
+                         aria-labelledby="deviceTitle">
+
+                    <div class="pp-widget-header">
+
+                        <h2 class="pp-widget-title"
+                            id="deviceTitle">
+
+                            Biometric Device
+
+                        </h2>
+
+                    </div>
+
+
+                    <div class="pp-widget-body">
+
+                        <div class="d-flex align-items-center gap-3 mb-4">
+
+                            <div class="rounded-circle
+                                        d-flex
+                                        align-items-center
+                                        justify-content-center"
+                                 style="
+                                    width:50px;
+                                    height:50px;
+                                    background:#eef4ff;
+                                    color:#1f4fa3;
+                                 ">
+
+                                <i class="bi bi-fingerprint fs-4"></i>
+
+                            </div>
+
+
+                            <div>
+
+                                <div class="fw-bold">
+                                    ZKTeco K40
+                                </div>
+
+                                <div class="small text-success">
+                                    <i class="bi bi-circle-fill"
+                                       style="font-size:7px;"></i>
+
+                                    Connected
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="mb-3">
+
+                            <div class="text-muted small">
+                                Last Synchronization
+                            </div>
+
+                            <div class="fw-semibold">
+                                Today, 8:05 AM
+                            </div>
+
+                        </div>
+
+
+                        <div class="mb-3">
+
+                            <div class="text-muted small">
+                                Attendance Logs Synced
+                            </div>
+
+                            <div class="fw-semibold">
+                                42 new logs
+                            </div>
+
+                        </div>
+
+
+                        <button type="button"
+                                class="btn btn-primary w-100"
+                                id="syncDeviceBtn">
+
+                            <i class="bi bi-arrow-repeat me-1"></i>
+
+                            Sync Device
+
+                        </button>
+
+                    </div>
+
+                </section>
+
+            </div>
+
+
+            <!-- =================================================
+                 USER ACCOUNT MANAGEMENT + QUICK ACTIONS
+                 ================================================= -->
+
+            <div class="pp-dash-grid">
+
+                <!-- User Accounts -->
+                <section class="pp-widget"
+                         aria-labelledby="usersTitle">
+
+                    <div class="pp-widget-header">
+
+                        <h2 class="pp-widget-title"
+                            id="usersTitle">
+
+                            User Account Management
+
+                        </h2>
+
+                        <span class="badge rounded-pill"
+                              style="
+                                background:#eef4ff;
+                                color:#1f4fa3;
+                              ">
+
+                            12 Accounts
+
+                        </span>
+
+                    </div>
+
+
+                    <div class="pp-widget-body">
+
+                        <div class="table-responsive">
+
+                            <table class="table align-middle mb-0">
+
+                                <thead>
+
+                                    <tr>
+
+                                        <th>
+                                            Role
+                                        </th>
+
+                                        <th>
+                                            Accounts
+                                        </th>
+
+                                        <th>
+                                            Status
+                                        </th>
+
+                                    </tr>
+
+                                </thead>
+
+
+                                <tbody>
+
+                                    <tr>
+
+                                        <td>
+                                            <i class="bi bi-shield-check me-2"></i>
+                                            System Administrator
+                                        </td>
+
+                                        <td>
+                                            2
+                                        </td>
+
+                                        <td>
+                                            <span class="badge text-bg-success">
+                                                Active
+                                            </span>
+                                        </td>
+
+                                    </tr>
+
+
+                                    <tr>
+
+                                        <td>
+                                            <i class="bi bi-cash-stack me-2"></i>
+                                            Payroll Master
+                                        </td>
+
+                                        <td>
+                                            2
+                                        </td>
+
+                                        <td>
+                                            <span class="badge text-bg-success">
+                                                Active
+                                            </span>
+                                        </td>
+
+                                    </tr>
+
+
+                                    <tr>
+
+                                        <td>
+                                            <i class="bi bi-fingerprint me-2"></i>
+                                            Attendance Master
+                                        </td>
+
+                                        <td>
+                                            2
+                                        </td>
+
+                                        <td>
+                                            <span class="badge text-bg-success">
+                                                Active
+                                            </span>
+                                        </td>
+
+                                    </tr>
+
+
+                                    <tr>
+
+                                        <td>
+                                            <i class="bi bi-people me-2"></i>
+                                            Employee Accounts
+                                        </td>
+
+                                        <td>
+                                            6
+                                        </td>
+
+                                        <td>
+                                            <span class="badge text-bg-success">
+                                                Active
+                                            </span>
+                                        </td>
+
+                                    </tr>
+
+                                </tbody>
+
+                            </table>
+
+                        </div>
+
+                    </div>
+
+                </section>
+
+
+                <!-- Quick Actions -->
+                <section class="pp-widget"
+                         aria-labelledby="actionsTitle">
+
+                    <div class="pp-widget-header">
+
+                        <h2 class="pp-widget-title"
+                            id="actionsTitle">
+
+                            Quick Actions
+
+                        </h2>
+
+                    </div>
+
+
+                    <div class="pp-widget-body">
+
+                        <div class="pp-quick-actions flex-column">
+
+                            <a href="#"
+                               class="pp-quick-action">
+
+                                <i class="bi bi-person-plus"></i>
+
+                                Manage Users
+
+                            </a>
+
+
+                            <a href="employee-records.html"
+                               class="pp-quick-action">
+
+                                <i class="bi bi-people"></i>
+
+                                Employee Records
+
+                            </a>
+
+
+                            <a href="#"
+                               class="pp-quick-action">
+
+                                <i class="bi bi-fingerprint"></i>
+
+                                Biometric Device
+
+                            </a>
+
+
+                            <a href="maintenance.html"
+                               class="pp-quick-action">
+
+                                <i class="bi bi-sliders"></i>
+
+                                System Maintenance
+
+                            </a>
+
+
+                            <a href="#"
+                               class="pp-quick-action">
+
+                                <i class="bi bi-file-earmark-bar-graph"></i>
+
+                                View Reports
+
+                            </a>
+
+                        </div>
+
+                    </div>
+
+                </section>
+
+            </div>
+
+
+            <!-- =================================================
+                 RECENT SYSTEM ACTIVITY
+                 ================================================= -->
+
+            <section class="pp-widget"
+                     aria-labelledby="activityTitle">
+
+                <div class="pp-widget-header">
+
+                    <h2 class="pp-widget-title"
+                        id="activityTitle">
+
+                        Recent System Activity
+
+                    </h2>
+
+                </div>
+
+
+                <div class="pp-widget-body">
+
+                    <ul class="pp-activity-list">
+
+
+                        <!-- Activity 1 -->
+                        <li class="pp-activity-item">
+
+                            <div class="pp-activity-icon employee"
+                                 aria-hidden="true">
+
+                                <i class="bi bi-person-plus"></i>
+
+                            </div>
+
+                            <div>
+
+                                <p class="pp-activity-text">
+
+                                    <strong>
+                                        Michael Tan
+                                    </strong>
+
+                                    was added to Employee Records.
+
+                                </p>
+
+                                <time class="pp-activity-time">
+
+                                    Today, 2:15 PM
+
+                                </time>
+
+                            </div>
+
+                        </li>
+
+
+                        <!-- Activity 2 -->
+                        <li class="pp-activity-item">
+
+                            <div class="pp-activity-icon attendance"
+                                 aria-hidden="true">
+
+                                <i class="bi bi-fingerprint"></i>
+
+                            </div>
+
+                            <div>
+
+                                <p class="pp-activity-text">
+
+                                    ZKTeco K40 synchronized
+
+                                    <strong>
+                                        42 attendance logs
+                                    </strong>.
+
+                                </p>
+
+                                <time class="pp-activity-time">
+
+                                    Today, 8:05 AM
+
+                                </time>
+
+                            </div>
+
+                        </li>
+
+
+                        <!-- Activity 3 -->
+                        <li class="pp-activity-item">
+
+                            <div class="pp-activity-icon payroll"
+                                 aria-hidden="true">
+
+                                <i class="bi bi-person-badge"></i>
+
+                            </div>
+
+                            <div>
+
+                                <p class="pp-activity-text">
+
+                                    A new
+
+                                    <strong>
+                                        Payroll Master
+                                    </strong>
+
+                                    account was created.
+
+                                </p>
+
+                                <time class="pp-activity-time">
+
+                                    Yesterday, 3:20 PM
+
+                                </time>
+
+                            </div>
+
+                        </li>
+
+
+                        <!-- Activity 4 -->
+                        <li class="pp-activity-item">
+
+                            <div class="pp-activity-icon leave"
+                                 aria-hidden="true">
+
+                                <i class="bi bi-pencil-square"></i>
+
+                            </div>
+
+                            <div>
+
+                                <p class="pp-activity-text">
+
+                                    Employee information was updated
+                                    by the System Administrator.
+
+                                </p>
+
+                                <time class="pp-activity-time">
+
+                                    Yesterday, 10:45 AM
+
+                                </time>
+
+                            </div>
+
+                        </li>
+
+
+                    </ul>
+
+                </div>
+
+            </section>
+
+        </main>
+
+    </div>
+
+
+    <!-- =========================================================
+         JAVASCRIPT
+         ========================================================= -->
+
+    <script
+        src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js">
+    </script>
+
+    <script src="js/payrollpro-layout.js"></script>
+
+    <script src="js/system-admin-dashboard.js"></script>
+
+</body>
+</html>
