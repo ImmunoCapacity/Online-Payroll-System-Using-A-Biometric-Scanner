@@ -1,210 +1,464 @@
 (function () {
     PayrollProLayout.init({
-        activeNav: 'leave',
+        activeNav: 'loans',
         navMode: 'staff',
-        user: { name: 'Dr. Maria Santos', role: 'Faculty Staff', initials: 'MS' },
-        institution: { name: 'STI Balayan', short: 'STI' },
-        notifications: true
+        user: {
+            name: 'Dr. Maria Santos',
+            role: 'Faculty Staff',
+            initials: 'MS'
+        },
+        institution: {
+            name: 'STI Balayan',
+            short: 'STI'
+        },
+        notifications: false
     });
 
-    var ALLOWANCE = {
-        Sick: 12,
-        Vacation: 15,
-        Maternity: 105,
-        Paternity: 7
+    var currentEmployee = {
+        id: 'EMP-2024-012',
+        name: 'Dr. Maria Santos',
+        role: 'Faculty Staff',
+        initials: 'MS'
     };
 
-    var USED = { Sick: 4, Vacation: 7, Maternity: 0, Paternity: 0 };
+    var loans = [
+        {
+            id: 1,
+            employeeId: 'EMP-2024-012',
+            type: 'SSS Salary Loan',
+            reference: 'SSS-2026-00841',
+            amount: 50000,
+            deductionPerPayroll: 2500,
+            startPeriod: 'March 11 – March 25, 2026',
+            deductionHistory: [
+                {
+                    period: 'March 11 – March 25, 2026',
+                    amount: 2500,
+                    remainingBalance: 47500,
+                    dateProcessed: '2026-03-25'
+                },
+                {
+                    period: 'March 26 – April 10, 2026',
+                    amount: 2500,
+                    remainingBalance: 45000,
+                    dateProcessed: '2026-04-10'
+                },
+                {
+                    period: 'April 11 – April 25, 2026',
+                    amount: 2500,
+                    remainingBalance: 42500,
+                    dateProcessed: '2026-04-25'
+                },
+                {
+                    period: 'April 26 – May 10, 2026',
+                    amount: 2500,
+                    remainingBalance: 40000,
+                    dateProcessed: '2026-05-10'
+                },
+                {
+                    period: 'May 11 – May 25, 2026',
+                    amount: 2500,
+                    remainingBalance: 37500,
+                    dateProcessed: '2026-05-25'
+                },
+                {
+                    period: 'May 26 – June 10, 2026',
+                    amount: 2500,
+                    remainingBalance: 35000,
+                    dateProcessed: '2026-06-10'
+                },
+                {
+                    period: 'June 11 – June 25, 2026',
+                    amount: 2500,
+                    remainingBalance: 32500,
+                    dateProcessed: '2026-06-25'
+                },
+                {
+                    period: 'June 26 – July 10, 2026',
+                    amount: 2500,
+                    remainingBalance: 30000,
+                    dateProcessed: '2026-07-10'
+                },
+                {
+                    period: 'July 11 – July 25, 2026',
+                    amount: 2500,
+                    remainingBalance: 27500,
+                    dateProcessed: '2026-07-25'
+                },
+                {
+                    period: 'July 26 – August 10, 2026',
+                    amount: 2500,
+                    remainingBalance: 25000,
+                    dateProcessed: '2026-08-10'
+                },
+                {
+                    period: 'August 11 – August 25, 2026',
+                    amount: 2500,
+                    remainingBalance: 22500,
+                    dateProcessed: '2026-08-25'
+                },
+                {
+                    period: 'August 26 – September 10, 2026',
+                    amount: 2500,
+                    remainingBalance: 20000,
+                    dateProcessed: '2026-09-10'
+                }
+            ]
+        },
 
-    var requests = [
-        { id: 1, category: 'Sick', dateFrom: '2026-06-10', dateTo: '2026-06-11', status: 'Approved', filedDate: '2026-06-08', reason: 'Medical consultation' },
-        { id: 2, category: 'Vacation', dateFrom: '2026-07-14', dateTo: '2026-07-16', status: 'Pending', filedDate: '2026-07-04', reason: 'Family vacation' },
-        { id: 3, category: 'Sick', dateFrom: '2026-05-02', dateTo: '2026-05-02', status: 'Rejected', filedDate: '2026-05-01', reason: 'Personal errand' },
-        { id: 4, category: 'Vacation', dateFrom: '2026-04-21', dateTo: '2026-04-22', status: 'Cancelled', filedDate: '2026-04-18', reason: 'Changed plans' }
+        {
+            id: 2,
+            employeeId: 'EMP-2024-012',
+            type: 'Pag-IBIG MPL',
+            reference: 'HDMF-2025-00372',
+            amount: 15000,
+            deductionPerPayroll: 1500,
+            startPeriod: 'April 11 – April 25, 2026',
+            deductionHistory: [
+                {
+                    period: 'April 11 – April 25, 2026',
+                    amount: 1500,
+                    remainingBalance: 13500,
+                    dateProcessed: '2026-04-25'
+                },
+                {
+                    period: 'April 26 – May 10, 2026',
+                    amount: 1500,
+                    remainingBalance: 12000,
+                    dateProcessed: '2026-05-10'
+                },
+                {
+                    period: 'May 11 – May 25, 2026',
+                    amount: 1500,
+                    remainingBalance: 10500,
+                    dateProcessed: '2026-05-25'
+                },
+                {
+                    period: 'May 26 – June 10, 2026',
+                    amount: 1500,
+                    remainingBalance: 9000,
+                    dateProcessed: '2026-06-10'
+                },
+                {
+                    period: 'June 11 – June 25, 2026',
+                    amount: 1500,
+                    remainingBalance: 7500,
+                    dateProcessed: '2026-06-25'
+                },
+                {
+                    period: 'June 26 – July 10, 2026',
+                    amount: 1500,
+                    remainingBalance: 6000,
+                    dateProcessed: '2026-07-10'
+                },
+                {
+                    period: 'July 11 – July 25, 2026',
+                    amount: 1500,
+                    remainingBalance: 4500,
+                    dateProcessed: '2026-07-25'
+                },
+                {
+                    period: 'July 26 – August 10, 2026',
+                    amount: 1500,
+                    remainingBalance: 3000,
+                    dateProcessed: '2026-08-10'
+                },
+                {
+                    period: 'August 11 – August 25, 2026',
+                    amount: 1500,
+                    remainingBalance: 1500,
+                    dateProcessed: '2026-08-25'
+                },
+                {
+                    period: 'August 26 – September 10, 2026',
+                    amount: 1500,
+                    remainingBalance: 0,
+                    dateProcessed: '2026-09-10'
+                }
+            ]
+        }
     ];
 
-    var nextId = 5;
+    function peso(value) {
+        var amount = Number(value) || 0;
 
-    function syncUsedFromApproved() {
-        USED = { Sick: 0, Vacation: 0, Maternity: 0, Paternity: 0 };
-        requests.forEach(function (r) {
-            if (r.status !== 'Approved') return;
-            var days = countDays(r.dateFrom, r.dateTo);
-            if (r.category in USED) USED[r.category] += days;
+        return '₱' + amount.toLocaleString('en-PH', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
         });
-        USED.Sick += 2;
-        USED.Vacation += 5;
     }
 
     function formatDate(iso) {
-        if (!iso) return '—';
-        var d = new Date(iso + 'T00:00:00');
-        return d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+        if (!iso) {
+            return '—';
+        }
+
+        var date = new Date(iso + 'T00:00:00');
+
+        return date.toLocaleDateString('en-PH', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+        });
     }
 
-    function formatRange(from, to) {
-        return formatDate(from) + ' – ' + formatDate(to);
+    function escapeHtml(value) {
+        return String(value == null ? '' : value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
     }
 
-    function countDays(from, to) {
-        var start = new Date(from + 'T00:00:00');
-        var end = new Date(to + 'T00:00:00');
-        if (end < start) return 0;
-        return Math.round((end - start) / 86400000) + 1;
+    function getTotalDeducted(loan) {
+        return loan.deductionHistory.reduce(function (total, item) {
+            return total + Number(item.amount || 0);
+        }, 0);
+    }
+
+    function getRemainingBalance(loan) {
+        return Math.max(
+            0,
+            loan.amount - getTotalDeducted(loan)
+        );
+    }
+
+    function getLoanStatus(loan) {
+        return getRemainingBalance(loan) <= 0
+            ? 'Paid'
+            : 'Active';
     }
 
     function statusBadge(status) {
-        var map = {
-            Pending: 'pp-badge-pending',
-            Approved: 'pp-badge-approved',
-            Rejected: 'pp-badge-rejected',
-            Cancelled: 'pp-badge-cancelled'
-        };
-        return '<span class="pp-badge ' + (map[status] || 'pp-badge-cancelled') + '">' + status + '</span>';
-    }
-
-    function renderBalance() {
-        syncUsedFromApproved();
-        var html = Object.keys(ALLOWANCE).map(function (cat) {
-            var max = ALLOWANCE[cat];
-            var used = USED[cat] || 0;
-            var remaining = max - used;
-            var cls = cat.toLowerCase();
+        if (status === 'Paid') {
             return (
-                '<div class="pp-balance-card ' + cls + '">' +
-                    '<div class="pp-balance-card-label">' + cat + ' Leave</div>' +
-                    '<div class="pp-balance-card-value"><span class="remaining">' + remaining + '</span> / ' + max + ' days remaining</div>' +
-                    '<div class="pp-balance-card-meta">' + used + ' day' + (used !== 1 ? 's' : '') + ' used this year</div>' +
-                '</div>'
+                '<span class="loan-status loan-status-paid">' +
+                    'Paid' +
+                '</span>'
             );
-        }).join('');
-        document.getElementById('leaveBalanceRow').innerHTML = html;
+        }
+
+        return (
+            '<span class="loan-status loan-status-active">' +
+                'Active' +
+            '</span>'
+        );
     }
 
-    function renderHistory() {
-        var tbody = document.getElementById('leaveHistoryBody');
-        var empty = document.getElementById('leaveEmptyState');
-        var sorted = requests.slice().sort(function (a, b) {
-            return b.filedDate.localeCompare(a.filedDate);
+    function renderLoans() {
+        var tbody = document.getElementById('loanHistoryBody');
+        var empty = document.getElementById('loanEmptyState');
+
+        var employeeLoans = loans.filter(function (loan) {
+            return loan.employeeId === currentEmployee.id;
         });
 
-        if (!sorted.length) {
+        if (!employeeLoans.length) {
             tbody.innerHTML = '';
             empty.classList.remove('d-none');
             return;
         }
 
         empty.classList.add('d-none');
-        tbody.innerHTML = sorted.map(function (r) {
-            var days = countDays(r.dateFrom, r.dateTo);
-            var cancelBtn = r.status === 'Pending'
-                ? '<button type="button" class="pp-btn-cancel" data-cancel-id="' + r.id + '">Cancel Request</button>'
-                : '<span class="text-muted small">—</span>';
+
+        tbody.innerHTML = employeeLoans.map(function (loan) {
+            var totalDeducted = getTotalDeducted(loan);
+            var remainingBalance = getRemainingBalance(loan);
+            var status = getLoanStatus(loan);
+
             return (
                 '<tr>' +
-                    '<td><strong>' + r.category + '</strong></td>' +
-                    '<td>' + formatRange(r.dateFrom, r.dateTo) + '</td>' +
-                    '<td class="col-hours">' + days + '</td>' +
-                    '<td>' + statusBadge(r.status) + '</td>' +
-                    '<td class="col-time">' + formatDate(r.filedDate) + '</td>' +
-                    '<td class="col-actions">' + cancelBtn + '</td>' +
+
+                    '<td>' +
+                        '<strong>' +
+                            escapeHtml(loan.type) +
+                        '</strong>' +
+                    '</td>' +
+
+                    '<td>' +
+                        escapeHtml(loan.reference) +
+                    '</td>' +
+
+                    '<td class="loan-money">' +
+                        peso(loan.amount) +
+                    '</td>' +
+
+                    '<td class="loan-money">' +
+                        peso(loan.deductionPerPayroll) +
+                    '</td>' +
+
+                    '<td class="loan-money">' +
+                        peso(totalDeducted) +
+                    '</td>' +
+
+                    '<td class="loan-balance ' +
+                        (remainingBalance <= 0
+                            ? 'loan-balance-paid'
+                            : '') +
+                    '">' +
+                        peso(remainingBalance) +
+                    '</td>' +
+
+                    '<td>' +
+                        statusBadge(status) +
+                    '</td>' +
+
+                    '<td class="col-actions">' +
+
+                        '<button ' +
+                            'type="button" ' +
+                            'class="loan-view-btn" ' +
+                            'data-loan-id="' + loan.id + '">' +
+
+                            'View Details' +
+
+                        '</button>' +
+
+                    '</td>' +
+
                 '</tr>'
             );
         }).join('');
+    }
 
-        tbody.querySelectorAll('[data-cancel-id]').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                var id = parseInt(btn.getAttribute('data-cancel-id'), 10);
-                var req = requests.find(function (r) { return r.id === id; });
-                if (!req || req.status !== 'Pending') return;
-                if (!confirm('Cancel this pending leave request?')) return;
-                req.status = 'Cancelled';
-                renderBalance();
-                renderHistory();
-            });
+    function findLoan(id) {
+        return loans.find(function (loan) {
+            return (
+                loan.id === id &&
+                loan.employeeId === currentEmployee.id
+            );
         });
     }
 
-    function updateDaysPreview() {
-        var from = document.getElementById('leaveDateFrom').value;
-        var to = document.getElementById('leaveDateTo').value;
-        var preview = document.getElementById('leaveDaysPreview');
-        if (!from || !to) {
-            preview.classList.add('d-none');
-            return;
-        }
-        var days = countDays(from, to);
-        if (days <= 0) {
-            preview.classList.remove('d-none');
-            preview.textContent = 'End date must be on or after the start date.';
-            preview.className = 'alert alert-warning border small mb-0';
-            return;
-        }
-        preview.classList.remove('d-none');
-        preview.className = 'alert alert-light border small mb-0';
-        preview.textContent = 'This request covers ' + days + ' working day' + (days !== 1 ? 's' : '') + '.';
+    function showLoanDetails(loan) {
+        var totalDeducted = getTotalDeducted(loan);
+        var remainingBalance = getRemainingBalance(loan);
+        var status = getLoanStatus(loan);
+
+        document.getElementById(
+            'detailEmployeeInitials'
+        ).textContent = currentEmployee.initials;
+
+        document.getElementById(
+            'detailEmployeeName'
+        ).textContent = currentEmployee.name;
+
+        document.getElementById(
+            'detailEmployeeMeta'
+        ).textContent =
+            currentEmployee.id +
+            ' · ' +
+            currentEmployee.role;
+
+        document.getElementById(
+            'detailLoanStatus'
+        ).innerHTML = statusBadge(status);
+
+        document.getElementById(
+            'detailLoanType'
+        ).textContent = loan.type;
+
+        document.getElementById(
+            'detailReference'
+        ).textContent = loan.reference;
+
+        document.getElementById(
+            'detailStartPeriod'
+        ).textContent = loan.startPeriod;
+
+        document.getElementById(
+            'detailDeduction'
+        ).textContent = peso(loan.deductionPerPayroll);
+
+        document.getElementById(
+            'detailLoanAmount'
+        ).textContent = peso(loan.amount);
+
+        document.getElementById(
+            'detailTotalDeducted'
+        ).textContent = peso(totalDeducted);
+
+        document.getElementById(
+            'detailRemainingBalance'
+        ).textContent = peso(remainingBalance);
+
+        renderDeductionHistory(loan);
+
+        var modal = bootstrap.Modal.getOrCreateInstance(
+            document.getElementById('loanDetailsModal')
+        );
+
+        modal.show();
     }
 
-    document.getElementById('leaveDateFrom').addEventListener('change', updateDaysPreview);
-    document.getElementById('leaveDateTo').addEventListener('change', updateDaysPreview);
+    function renderDeductionHistory(loan) {
+        var tbody = document.getElementById(
+            'loanDeductionHistoryBody'
+        );
 
-    document.getElementById('leaveForm').addEventListener('submit', function (e) {
-        e.preventDefault();
-        var form = e.target;
-        if (!form.checkValidity()) {
-            form.classList.add('was-validated');
+        var empty = document.getElementById(
+            'loanDeductionHistoryEmpty'
+        );
+
+        if (!loan.deductionHistory.length) {
+            tbody.innerHTML = '';
+            empty.classList.remove('d-none');
             return;
         }
 
-        var category = document.getElementById('leaveCategory').value;
-        var dateFrom = document.getElementById('leaveDateFrom').value;
-        var dateTo = document.getElementById('leaveDateTo').value;
-        var reason = document.getElementById('leaveReason').value.trim();
-        var days = countDays(dateFrom, dateTo);
+        empty.classList.add('d-none');
 
-        if (days <= 0) {
-            document.getElementById('leaveDateTo').setCustomValidity('End date must be after start date.');
-            form.classList.add('was-validated');
+        tbody.innerHTML = loan.deductionHistory
+            .slice()
+            .reverse()
+            .map(function (item) {
+                return (
+                    '<tr>' +
+
+                        '<td>' +
+                            escapeHtml(item.period) +
+                        '</td>' +
+
+                        '<td>' +
+                            peso(item.amount) +
+                        '</td>' +
+
+                        '<td>' +
+                            peso(item.remainingBalance) +
+                        '</td>' +
+
+                        '<td>' +
+                            formatDate(item.dateProcessed) +
+                        '</td>' +
+
+                    '</tr>'
+                );
+            })
+            .join('');
+    }
+
+    document.getElementById(
+        'loanHistoryBody'
+    ).addEventListener('click', function (event) {
+
+        var button = event.target.closest('[data-loan-id]');
+
+        if (!button) {
             return;
         }
-        document.getElementById('leaveDateTo').setCustomValidity('');
 
-        var pendingDays = requests.filter(function (r) {
-            return r.status === 'Pending' && r.category === category;
-        }).reduce(function (sum, r) {
-            return sum + countDays(r.dateFrom, r.dateTo);
-        }, 0);
-        var remaining = ALLOWANCE[category] - (USED[category] || 0) - pendingDays;
-        if (days > remaining) {
-            alert('Insufficient ' + category + ' Leave balance. You have ' + remaining + ' day(s) remaining.');
-            return;
+        var loanId = parseInt(
+            button.getAttribute('data-loan-id'),
+            10
+        );
+
+        var loan = findLoan(loanId);
+
+        if (loan) {
+            showLoanDetails(loan);
         }
-
-        requests.unshift({
-            id: nextId++,
-            category: category,
-            dateFrom: dateFrom,
-            dateTo: dateTo,
-            status: 'Pending',
-            filedDate: new Date().toISOString().slice(0, 10),
-            reason: reason
-        });
-
-        form.reset();
-        form.classList.remove('was-validated');
-        document.getElementById('leaveDaysPreview').classList.add('d-none');
-        bootstrap.Modal.getInstance(document.getElementById('leaveFormModal')).hide();
-        renderBalance();
-        renderHistory();
     });
 
-    document.getElementById('leaveFormModal').addEventListener('hidden.bs.modal', function () {
-        var form = document.getElementById('leaveForm');
-        form.reset();
-        form.classList.remove('was-validated');
-        document.getElementById('leaveDaysPreview').classList.add('d-none');
-    });
-
-    renderBalance();
-    renderHistory();
+    renderLoans();
 })();
