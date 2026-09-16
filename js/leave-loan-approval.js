@@ -1,6 +1,6 @@
 (function () {
     PayrollProLayout.init({
-        activeNav: 'leave',
+        activeNav: 'loans',
         user: {
             name: 'Maria Elena Reyes',
             role: 'Payroll Master',
@@ -13,264 +13,599 @@
         notifications: true
     });
 
-    var leaveRequests = [
-        { id: 101, employee: 'Dr. Maria Santos', category: 'Vacation', dateFrom: '2026-07-14', dateTo: '2026-07-16', filedDate: '2026-07-04', status: 'Pending', reason: 'Family vacation' },
-        { id: 102, employee: 'Juan Dela Cruz', category: 'Sick', dateFrom: '2026-07-10', dateTo: '2026-07-11', filedDate: '2026-07-06', status: 'Pending', reason: 'Flu symptoms' },
-        { id: 103, employee: 'Elena Villanueva', category: 'Maternity', dateFrom: '2026-08-01', dateTo: '2026-11-13', filedDate: '2026-06-20', status: 'Approved', reason: 'Maternity leave' },
-        { id: 104, employee: 'Michael Tan', category: 'Paternity', dateFrom: '2026-07-20', dateTo: '2026-07-26', filedDate: '2026-07-01', status: 'Rejected', reason: 'Newborn care', remarks: 'Insufficient documentation submitted.' },
-        { id: 105, employee: 'Ana Reyes', category: 'Vacation', dateFrom: '2026-06-05', dateTo: '2026-06-07', filedDate: '2026-05-28', status: 'Approved', reason: 'Personal travel' }
+    var employees = [
+        {
+            id: 'EMP-2023-007',
+            name: 'Anna Cruz',
+            role: 'Admin Staff'
+        },
+        {
+            id: 'EMP-2024-012',
+            name: 'Dr. Maria Santos',
+            role: 'Faculty Staff'
+        },
+        {
+            id: 'EMP-2022-031',
+            name: 'Juan Dela Cruz',
+            role: 'Admin Staff'
+        },
+        {
+            id: 'EMP-2021-089',
+            name: 'Elena Villanueva',
+            role: 'Faculty Staff'
+        }
     ];
 
-    var loanRequests = [
-        { id: 201, employee: 'Dr. Maria Santos', type: 'SSS Salary Loan', principal: 50000, term: 18, filedDate: '2026-07-02', status: 'Pending' },
-        { id: 202, employee: 'Carlos Mendoza', type: 'Pag-IBIG Loan', principal: 80000, term: 24, filedDate: '2026-07-05', status: 'Pending' },
-        { id: 203, employee: 'Juan Dela Cruz', type: 'Institutional Loan', principal: 25000, term: 12, filedDate: '2026-06-15', status: 'Approved' },
-        { id: 204, employee: 'Rosa Garcia', type: 'SSS Salary Loan', principal: 30000, term: 12, filedDate: '2026-06-01', status: 'Rejected', remarks: 'Existing loan balance exceeds policy limit.' }
+    var loans = [
+        {
+            id: 1,
+            employeeId: 'EMP-2023-007',
+            employeeName: 'Anna Cruz',
+            employeeRole: 'Admin Staff',
+            type: 'SSS Salary Loan',
+            reference: 'SSS-2026-00123',
+            amount: 20000,
+            deductionPerPayroll: 1000,
+            startPeriod: '2026-03-11_2026-03-25',
+            startPeriodLabel: 'March 11 – March 25, 2026',
+            status: 'Active',
+            remarks: '',
+            deductionHistory: [
+                {
+                    period: 'March 11 – March 25, 2026',
+                    amount: 1000,
+                    remainingBalance: 19000,
+                    dateProcessed: '2026-03-25'
+                },
+                {
+                    period: 'March 26 – April 10, 2026',
+                    amount: 1000,
+                    remainingBalance: 18000,
+                    dateProcessed: '2026-04-10'
+                },
+                {
+                    period: 'April 11 – April 25, 2026',
+                    amount: 1000,
+                    remainingBalance: 17000,
+                    dateProcessed: '2026-04-25'
+                },
+                {
+                    period: 'April 26 – May 10, 2026',
+                    amount: 1000,
+                    remainingBalance: 16000,
+                    dateProcessed: '2026-05-10'
+                },
+                {
+                    period: 'May 11 – May 25, 2026',
+                    amount: 1000,
+                    remainingBalance: 15000,
+                    dateProcessed: '2026-05-25'
+                },
+                {
+                    period: 'May 26 – June 10, 2026',
+                    amount: 1000,
+                    remainingBalance: 14000,
+                    dateProcessed: '2026-06-10'
+                },
+                {
+                    period: 'June 11 – June 25, 2026',
+                    amount: 1000,
+                    remainingBalance: 13000,
+                    dateProcessed: '2026-06-25'
+                },
+                {
+                    period: 'June 26 – July 10, 2026',
+                    amount: 1000,
+                    remainingBalance: 12000,
+                    dateProcessed: '2026-07-10'
+                },
+                {
+                    period: 'July 11 – July 25, 2026',
+                    amount: 1000,
+                    remainingBalance: 11000,
+                    dateProcessed: '2026-07-25'
+                },
+                {
+                    period: 'July 26 – August 10, 2026',
+                    amount: 1000,
+                    remainingBalance: 10000,
+                    dateProcessed: '2026-08-10'
+                },
+                {
+                    period: 'August 11 – August 25, 2026',
+                    amount: 1000,
+                    remainingBalance: 9000,
+                    dateProcessed: '2026-08-25'
+                },
+                {
+                    period: 'August 26 – September 10, 2026',
+                    amount: 1000,
+                    remainingBalance: 8000,
+                    dateProcessed: '2026-09-10'
+                }
+            ]
+        },
+        {
+            id: 2,
+            employeeId: 'EMP-2021-089',
+            employeeName: 'Elena Villanueva',
+            employeeRole: 'Faculty Staff',
+            type: 'Pag-IBIG MPL',
+            reference: 'HDMF-2025-0456',
+            amount: 15000,
+            deductionPerPayroll: 750,
+            startPeriod: '2025-11-11_2025-11-25',
+            startPeriodLabel: 'November 11 – November 25, 2025',
+            status: 'Paid',
+            remarks: '',
+            deductionHistory: [
+                {
+                    period: 'August 26 – September 10, 2026',
+                    amount: 750,
+                    remainingBalance: 750,
+                    dateProcessed: '2026-09-10'
+                },
+                {
+                    period: 'September 11 – September 25, 2026',
+                    amount: 750,
+                    remainingBalance: 0,
+                    dateProcessed: '2026-09-25'
+                }
+            ]
+        }
     ];
 
-    var pendingReject = null;
-    var rejectModalEl = document.getElementById('rejectModal');
-    var rejectModal = new bootstrap.Modal(rejectModalEl);
+    var nextLoanId = 3;
+
+    function peso(value) {
+        var amount = Number(value) || 0;
+
+        return '₱' + amount.toLocaleString('en-PH', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    }
 
     function formatDate(iso) {
-        if (!iso) return '—';
-        var d = new Date(iso + 'T00:00:00');
-        return d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+        if (!iso) {
+            return '—';
+        }
+
+        var date = new Date(iso + 'T00:00:00');
+
+        return date.toLocaleDateString('en-PH', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+        });
     }
 
-    function formatRange(from, to) {
-        return formatDate(from) + ' – ' + formatDate(to);
+    function escapeHtml(value) {
+        return String(value == null ? '' : value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
     }
 
-    function countDays(from, to) {
-        var start = new Date(from + 'T00:00:00');
-        var end = new Date(to + 'T00:00:00');
-        if (end < start) return 0;
-        return Math.round((end - start) / 86400000) + 1;
+    function getTotalPaid(loan) {
+        return loan.deductionHistory.reduce(function (total, item) {
+            return total + Number(item.amount || 0);
+        }, 0);
     }
 
-    function peso(n) {
-        return '₱' + n.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    function getRemainingBalance(loan) {
+        return Math.max(0, loan.amount - getTotalPaid(loan));
+    }
+
+    function getLoanStatus(loan) {
+        return getRemainingBalance(loan) <= 0 ? 'Paid' : 'Active';
     }
 
     function statusBadge(status) {
-        var map = {
-            Pending: 'pp-badge-pending',
-            Approved: 'pp-badge-approved',
-            Rejected: 'pp-badge-rejected',
-            Cancelled: 'pp-badge-cancelled'
-        };
-        return '<span class="pp-badge ' + (map[status] || 'pp-badge-cancelled') + '">' + status + '</span>';
-    }
-
-    function inDateRange(filedDate, from, to) {
-        if (from && filedDate < from) return false;
-        if (to && filedDate > to) return false;
-        return true;
-    }
-
-    function actionButtons(item, type) {
-        if (item.status !== 'Pending') {
-            return '<span class="text-muted small">—</span>';
+        if (status === 'Paid') {
+            return '<span class="loan-status loan-status-paid">Paid</span>';
         }
+
+        return '<span class="loan-status loan-status-active">Active</span>';
+    }
+
+    function getInitials(name) {
+        var parts = String(name || '')
+            .trim()
+            .split(/\s+/)
+            .filter(Boolean);
+
+        if (!parts.length) {
+            return '--';
+        }
+
+        if (parts.length === 1) {
+            return parts[0].charAt(0).toUpperCase();
+        }
+
         return (
-            '<div class="pp-approval-actions">' +
-                '<button type="button" class="btn-pp-approve" data-action="approve" data-type="' + type + '" data-id="' + item.id + '">Approve</button>' +
-                '<button type="button" class="btn-pp-reject" data-action="reject" data-type="' + type + '" data-id="' + item.id + '">Reject</button>' +
-            '</div>'
+            parts[0].charAt(0) +
+            parts[parts.length - 1].charAt(0)
+        ).toUpperCase();
+    }
+
+    function populateEmployeeSelect() {
+        var select = document.getElementById('loanEmployee');
+
+        select.innerHTML =
+            '<option value="" selected disabled>Select employee</option>' +
+            employees.map(function (employee) {
+                return (
+                    '<option value="' + escapeHtml(employee.id) + '">' +
+                        escapeHtml(employee.name) +
+                        ' — ' +
+                        escapeHtml(employee.id) +
+                    '</option>'
+                );
+            }).join('');
+    }
+
+    function renderLoans() {
+        var search = document
+            .getElementById('loanSearch')
+            .value
+            .trim()
+            .toLowerCase();
+
+        var type = document.getElementById('loanTypeFilter').value;
+        var status = document.getElementById('loanStatusFilter').value;
+
+        var tbody = document.getElementById('loanTableBody');
+        var empty = document.getElementById('loanEmptyState');
+
+        var filtered = loans.filter(function (loan) {
+            var currentStatus = getLoanStatus(loan);
+
+            var matchesSearch =
+                !search ||
+                loan.employeeName.toLowerCase().indexOf(search) >= 0 ||
+                loan.employeeId.toLowerCase().indexOf(search) >= 0;
+
+            var matchesType =
+                type === 'all' ||
+                loan.type === type;
+
+            var matchesStatus =
+                status === 'all' ||
+                currentStatus === status;
+
+            return matchesSearch && matchesType && matchesStatus;
+        });
+
+        if (!filtered.length) {
+            tbody.innerHTML = '';
+            empty.classList.remove('d-none');
+            return;
+        }
+
+        empty.classList.add('d-none');
+
+        tbody.innerHTML = filtered.map(function (loan) {
+            var totalPaid = getTotalPaid(loan);
+            var remaining = getRemainingBalance(loan);
+            var currentStatus = getLoanStatus(loan);
+
+            return (
+                '<tr>' +
+
+                    '<td>' +
+                        '<strong>' +
+                            escapeHtml(loan.employeeName) +
+                        '</strong>' +
+                    '</td>' +
+
+                    '<td>' +
+                        escapeHtml(loan.employeeId) +
+                    '</td>' +
+
+                    '<td>' +
+                        escapeHtml(loan.type) +
+                    '</td>' +
+
+                    '<td>' +
+                        escapeHtml(loan.reference) +
+                    '</td>' +
+
+                    '<td class="loan-money">' +
+                        peso(loan.amount) +
+                    '</td>' +
+
+                    '<td class="loan-money">' +
+                        peso(loan.deductionPerPayroll) +
+                    '</td>' +
+
+                    '<td class="loan-money">' +
+                        peso(totalPaid) +
+                    '</td>' +
+
+                    '<td class="loan-balance ' +
+                        (remaining <= 0 ? 'loan-balance-paid' : '') +
+                    '">' +
+                        peso(remaining) +
+                    '</td>' +
+
+                    '<td>' +
+                        statusBadge(currentStatus) +
+                    '</td>' +
+
+                    '<td class="col-actions">' +
+                        '<button ' +
+                            'type="button" ' +
+                            'class="loan-view-btn" ' +
+                            'data-loan-id="' + loan.id + '">' +
+                            'View Details' +
+                        '</button>' +
+                    '</td>' +
+
+                '</tr>'
+            );
+        }).join('');
+    }
+
+    function findLoan(id) {
+        return loans.find(function (loan) {
+            return loan.id === id;
+        });
+    }
+
+    function showLoanDetails(loan) {
+        var totalPaid = getTotalPaid(loan);
+        var remaining = getRemainingBalance(loan);
+        var currentStatus = getLoanStatus(loan);
+
+        document.getElementById('detailEmployeeInitials').textContent =
+            getInitials(loan.employeeName);
+
+        document.getElementById('detailEmployeeName').textContent =
+            loan.employeeName;
+
+        document.getElementById('detailEmployeeMeta').textContent =
+            loan.employeeId + ' · ' + loan.employeeRole;
+
+        document.getElementById('detailLoanStatus').innerHTML =
+            statusBadge(currentStatus);
+
+        document.getElementById('detailLoanType').textContent =
+            loan.type;
+
+        document.getElementById('detailReference').textContent =
+            loan.reference;
+
+        document.getElementById('detailStartPeriod').textContent =
+            loan.startPeriodLabel;
+
+        document.getElementById('detailDeduction').textContent =
+            peso(loan.deductionPerPayroll);
+
+        document.getElementById('detailLoanAmount').textContent =
+            peso(loan.amount);
+
+        document.getElementById('detailTotalPaid').textContent =
+            peso(totalPaid);
+
+        document.getElementById('detailRemainingBalance').textContent =
+            peso(remaining);
+
+        renderDeductionHistory(loan);
+
+        var modal = bootstrap.Modal.getOrCreateInstance(
+            document.getElementById('loanDetailsModal')
         );
+
+        modal.show();
     }
 
-    function renderLeaveApprovals() {
-        var status = document.getElementById('leaveFilterStatus').value;
-        var from = document.getElementById('leaveFilterFrom').value;
-        var to = document.getElementById('leaveFilterTo').value;
-        var tbody = document.getElementById('leaveApprovalBody');
-        var empty = document.getElementById('leaveApprovalEmpty');
+    function renderDeductionHistory(loan) {
+        var tbody = document.getElementById('loanDeductionHistoryBody');
+        var empty = document.getElementById('loanDeductionHistoryEmpty');
 
-        var filtered = leaveRequests.filter(function (r) {
-            if (status !== 'all' && r.status !== status) return false;
-            return inDateRange(r.filedDate, from, to);
-        }).sort(function (a, b) {
-            return b.filedDate.localeCompare(a.filedDate);
-        });
-
-        document.getElementById('leavePendingCount').textContent = leaveRequests.filter(function (r) {
-            return r.status === 'Pending';
-        }).length;
-
-        if (!filtered.length) {
+        if (!loan.deductionHistory.length) {
             tbody.innerHTML = '';
             empty.classList.remove('d-none');
             return;
         }
 
         empty.classList.add('d-none');
-        tbody.innerHTML = filtered.map(function (r) {
-            var days = countDays(r.dateFrom, r.dateTo);
-            return (
-                '<tr>' +
-                    '<td><strong>' + r.employee + '</strong></td>' +
-                    '<td>' + r.category + '</td>' +
-                    '<td class="col-details">' + formatRange(r.dateFrom, r.dateTo) + ' · ' + days + ' day' + (days !== 1 ? 's' : '') + '</td>' +
-                    '<td class="col-time">' + formatDate(r.filedDate) + '</td>' +
-                    '<td>' + statusBadge(r.status) + '</td>' +
-                    '<td class="col-actions">' + actionButtons(r, 'leave') + '</td>' +
-                '</tr>'
-            );
-        }).join('');
+
+        tbody.innerHTML = loan.deductionHistory
+            .slice()
+            .reverse()
+            .map(function (item) {
+                return (
+                    '<tr>' +
+
+                        '<td>' +
+                            escapeHtml(item.period) +
+                        '</td>' +
+
+                        '<td>' +
+                            peso(item.amount) +
+                        '</td>' +
+
+                        '<td>' +
+                            peso(item.remainingBalance) +
+                        '</td>' +
+
+                        '<td>' +
+                            formatDate(item.dateProcessed) +
+                        '</td>' +
+
+                    '</tr>'
+                );
+            })
+            .join('');
     }
 
-    function renderLoanApprovals() {
-        var status = document.getElementById('loanFilterStatus').value;
-        var from = document.getElementById('loanFilterFrom').value;
-        var to = document.getElementById('loanFilterTo').value;
-        var tbody = document.getElementById('loanApprovalBody');
-        var empty = document.getElementById('loanApprovalEmpty');
+    document.getElementById('loanSearch').addEventListener(
+        'input',
+        renderLoans
+    );
 
-        var filtered = loanRequests.filter(function (r) {
-            if (status !== 'all' && r.status !== status) return false;
-            return inDateRange(r.filedDate, from, to);
-        }).sort(function (a, b) {
-            return b.filedDate.localeCompare(a.filedDate);
-        });
+    document.getElementById('loanTypeFilter').addEventListener(
+        'change',
+        renderLoans
+    );
 
-        document.getElementById('loanPendingCount').textContent = loanRequests.filter(function (r) {
-            return r.status === 'Pending';
-        }).length;
+    document.getElementById('loanStatusFilter').addEventListener(
+        'change',
+        renderLoans
+    );
 
-        if (!filtered.length) {
-            tbody.innerHTML = '';
-            empty.classList.remove('d-none');
-            return;
-        }
+    document.getElementById('loanTableBody').addEventListener(
+        'click',
+        function (event) {
+            var button = event.target.closest('[data-loan-id]');
 
-        empty.classList.add('d-none');
-        tbody.innerHTML = filtered.map(function (r) {
-            var monthly = r.principal / r.term;
-            return (
-                '<tr>' +
-                    '<td><strong>' + r.employee + '</strong></td>' +
-                    '<td>' + r.type + '</td>' +
-                    '<td class="col-details">' + peso(r.principal) + ' · ' + r.term + ' mo · ' + peso(monthly) + '/mo</td>' +
-                    '<td class="col-time">' + formatDate(r.filedDate) + '</td>' +
-                    '<td>' + statusBadge(r.status) + '</td>' +
-                    '<td class="col-actions">' + actionButtons(r, 'loan') + '</td>' +
-                '</tr>'
-            );
-        }).join('');
-    }
-
-    function findRequest(type, id) {
-        var list = type === 'leave' ? leaveRequests : loanRequests;
-        return list.find(function (r) { return r.id === id; });
-    }
-
-    function switchTab(tab) {
-        document.querySelectorAll('.pp-approval-tab').forEach(function (btn) {
-            btn.classList.toggle('active', btn.dataset.tab === tab);
-        });
-        document.getElementById('panelLeave').classList.toggle('d-none', tab !== 'leave');
-        document.getElementById('panelLoans').classList.toggle('d-none', tab !== 'loans');
-
-        var activeNav = tab === 'loans' ? 'loans' : 'leave';
-        document.querySelectorAll('.pp-sidebar-link').forEach(function (link) {
-            var href = link.getAttribute('href') || '';
-            var isLeave = href.indexOf('leave-loan-approval') >= 0 && href.indexOf('tab=loans') < 0;
-            var isLoans = href.indexOf('tab=loans') >= 0;
-            link.classList.toggle('active', (tab === 'leave' && isLeave && !isLoans) || (tab === 'loans' && isLoans));
-            if ((tab === 'leave' && isLeave && !isLoans) || (tab === 'loans' && isLoans)) {
-                link.setAttribute('aria-current', 'page');
-            } else {
-                link.removeAttribute('aria-current');
+            if (!button) {
+                return;
             }
-        });
-    }
 
-    document.querySelectorAll('.pp-approval-tab').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-            switchTab(btn.dataset.tab);
-        });
-    });
+            var loanId = parseInt(
+                button.getAttribute('data-loan-id'),
+                10
+            );
 
-    ['leaveFilterStatus', 'leaveFilterFrom', 'leaveFilterTo'].forEach(function (id) {
-        document.getElementById(id).addEventListener('change', renderLeaveApprovals);
-    });
+            var loan = findLoan(loanId);
 
-    ['loanFilterStatus', 'loanFilterFrom', 'loanFilterTo'].forEach(function (id) {
-        document.getElementById(id).addEventListener('change', renderLoanApprovals);
-    });
-
-    document.getElementById('leaveClearFilters').addEventListener('click', function () {
-        document.getElementById('leaveFilterStatus').value = 'Pending';
-        document.getElementById('leaveFilterFrom').value = '';
-        document.getElementById('leaveFilterTo').value = '';
-        renderLeaveApprovals();
-    });
-
-    document.getElementById('loanClearFilters').addEventListener('click', function () {
-        document.getElementById('loanFilterStatus').value = 'Pending';
-        document.getElementById('loanFilterFrom').value = '';
-        document.getElementById('loanFilterTo').value = '';
-        renderLoanApprovals();
-    });
-
-    document.addEventListener('click', function (e) {
-        var btn = e.target.closest('[data-action]');
-        if (!btn) return;
-
-        var action = btn.getAttribute('data-action');
-        var type = btn.getAttribute('data-type');
-        var id = parseInt(btn.getAttribute('data-id'), 10);
-        var item = findRequest(type, id);
-        if (!item || item.status !== 'Pending') return;
-
-        if (action === 'approve') {
-            item.status = 'Approved';
-            renderLeaveApprovals();
-            renderLoanApprovals();
-            return;
+            if (loan) {
+                showLoanDetails(loan);
+            }
         }
+    );
 
-        if (action === 'reject') {
-            pendingReject = { type: type, id: id, item: item };
-            document.getElementById('rejectContext').textContent =
-                'Reject ' + (type === 'leave' ? 'leave' : 'loan') + ' request from ' + item.employee + '. Remarks are required.';
-            document.getElementById('rejectForm').reset();
-            document.getElementById('rejectForm').classList.remove('was-validated');
-            rejectModal.show();
+    document.getElementById('recordLoanForm').addEventListener(
+        'submit',
+        function (event) {
+            event.preventDefault();
+
+            var form = event.target;
+
+            if (!form.checkValidity()) {
+                form.classList.add('was-validated');
+                return;
+            }
+
+            var employeeId =
+                document.getElementById('loanEmployee').value;
+
+            var employee = employees.find(function (item) {
+                return item.id === employeeId;
+            });
+
+            if (!employee) {
+                return;
+            }
+
+            var type =
+                document.getElementById('loanType').value;
+
+            var reference =
+                document.getElementById('loanReference').value.trim();
+
+            var amount =
+                parseFloat(
+                    document.getElementById('loanAmount').value
+                );
+
+            var deduction =
+                parseFloat(
+                    document.getElementById('loanDeduction').value
+                );
+
+            var startPeriodSelect =
+                document.getElementById('loanStartPeriod');
+
+            var startPeriod =
+                startPeriodSelect.value;
+
+            var startPeriodLabel =
+                startPeriodSelect.options[
+                    startPeriodSelect.selectedIndex
+                ].text.trim();
+
+            var remarks =
+                document.getElementById('loanRemarks').value.trim();
+
+            if (
+                !amount ||
+                amount <= 0 ||
+                !deduction ||
+                deduction <= 0
+            ) {
+                form.classList.add('was-validated');
+                return;
+            }
+
+            if (deduction > amount) {
+                alert(
+                    'Deduction per payroll cannot be greater than the total loan amount.'
+                );
+                return;
+            }
+
+            var duplicateReference = loans.some(function (loan) {
+                return loan.reference.toLowerCase() ===
+                    reference.toLowerCase();
+            });
+
+            if (duplicateReference) {
+                alert(
+                    'A loan with this reference number already exists.'
+                );
+                return;
+            }
+
+            loans.push({
+                id: nextLoanId++,
+                employeeId: employee.id,
+                employeeName: employee.name,
+                employeeRole: employee.role,
+                type: type,
+                reference: reference,
+                amount: amount,
+                deductionPerPayroll: deduction,
+                startPeriod: startPeriod,
+                startPeriodLabel: startPeriodLabel,
+                status: 'Active',
+                remarks: remarks,
+                deductionHistory: []
+            });
+
+            form.reset();
+            form.classList.remove('was-validated');
+
+            var modalElement =
+                document.getElementById('recordLoanModal');
+
+            var modal =
+                bootstrap.Modal.getInstance(modalElement);
+
+            if (modal) {
+                modal.hide();
+            }
+
+            renderLoans();
         }
-    });
+    );
 
-    document.getElementById('rejectForm').addEventListener('submit', function (e) {
-        e.preventDefault();
-        var form = e.target;
-        if (!form.checkValidity()) {
-            form.classList.add('was-validated');
-            return;
+    document.getElementById('recordLoanModal').addEventListener(
+        'hidden.bs.modal',
+        function () {
+            var form =
+                document.getElementById('recordLoanForm');
+
+            form.reset();
+            form.classList.remove('was-validated');
         }
-        if (!pendingReject) return;
+    );
 
-        var item = pendingReject.item;
-        item.status = 'Rejected';
-        item.remarks = document.getElementById('rejectRemarks').value.trim();
-        pendingReject = null;
-        rejectModal.hide();
-        renderLeaveApprovals();
-        renderLoanApprovals();
-    });
-
-    rejectModalEl.addEventListener('hidden.bs.modal', function () {
-        pendingReject = null;
-        document.getElementById('rejectForm').reset();
-        document.getElementById('rejectForm').classList.remove('was-validated');
-    });
-
-    var params = new URLSearchParams(location.search);
-    if (params.get('tab') === 'loans') {
-        switchTab('loans');
-    }
-
-    renderLeaveApprovals();
-    renderLoanApprovals();
+    populateEmployeeSelect();
+    renderLoans();
 })();

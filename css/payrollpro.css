@@ -73,6 +73,10 @@ body.pp-app {
     background: var(--pp-primary-light);
 }
 
+.pp-sidebar-link:hover i {
+    color: var(--pp-primary);
+}
+
 .pp-nav-link.active {
     color: var(--pp-primary-dark) !important;
     background: var(--pp-accent-light);
@@ -600,7 +604,7 @@ body.pp-app-shell {
 .pp-sidebar {
     width: 260px;
     flex-shrink: 0;
-    background: #72a1e4;
+    background: #3f6f9f;
     border-right: 1px solid var(--pp-border);
     display: flex;
     flex-direction: column;
@@ -2432,4 +2436,279 @@ body.pp-app-shell {
 .pp-logout-button:hover {
     background: #FEF2F2;
     color: #B91C1C;
+}
+/* =========================================================
+   PAYROLL MASTER DASHBOARD
+   ========================================================= */
+
+.pp-dash-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.pp-widget {
+    overflow: hidden;
+    background: #ffffff;
+    border: 1px solid #d9e5ed;
+    border-radius: 14px;
+    box-shadow: 0 5px 16px rgba(30, 78, 110, 0.07);
+}
+
+.pp-widget-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 16px 18px;
+    background: #f8fbfd;
+    border-bottom: 1px solid #dce7ee;
+}
+
+.pp-widget-title {
+    margin: 0;
+    color: #0c4f70;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.pp-widget-title i {
+    color: #1681ad;
+}
+
+.pp-widget-subtitle {
+    margin-top: 4px;
+    color: #6c8190;
+    font-size: 12px;
+}
+
+.pp-widget-body {
+    padding: 18px;
+}
+
+
+/* CURRENT PAYROLL / BIOMETRIC INNER CARDS */
+
+.pp-widget-body > .pp-card {
+    background: #f3f8fc;
+    border: 1px solid #dbe8f0;
+    box-shadow: none;
+}
+
+.pp-widget-body > .pp-card .pp-card-body {
+    padding: 18px;
+}
+
+
+/* ICON BOX */
+
+.pp-icon-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 46px;
+    flex: 0 0 46px;
+    border-radius: 11px;
+    background: #e1f1f8;
+    color: #0878a5;
+    font-size: 30px;
+    line-height: 2;
+}
+
+.pp-widget:first-child .pp-icon-box {
+    background: #e8efff;
+    color: #2f64c7;
+}
+
+.pp-widget:nth-child(2) .pp-icon-box {
+    background: #e4f6ed;
+    color: #168456;
+}
+
+
+/* PAYROLL PERIOD STATUS */
+
+.pp-badge-warning {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 11px;
+    background: #fff1d5;
+    border-radius: 7px;
+    color: #98610f;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+
+/* BIOMETRIC STATUS */
+
+.pp-device-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 11px;
+    border-radius: 7px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.pp-device-status-connected {
+    background: #e1f6e9;
+    color: #178248;
+}
+
+.pp-device-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+
+/* DASHBOARD BUTTONS */
+
+.pp-widget-body .btn-pp-primary {
+    background: #126d8c;
+    border-color: #126d8c;
+}
+
+.pp-widget-body .btn-pp-primary:hover {
+    background: #0d5d78;
+    border-color: #0d5d78;
+}
+
+
+/* RECENT ACTIVITY */
+
+.pp-activity-feed {
+    background: #ffffff;
+}
+
+.pp-activity-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 13px;
+    padding: 14px 18px;
+    border-bottom: 1px solid #e8eef2;
+}
+
+.pp-activity-item:last-child {
+    border-bottom: 0;
+}
+
+.pp-activity-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
+    border-radius: 50%;
+    font-size: 15px;
+}
+
+.pp-activity-icon-success {
+    background: #e3f6ea;
+    color: #18864b;
+}
+
+.pp-activity-icon-warning {
+    background: #fff2dc;
+    color: #b77718;
+}
+
+.pp-activity-icon-info {
+    background: #e3f2f9;
+    color: #0878a5;
+}
+
+.pp-activity-icon-primary {
+    background: #e8efff;
+    color: #3569d4;
+}
+
+.pp-activity-content {
+    min-width: 0;
+    flex: 1;
+}
+
+.pp-activity-text {
+    margin: 0 0 4px;
+    color: #29465d;
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+.pp-activity-time {
+    color: #8293a3;
+    font-size: 11px;
+}
+
+
+/* QUICK ACTIONS */
+
+.pp-quick-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.pp-quick-action {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 52px;
+    padding: 12px 14px;
+    background: #f8fbfd;
+    border: 1px solid #dce7ee;
+    border-radius: 10px;
+    color: #173d5a;
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    transition:
+        background 0.15s ease,
+        border-color 0.15s ease,
+        transform 0.15s ease;
+}
+
+.pp-quick-action i {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    flex: 0 0 32px;
+    border-radius: 8px;
+    background: #e3f2f9;
+    color: #0878a5;
+    font-size: 15px;
+}
+
+.pp-quick-action:hover {
+    background: #eef7fb;
+    border-color: #bcd7e5;
+    color: #075a7e;
+    transform: translateY(-1px);
+}
+
+
+/* RESPONSIVE */
+
+@media (max-width: 1050px) {
+    .pp-dash-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 700px) {
+    .pp-quick-actions {
+        grid-template-columns: 1fr;
+    }
+
+    .pp-widget-header {
+        align-items: flex-start;
+    }
 }
