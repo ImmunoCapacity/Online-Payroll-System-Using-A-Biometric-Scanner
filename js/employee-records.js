@@ -13,7 +13,7 @@
         notifications: true
     });
 
-    let employeeList = DataStore.getEmployees();
+    let employeeList = [];
 
     const employeeSearch = document.getElementById('employeeSearch');
     const employeeDepartment = document.getElementById('employeeDepartment');
@@ -34,9 +34,31 @@
     const employeeStatusSelect = document.getElementById('employeeStatusSelect');
     const employeeJoined = document.getElementById('employeeJoined');
     const employeeNotes = document.getElementById('employeeNotes');
+    const saveButton = employeeForm.querySelector('button[type="submit"]');
 
-    function persist() {
-        DataStore.saveEmployees(employeeList);
+    // ================================================================
+    // LOAD FROM THE REAL DATABASE (api/employees/list.php)
+    // ================================================================
+
+    function loadEmployees() {
+        employeeBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Loading employees…</td></tr>';
+        emptyState.classList.add('d-none');
+
+        return fetch('api/employees/list.php')
+            .then(function (response) { return response.json(); })
+            .then(function (data) {
+                if (!data.success) {
+                    throw new Error(data.message || 'Failed to load employees.');
+                }
+                employeeList = data.employees;
+                renderTable();
+            })
+            .catch(function (error) {
+                employeeBody.innerHTML = '';
+                emptyState.textContent = 'Could not load employees from the server. Is the PHP backend running and the database reachable?';
+                emptyState.classList.remove('d-none');
+                console.error('[Employee Records]', error);
+            });
     }
 
     function getFilteredEmployees() {
@@ -64,6 +86,7 @@
 
         if (rows.length === 0) {
             employeeBody.innerHTML = '';
+            emptyState.textContent = 'No employees match your search.';
             emptyState.classList.remove('d-none');
             return;
         }
@@ -97,6 +120,7 @@
         modalTitle.textContent = 'Add Employee';
         employeeStatusSelect.value = 'Active';
         employeeDepartmentSelect.value = '';
+        employeeDepartmentSelect.disabled = false;
         employeeJoined.value = new Date().toISOString().slice(0, 10);
         clearNumberError();
     }
@@ -109,6 +133,10 @@
             employeeName.value = employee.displayName;
             employeeNumber.value = employee.employeeNumber;
             employeeDepartmentSelect.value = employee.department;
+            // Department decides which database table a row lives in and
+            // can't be changed after creation without moving that history —
+            // see api/employees/update.php.
+            employeeDepartmentSelect.disabled = true;
             employeeEmail.value = employee.email;
             employeePhone.value = employee.phone;
             employeeStatusSelect.value = employee.status;
@@ -118,6 +146,11 @@
 
         const modal = new bootstrap.Modal(employeeModal);
         modal.show();
+    }
+
+    function setSaving(saving) {
+        saveButton.disabled = saving;
+        saveButton.textContent = saving ? 'Saving…' : 'Save Employee';
     }
 
     function saveEmployee(event) {
@@ -134,15 +167,7 @@
             return;
         }
 
-        if (DataStore.isEmployeeNumberTaken(number, editingId)) {
-            employeeNumber.classList.add('is-invalid');
-            if (employeeNumberError) employeeNumberError.textContent = 'This employee number is already in use.';
-            employeeNumber.focus();
-            return;
-        }
-
         const payload = {
-            id: editingId || number,
             employeeNumber: number,
             displayName: employeeName.value.trim(),
             department: employeeDepartmentSelect.value,
@@ -157,20 +182,37 @@
             return;
         }
 
-        const existingIndex = employeeList.findIndex(function (item) { return item.id === payload.id; });
-        if (existingIndex >= 0) {
-            // Preserve fields this form doesn't manage (type, schedule, rate, fingerprint, etc.)
-            payload.type = employeeList[existingIndex].type || payload.department;
-            employeeList[existingIndex] = Object.assign({}, employeeList[existingIndex], payload);
-        } else {
-            payload.type = payload.department;
-            employeeList.unshift(payload);
+        var url = editingId ? 'api/employees/update.php' : 'api/employees/create.php';
+        if (editingId) {
+            payload.id = editingId;
         }
 
-        persist();
-        bootstrap.Modal.getInstance(employeeModal).hide();
-        renderTable();
-        PPToast.success(existingIndex >= 0 ? 'Employee updated.' : 'Employee added.');
+        setSaving(true);
+
+        fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+            .then(function (response) { return response.json(); })
+            .then(function (data) {
+                setSaving(false);
+
+                if (!data.success) {
+                    employeeNumber.classList.add('is-invalid');
+                    if (employeeNumberError) employeeNumberError.textContent = data.message || 'Could not save employee.';
+                    return;
+                }
+
+                bootstrap.Modal.getInstance(employeeModal).hide();
+                PPToast.success(editingId ? 'Employee updated.' : 'Employee added.');
+                loadEmployees();
+            })
+            .catch(function (error) {
+                setSaving(false);
+                PPToast.error('Could not reach the server. Is the PHP backend running?');
+                console.error('[Employee Records]', error);
+            });
     }
 
     employeeBody.addEventListener('click', function (event) {
@@ -188,15 +230,30 @@
         if (action === 'delete' && match) {
             ConfirmModal.show({
                 title: 'Delete Employee',
-                message: 'Delete ' + match.displayName + ' (' + match.employeeNumber + ')? This will not remove their historical payroll, DTR, leave, or loan records, but they will no longer appear in employee lists. This cannot be undone.',
+                message: 'Delete ' + match.displayName + ' (' + match.employeeNumber + ')? This will also remove their historical payroll, DTR, leave, and loan records. This cannot be undone.',
                 confirmText: 'Delete Employee',
                 tone: 'danger'
             }).then(function (confirmed) {
                 if (!confirmed) return;
-                employeeList = employeeList.filter(function (item) { return item.id !== id; });
-                persist();
-                renderTable();
-                PPToast.success('Employee deleted.');
+
+                fetch('api/employees/delete.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: id })
+                })
+                    .then(function (response) { return response.json(); })
+                    .then(function (data) {
+                        if (!data.success) {
+                            PPToast.error(data.message || 'Could not delete employee.');
+                            return;
+                        }
+                        PPToast.success('Employee deleted.');
+                        loadEmployees();
+                    })
+                    .catch(function (error) {
+                        PPToast.error('Could not reach the server. Is the PHP backend running?');
+                        console.error('[Employee Records]', error);
+                    });
             });
         }
     });
@@ -215,9 +272,9 @@
 
     employeeModal.addEventListener('hidden.bs.modal', resetForm);
 
-    renderTable();
-
-    if (new URLSearchParams(location.search).get('action') === 'add') {
-        openModal(null);
-    }
+    loadEmployees().then(function () {
+        if (new URLSearchParams(location.search).get('action') === 'add') {
+            openModal(null);
+        }
+    });
 })();
