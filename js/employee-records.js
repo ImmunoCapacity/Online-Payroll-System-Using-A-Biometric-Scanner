@@ -13,14 +13,7 @@
         notifications: true
     });
 
-    const employees = [
-        { id: 'EMP-1001', name: 'Dr. Maria Santos', department: 'Faculty', email: 'maria.santos@institution.edu', phone: '0917-111-2222', status: 'Active', joined: '2020-01-15', notes: 'Department head' },
-        { id: 'EMP-1002', name: 'Anna Cruz', department: 'Admin', email: 'anna.cruz@institution.edu', phone: '0917-333-4444', status: 'Active', joined: '2021-06-10', notes: 'Handles HR records' },
-        { id: 'EMP-1003', name: 'Prof. James Rivera', department: 'Faculty', email: 'james.rivera@institution.edu', phone: '0917-555-6666', status: 'On Leave', joined: '2019-09-01', notes: 'On sick leave' },
-        { id: 'EMP-1004', name: 'Elena Villanueva', department: 'Admin', email: 'elena.villanueva@institution.edu', phone: '0917-777-8888', status: 'Inactive', joined: '2018-02-20', notes: 'Retired last quarter' }
-    ];
-
-    let employeeList = employees;
+    let employeeList = DataStore.getEmployees();
 
     const employeeSearch = document.getElementById('employeeSearch');
     const employeeDepartment = document.getElementById('employeeDepartment');
@@ -34,6 +27,7 @@
     const employeeId = document.getElementById('employeeId');
     const employeeName = document.getElementById('employeeName');
     const employeeNumber = document.getElementById('employeeNumber');
+    const employeeNumberError = document.getElementById('employeeNumberError');
     const employeeDepartmentSelect = document.getElementById('employeeDepartmentSelect');
     const employeeEmail = document.getElementById('employeeEmail');
     const employeePhone = document.getElementById('employeePhone');
@@ -41,13 +35,17 @@
     const employeeJoined = document.getElementById('employeeJoined');
     const employeeNotes = document.getElementById('employeeNotes');
 
+    function persist() {
+        DataStore.saveEmployees(employeeList);
+    }
+
     function getFilteredEmployees() {
         const q = employeeSearch.value.trim().toLowerCase();
         const department = employeeDepartment.value;
         const status = employeeStatus.value;
 
         return employeeList.filter(function (employee) {
-            const matchesText = !q || (employee.name + ' ' + employee.email).toLowerCase().includes(q);
+            const matchesText = !q || (employee.displayName + ' ' + employee.email).toLowerCase().includes(q);
             const matchesDepartment = department === 'all' || employee.department === department;
             const matchesStatus = status === 'all' || employee.status === status;
             return matchesText && matchesDepartment && matchesStatus;
@@ -74,15 +72,23 @@
         employeeBody.innerHTML = rows.map(function (employee) {
             return (
                 '<tr>' +
-                    '<td><strong>' + employee.name + '</strong><br><span class="text-muted" style="font-size:0.75rem;">' + employee.id + '</span></td>' +
+                    '<td><strong>' + employee.displayName + '</strong><br><span class="text-muted" style="font-size:0.75rem;">' + employee.employeeNumber + '</span></td>' +
                     '<td>' + employee.department + '</td>' +
                     '<td>' + employee.email + '</td>' +
                     '<td>' + employee.phone + '</td>' +
                     '<td><span class="pp-badge ' + (employee.status === 'Active' ? 'pp-badge-present' : employee.status === 'On Leave' ? 'pp-badge-late' : 'pp-badge-absent') + '">' + employee.status + '</span></td>' +
-                    '<td class="text-center"><button type="button" class="btn btn-sm btn-pp-outline me-2" data-action="edit" data-id="' + employee.id + '"><i class="bi bi-pencil"></i></button><button type="button" class="btn btn-sm btn-pp-outline" data-action="delete" data-id="' + employee.id + '"><i class="bi bi-trash"></i></button></td>' +
+                    '<td class="text-center">' +
+                        '<button type="button" class="btn btn-sm btn-pp-outline me-2" data-action="edit" data-id="' + employee.id + '" aria-label="Edit ' + employee.displayName + '"><i class="bi bi-pencil"></i></button>' +
+                        '<button type="button" class="btn btn-sm btn-pp-outline" data-action="delete" data-id="' + employee.id + '" aria-label="Delete ' + employee.displayName + '"><i class="bi bi-trash"></i></button>' +
+                    '</td>' +
                 '</tr>'
             );
         }).join('');
+    }
+
+    function clearNumberError() {
+        employeeNumber.classList.remove('is-invalid');
+        if (employeeNumberError) employeeNumberError.textContent = '';
     }
 
     function resetForm() {
@@ -92,6 +98,7 @@
         employeeStatusSelect.value = 'Active';
         employeeDepartmentSelect.value = '';
         employeeJoined.value = new Date().toISOString().slice(0, 10);
+        clearNumberError();
     }
 
     function openModal(employee) {
@@ -99,13 +106,13 @@
         if (employee) {
             modalTitle.textContent = 'Edit Employee';
             employeeId.value = employee.id;
-            employeeName.value = employee.name;
-            employeeNumber.value = employee.id;
+            employeeName.value = employee.displayName;
+            employeeNumber.value = employee.employeeNumber;
             employeeDepartmentSelect.value = employee.department;
             employeeEmail.value = employee.email;
             employeePhone.value = employee.phone;
             employeeStatusSelect.value = employee.status;
-            employeeJoined.value = employee.joined;
+            employeeJoined.value = employee.dateHired;
             employeeNotes.value = employee.notes || '';
         }
 
@@ -115,31 +122,55 @@
 
     function saveEmployee(event) {
         event.preventDefault();
+        clearNumberError();
+
+        const editingId = employeeId.value || null;
+        const number = employeeNumber.value.trim();
+
+        if (!number) {
+            employeeNumber.classList.add('is-invalid');
+            if (employeeNumberError) employeeNumberError.textContent = 'Employee number is required.';
+            employeeNumber.focus();
+            return;
+        }
+
+        if (DataStore.isEmployeeNumberTaken(number, editingId)) {
+            employeeNumber.classList.add('is-invalid');
+            if (employeeNumberError) employeeNumberError.textContent = 'This employee number is already in use.';
+            employeeNumber.focus();
+            return;
+        }
 
         const payload = {
-            id: employeeId.value || 'EMP-' + Date.now().toString().slice(-4),
-            name: employeeName.value.trim(),
+            id: editingId || number,
+            employeeNumber: number,
+            displayName: employeeName.value.trim(),
             department: employeeDepartmentSelect.value,
             email: employeeEmail.value.trim(),
             phone: employeePhone.value.trim(),
             status: employeeStatusSelect.value,
-            joined: employeeJoined.value,
+            dateHired: employeeJoined.value,
             notes: employeeNotes.value.trim()
         };
 
-        if (!payload.name || !payload.department || !payload.email || !payload.phone || !payload.joined) {
+        if (!payload.displayName || !payload.department || !payload.email || !payload.phone || !payload.dateHired) {
             return;
         }
 
         const existingIndex = employeeList.findIndex(function (item) { return item.id === payload.id; });
         if (existingIndex >= 0) {
-            employeeList[existingIndex] = payload;
+            // Preserve fields this form doesn't manage (type, schedule, rate, fingerprint, etc.)
+            payload.type = employeeList[existingIndex].type || payload.department;
+            employeeList[existingIndex] = Object.assign({}, employeeList[existingIndex], payload);
         } else {
+            payload.type = payload.department;
             employeeList.unshift(payload);
         }
 
+        persist();
         bootstrap.Modal.getInstance(employeeModal).hide();
         renderTable();
+        PPToast.success(existingIndex >= 0 ? 'Employee updated.' : 'Employee added.');
     }
 
     employeeBody.addEventListener('click', function (event) {
@@ -154,9 +185,19 @@
             openModal(match);
         }
 
-        if (action === 'delete') {
-            employeeList = employeeList.filter(function (item) { return item.id !== id; });
-            renderTable();
+        if (action === 'delete' && match) {
+            ConfirmModal.show({
+                title: 'Delete Employee',
+                message: 'Delete ' + match.displayName + ' (' + match.employeeNumber + ')? This will not remove their historical payroll, DTR, leave, or loan records, but they will no longer appear in employee lists. This cannot be undone.',
+                confirmText: 'Delete Employee',
+                tone: 'danger'
+            }).then(function (confirmed) {
+                if (!confirmed) return;
+                employeeList = employeeList.filter(function (item) { return item.id !== id; });
+                persist();
+                renderTable();
+                PPToast.success('Employee deleted.');
+            });
         }
     });
 
@@ -170,7 +211,13 @@
         field.addEventListener('change', renderTable);
     });
 
+    employeeNumber.addEventListener('input', clearNumberError);
+
     employeeModal.addEventListener('hidden.bs.modal', resetForm);
 
     renderTable();
+
+    if (new URLSearchParams(location.search).get('action') === 'add') {
+        openModal(null);
+    }
 })();

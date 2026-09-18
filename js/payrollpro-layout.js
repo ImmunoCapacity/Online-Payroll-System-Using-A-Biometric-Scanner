@@ -53,14 +53,14 @@
             id: 'loans',
             label: 'Loan Management',
             icon: 'bi-bank',
-            href: 'leave-loan-approval.html?tab=loans'
+            href: 'leave-loan-approval.html'
         },
 
         {
             id: 'reports',
             label: 'Reports',
             icon: 'bi-file-earmark-bar-graph',
-            href: '#'
+            href: 'reports.html'
         },
 
         {
@@ -90,7 +90,7 @@
             id: 'users',
             label: 'User Management',
             icon: 'bi-person-gear',
-            href: '#'
+            href: 'user-management.html'
         },
 
         {
@@ -104,7 +104,14 @@
             id: 'biometric',
             label: 'Biometric Device',
             icon: 'bi-fingerprint',
-            href: '#'
+            href: 'biometric-devices.html'
+        },
+
+        {
+            id: 'fingerprint',
+            label: 'Fingerprint Enrollment',
+            icon: 'bi-fingerprint',
+            href: 'fingerprint-registration.html'
         },
 
         {
@@ -118,7 +125,7 @@
             id: 'reports',
             label: 'Reports',
             icon: 'bi-file-earmark-bar-graph',
-            href: '#'
+            href: 'reports.html'
         }
 
     ];
@@ -162,7 +169,7 @@
             id: 'reports',
             label: 'Attendance Reports',
             icon: 'bi-file-earmark-bar-graph',
-            href: '#'
+            href: 'attendance-reports.html'
         }
 
     ];
@@ -185,7 +192,7 @@
             id: 'attendance',
             label: 'My Attendance',
             icon: 'bi-clock-history',
-            href: '#'
+            href: 'my-attendance.html'
         },
 
         {
@@ -478,21 +485,21 @@
 
                             '<div class="pp-user-dropdown-divider"></div>' +
 
-                            '<a href="#" class="pp-user-dropdown-item">' +
+                            '<button type="button" class="pp-user-dropdown-item" id="ppOpenProfile">' +
 
                                 '<i class="bi bi-person"></i>' +
 
                                 '<span>Profile</span>' +
 
-                            '</a>' +
+                            '</button>' +
 
-                            '<a href="#" class="pp-user-dropdown-item">' +
+                            '<button type="button" class="pp-user-dropdown-item" id="ppOpenSettings">' +
 
                                 '<i class="bi bi-gear"></i>' +
 
                                 '<span>Settings</span>' +
 
-                            '</a>' +
+                            '</button>' +
 
                             '<div class="pp-user-dropdown-divider"></div>' +
 
@@ -716,6 +723,11 @@
                 'click',
                 function () {
 
+                    fetch('api/auth/logout.php', { method: 'POST' }).catch(function () {
+                        // Best-effort — still clear local state and redirect even if
+                        // the backend is unreachable.
+                    });
+
                     try {
 
                         localStorage.removeItem(
@@ -778,6 +790,136 @@
 
         return null;
 
+    }
+
+
+    // ============================================================
+    // PROFILE / SETTINGS MODALS
+    // ============================================================
+
+    function ensureAccountModals(config) {
+
+        if (document.getElementById('ppProfileModal')) {
+            return;
+        }
+
+        var user = config.user;
+        var wrapper = document.createElement('div');
+
+        wrapper.innerHTML =
+
+            '<div class="modal fade pp-modal" id="ppProfileModal" tabindex="-1" aria-hidden="true">' +
+                '<div class="modal-dialog modal-dialog-centered">' +
+                    '<div class="modal-content">' +
+                        '<div class="modal-header">' +
+                            '<h2 class="modal-title"><i class="bi bi-person me-2"></i>Profile</h2>' +
+                            '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>' +
+                        '</div>' +
+                        '<div class="modal-body">' +
+                            '<div class="mb-3">' +
+                                '<label class="pp-form-label">Name</label>' +
+                                '<input type="text" class="form-control pp-form-control" value="' + user.name + '" disabled>' +
+                            '</div>' +
+                            '<div class="mb-3">' +
+                                '<label class="pp-form-label">Role</label>' +
+                                '<input type="text" class="form-control pp-form-control" value="' + user.role + '" disabled>' +
+                            '</div>' +
+                            '<div class="mb-0">' +
+                                '<label class="pp-form-label">Institution</label>' +
+                                '<input type="text" class="form-control pp-form-control" value="' + config.institution.name + '" disabled>' +
+                            '</div>' +
+                            '<p class="pp-form-note mt-3 mb-0">Profile details are managed by your System Administrator and cannot be edited here.</p>' +
+                        '</div>' +
+                        '<div class="modal-footer">' +
+                            '<button type="button" class="btn btn-pp-outline" data-bs-dismiss="modal">Close</button>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+
+            '<div class="modal fade pp-modal" id="ppSettingsModal" tabindex="-1" aria-hidden="true">' +
+                '<div class="modal-dialog modal-dialog-centered">' +
+                    '<div class="modal-content">' +
+                        '<div class="modal-header">' +
+                            '<h2 class="modal-title"><i class="bi bi-gear me-2"></i>Settings</h2>' +
+                            '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>' +
+                        '</div>' +
+                        '<div class="modal-body">' +
+                            '<div class="form-check form-switch mb-3">' +
+                                '<input class="form-check-input" type="checkbox" role="switch" id="ppSettingNotifications">' +
+                                '<label class="form-check-label" for="ppSettingNotifications">Enable notifications</label>' +
+                            '</div>' +
+                            '<div class="form-check form-switch mb-0">' +
+                                '<input class="form-check-input" type="checkbox" role="switch" id="ppSettingCompactSidebar">' +
+                                '<label class="form-check-label" for="ppSettingCompactSidebar">Always collapse sidebar on load</label>' +
+                            '</div>' +
+                        '</div>' +
+                        '<div class="modal-footer">' +
+                            '<button type="button" class="btn btn-pp-outline" data-bs-dismiss="modal">Cancel</button>' +
+                            '<button type="button" class="btn btn-pp-primary" id="ppSettingsSave">Save Changes</button>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+
+        while (wrapper.firstChild) {
+            document.body.appendChild(wrapper.firstChild);
+        }
+    }
+
+    function bindAccountModals(config) {
+
+        ensureAccountModals(config);
+
+        var profileBtn = document.getElementById('ppOpenProfile');
+        var settingsBtn = document.getElementById('ppOpenSettings');
+        var profileModalEl = document.getElementById('ppProfileModal');
+        var settingsModalEl = document.getElementById('ppSettingsModal');
+
+        if (!profileModalEl || !settingsModalEl) {
+            return;
+        }
+
+        var profileModal = bootstrap.Modal.getOrCreateInstance(profileModalEl);
+        var settingsModal = bootstrap.Modal.getOrCreateInstance(settingsModalEl);
+
+        if (profileBtn) {
+            profileBtn.addEventListener('click', function () {
+                profileModal.show();
+            });
+        }
+
+        if (settingsBtn) {
+            settingsBtn.addEventListener('click', function () {
+                try {
+                    var saved = JSON.parse(localStorage.getItem('ppSettings') || '{}');
+                    document.getElementById('ppSettingNotifications').checked = saved.notifications !== false;
+                    document.getElementById('ppSettingCompactSidebar').checked = !!saved.compactSidebar;
+                } catch (error) {
+                    // ignore — defaults already set in markup
+                }
+                settingsModal.show();
+            });
+        }
+
+        var saveBtn = document.getElementById('ppSettingsSave');
+        if (saveBtn) {
+            saveBtn.addEventListener('click', function () {
+                var settings = {
+                    notifications: document.getElementById('ppSettingNotifications').checked,
+                    compactSidebar: document.getElementById('ppSettingCompactSidebar').checked
+                };
+                try {
+                    localStorage.setItem('ppSettings', JSON.stringify(settings));
+                } catch (error) {
+                    console.warn('[PayrollProLayout] Could not save settings:', error);
+                }
+                settingsModal.hide();
+                if (global.PPToast) {
+                    global.PPToast.success('Settings saved.');
+                }
+            });
+        }
     }
 
 
@@ -982,6 +1124,8 @@
             bindSidebarToggle();
 
             bindUserMenu();
+
+            bindAccountModals(config);
 
 
             return config;

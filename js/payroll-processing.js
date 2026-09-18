@@ -29,50 +29,38 @@
         }
     };
 
-    var EMPLOYEES = [
-        {
-            id: 'EMP-2021-014', name: 'Dr. Maria Santos', type: 'Faculty',
-            units: 18, rate: 850, rateType: 'per unit',
-            deductions: { bir: 4250, philhealth: 680, pagibig: 200, loan: 0 },
-            benefits: { chalk: 500, internet: 800 },
-            status: 'reviewed'
-        },
-        {
-            id: 'EMP-2022-031', name: 'Prof. James Rivera', type: 'Faculty',
-            units: 21, rate: 820, rateType: 'per unit',
-            deductions: { bir: 5100, philhealth: 720, pagibig: 200, loan: 1500 },
-            benefits: { chalk: 500 },
-            status: 'reviewed'
-        },
-        {
-            id: 'EMP-2023-007', name: 'Anna Cruz', type: 'Admin',
-            units: 88, rate: 185, rateType: 'per hour',
-            deductions: { bir: 2180, philhealth: 420, pagibig: 200, loan: 0 },
-            benefits: { rice: 1500 },
-            status: 'computed'
-        },
-        {
-            id: 'EMP-2020-052', name: 'Roberto Mendoza', type: 'Faculty',
-            units: 15, rate: 800, rateType: 'per unit',
-            deductions: { bir: 3200, philhealth: 580, pagibig: 200, loan: 800 },
-            benefits: {},
-            status: 'computed'
-        },
-        {
-            id: 'EMP-2021-089', name: 'Elena Villanueva', type: 'Admin',
-            units: 92, rate: 175, rateType: 'per hour',
-            deductions: { bir: 1950, philhealth: 390, pagibig: 200, loan: 0 },
-            benefits: { rice: 1500, laundry: 300 },
-            status: 'reviewed'
-        },
-        {
-            id: 'EMP-2024-003', name: 'Michael Tan', type: 'Faculty',
-            units: 12, rate: 780, rateType: 'per unit',
-            deductions: { bir: 2100, philhealth: 450, pagibig: 200, loan: 0 },
-            benefits: { chalk: 500 },
-            status: 'computed'
-        }
-    ];
+    // Per-employee demo payroll inputs (deductions/benefits for this run).
+    // Employees without a preset here fall back to a zeroed default so any
+    // employee added in Employee Records can still run through payroll.
+    var DEMO_PAYROLL_INPUTS = {
+        'EMP-2021-014': { deductions: { bir: 4250, philhealth: 680, pagibig: 200, loan: 0 }, benefits: { chalk: 500, internet: 800 }, status: 'reviewed' },
+        'EMP-2022-031': { deductions: { bir: 5100, philhealth: 720, pagibig: 200, loan: 1500 }, benefits: { chalk: 500 }, status: 'reviewed' },
+        'EMP-1002': { deductions: { bir: 2180, philhealth: 420, pagibig: 200, loan: 0 }, benefits: { rice: 1500 }, status: 'computed' },
+        'EMP-2020-052': { deductions: { bir: 3200, philhealth: 580, pagibig: 200, loan: 800 }, benefits: {}, status: 'computed' },
+        'EMP-1004': { deductions: { bir: 1950, philhealth: 390, pagibig: 200, loan: 0 }, benefits: { rice: 1500, laundry: 300 }, status: 'reviewed' },
+        'EMP-2024-003': { deductions: { bir: 2100, philhealth: 450, pagibig: 200, loan: 0 }, benefits: { chalk: 500 }, status: 'computed' }
+    };
+
+    function buildEmployeesForPayroll() {
+        return DataStore.getEmployees()
+            .filter(function (e) { return e.status === 'Active'; })
+            .map(function (e) {
+                var demo = DEMO_PAYROLL_INPUTS[e.id] || { deductions: { bir: 0, philhealth: 0, pagibig: 0, loan: 0 }, benefits: {}, status: 'computed' };
+                return {
+                    id: e.id,
+                    name: e.displayName,
+                    type: e.type,
+                    units: e.units || 0,
+                    rate: e.rate || 0,
+                    rateType: e.rateType === 'Per Hour' ? 'per hour' : 'per unit',
+                    deductions: Object.assign({}, demo.deductions),
+                    benefits: Object.assign({}, demo.benefits),
+                    status: demo.status
+                };
+            });
+    }
+
+    var EMPLOYEES = buildEmployeesForPayroll();
 
     var payrollData = {};
     var currentPeriod = '2026-07-01';
@@ -294,6 +282,25 @@
         }, 1800);
     });
 
+    function persistReleasedPayroll(period) {
+        var records = DataStore.get('payroll', []);
+        getEmployees().forEach(function (emp) {
+            records.push({
+                id: DataStore.nextNumericId(records),
+                employeeId: emp.id,
+                employee: emp.name,
+                periodLabel: period.label,
+                payDate: period.payDate,
+                gross: calcGross(emp),
+                benefits: calcBenefitsTotal(emp.benefits),
+                deductions: calcDeductionsTotal(emp.deductions),
+                net: calcNet(emp),
+                dateGenerated: new Date().toISOString()
+            });
+        });
+        DataStore.set('payroll', records);
+    }
+
     document.getElementById('btnRelease').addEventListener('click', function () {
         if (!allReviewed()) return;
         var period = PERIODS[currentPeriod];
@@ -301,8 +308,9 @@
         period.status = 'released';
         document.getElementById('periodBadge').outerHTML = periodStatusBadge('released');
         updateReleaseButton();
+        persistReleasedPayroll(period);
         renderTable();
-        alert('Payslips released for ' + period.label + '. Employees can now view them in the Staff Module.');
+        PPToast.success('Payslips released for ' + period.label + '. Employees can now view them in the Staff Module.');
     });
 
     initPeriodData();

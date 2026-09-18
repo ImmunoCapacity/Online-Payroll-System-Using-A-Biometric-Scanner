@@ -16,29 +16,15 @@
     const GRACE_MINUTES = 15;
     const STANDARD_START = '08:00';
 
-    const employees = [
-        { id: 'EMP-2021-014', name: 'Dr. Maria Santos', type: 'Faculty', scheduleStart: '07:30', scheduleEnd: '09:30' },
-        { id: 'EMP-2022-031', name: 'Prof. James Rivera', type: 'Faculty', scheduleStart: '10:00', scheduleEnd: '12:00' },
-        { id: 'EMP-2023-007', name: 'Anna Cruz', type: 'Admin' },
-        { id: 'EMP-2020-052', name: 'Roberto Mendoza', type: 'Faculty', scheduleStart: '13:00', scheduleEnd: '15:00' },
-        { id: 'EMP-2021-089', name: 'Elena Villanueva', type: 'Admin' },
-        { id: 'EMP-2024-003', name: 'Michael Tan', type: 'Faculty', scheduleStart: '08:00', scheduleEnd: '10:00' },
-        { id: 'EMP-2022-045', name: 'Grace Lim', type: 'Admin' },
-        { id: 'EMP-2023-019', name: 'Dr. Patricia Go', type: 'Faculty', scheduleStart: '14:00', scheduleEnd: '16:00' }
-    ];
+    const employees = DataStore.getEmployees().filter(function (e) { return e.status !== 'Inactive'; });
 
     const today = new Date().toISOString().slice(0, 10);
 
-    let records = [
-        { empId: 'EMP-2021-014', date: today, timeIn: '07:42', timeOut: '17:05', status: 'present', manual: false },
-        { empId: 'EMP-2022-031', date: today, timeIn: '10:22', timeOut: '18:00', status: 'late', manual: false },
-        { empId: 'EMP-2023-007', date: today, timeIn: '08:01', timeOut: '17:30', status: 'present', manual: false },
-        { empId: 'EMP-2020-052', date: today, timeIn: null, timeOut: null, status: 'absent', manual: false },
-        { empId: 'EMP-2021-089', date: today, timeIn: '08:10', timeOut: '16:45', status: 'present', manual: false },
-        { empId: 'EMP-2024-003', date: today, timeIn: null, timeOut: null, status: 'leave', manual: false },
-        { empId: 'EMP-2022-045', date: today, timeIn: '08:18', timeOut: '17:00', status: 'late', manual: false },
-        { empId: 'EMP-2023-019', date: today, timeIn: '13:55', timeOut: '17:20', status: 'present', manual: false }
-    ];
+    let records = DataStore.getDTR();
+
+    function persistRecords() {
+        DataStore.saveDTR(records);
+    }
 
     const filterDate = document.getElementById('filterDate');
     const filterType = document.getElementById('filterType');
@@ -58,7 +44,7 @@
 
     function populateDatalist() {
         employeeDatalist.innerHTML = employees.map(function (e) {
-            return '<option value="' + e.name + ' (' + e.id + ')"></option>';
+            return '<option value="' + e.displayName + ' (' + e.id + ')"></option>';
         }).join('');
     }
 
@@ -142,16 +128,16 @@
         return records
             .filter(function (r) { return r.date === date; })
             .map(function (r) {
-                const emp = employees.find(function (e) { return e.id === r.empId; });
+                const emp = employees.find(function (e) { return e.id === r.employeeId; });
                 return { record: r, employee: emp };
             })
             .filter(function (row) {
                 if (!row.employee) return false;
                 if (type !== 'all' && row.employee.type !== type) return false;
-                if (q && !row.employee.name.toLowerCase().includes(q)) return false;
+                if (q && !row.employee.displayName.toLowerCase().includes(q)) return false;
                 return true;
             })
-            .sort(function (a, b) { return a.employee.name.localeCompare(b.employee.name); });
+            .sort(function (a, b) { return a.employee.displayName.localeCompare(b.employee.displayName); });
     }
 
     function updateSummary() {
@@ -185,7 +171,7 @@
             const manualTag = rec.manual ? ' <i class="bi bi-pencil-fill text-muted" title="Manual entry" style="font-size:0.7rem;"></i>' : '';
             return (
                 '<tr>' +
-                    '<td><strong>' + emp.name + '</strong>' + manualTag + '<br><span class="text-muted" style="font-size:0.75rem;">' + emp.id + '</span></td>' +
+                    '<td><strong>' + emp.displayName + '</strong>' + manualTag + '<br><span class="text-muted" style="font-size:0.75rem;">' + emp.id + '</span></td>' +
                     '<td>' + typeBadge(emp.type) + '</td>' +
                     '<td class="col-time">' + formatTime12(rec.timeIn) + '</td>' +
                     '<td class="col-time">' + formatTime12(rec.timeOut) + '</td>' +
@@ -203,7 +189,7 @@
             return employees.find(function (e) { return e.id === match[1]; });
         }
         return employees.find(function (e) {
-            return e.name.toLowerCase() === value.toLowerCase();
+            return e.displayName.toLowerCase() === value.toLowerCase();
         });
     }
 
@@ -234,11 +220,11 @@
         const status = deriveStatus(timeIn, scheduledStart);
 
         const existing = records.findIndex(function (r) {
-            return r.empId === emp.id && r.date === date;
+            return r.employeeId === emp.id && r.date === date;
         });
 
         const entry = {
-            empId: emp.id,
+            employeeId: emp.id,
             date: date,
             timeIn: timeIn,
             timeOut: timeOut,
@@ -252,6 +238,7 @@
         } else {
             records.push(entry);
         }
+        persistRecords();
 
         filterDate.value = date;
         bootstrap.Modal.getInstance(manualModal).hide();
@@ -259,6 +246,7 @@
         manualForm.classList.remove('was-validated');
         manualDate.value = today;
         renderTable();
+        PPToast.success('Attendance record saved.');
     });
 
     manualModal.addEventListener('hidden.bs.modal', function () {

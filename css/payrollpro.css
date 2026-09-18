@@ -2295,6 +2295,94 @@ body.pp-app-shell {
     color: #fff;
 }
 
+.btn-pp-danger {
+    background: var(--pp-error);
+    border: none;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.875rem;
+    border-radius: var(--pp-radius-sm);
+    padding: 0.5rem 1rem;
+}
+
+.btn-pp-danger:hover {
+    background: #7f1616;
+    color: #fff;
+}
+
+.pp-highstakes-alert.pp-alert-danger {
+    background: var(--pp-error-bg);
+    border-color: #fca5a5;
+    color: #7f1616;
+}
+
+.pp-highstakes-alert.pp-alert-danger i {
+    color: var(--pp-error);
+}
+
+/* Toasts */
+.pp-toast-container {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-width: calc(100vw - 2rem);
+}
+
+.pp-toast {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    background: var(--pp-surface);
+    border: 1px solid var(--pp-border);
+    border-left: 4px solid var(--pp-success);
+    border-radius: var(--pp-radius-sm);
+    box-shadow: var(--pp-shadow);
+    padding: 0.75rem 0.875rem;
+    font-size: 0.875rem;
+    color: var(--pp-text);
+    min-width: 260px;
+    max-width: 380px;
+    opacity: 0;
+    transform: translateX(12px);
+    transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.pp-toast.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.pp-toast-success i { color: var(--pp-success); }
+.pp-toast-error { border-left-color: var(--pp-error); }
+.pp-toast-error i { color: var(--pp-error); }
+
+.pp-toast-message { flex: 1; }
+
+.pp-toast-close {
+    background: none;
+    border: none;
+    color: var(--pp-text-muted);
+    font-size: 1.125rem;
+    line-height: 1;
+    padding: 0;
+    cursor: pointer;
+}
+
+@media (max-width: 575px) {
+    .pp-toast-container {
+        left: 1rem;
+        right: 1rem;
+    }
+    .pp-toast {
+        min-width: 0;
+        max-width: none;
+    }
+}
+
 .pp-form-note {
     font-size: 0.75rem;
     color: var(--pp-text-muted);
@@ -2563,6 +2651,11 @@ body.pp-app-shell {
 .pp-device-status-connected {
     background: #e1f6e9;
     color: #178248;
+}
+
+.pp-device-status-disconnected {
+    background: var(--pp-error-bg);
+    color: var(--pp-error);
 }
 
 .pp-device-dot {

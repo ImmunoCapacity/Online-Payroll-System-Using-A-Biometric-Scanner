@@ -341,4 +341,32 @@
     renderPayrollInformation();
     renderPayrollCalendar();
 
+
+    /* ============================================================
+       BIOMETRIC DEVICE STATUS
+       ============================================================ */
+
+    (function renderBiometricDevice() {
+        var nameEl = document.getElementById('biometricDeviceName');
+        var statusEl = document.getElementById('biometricStatus');
+
+        if (!nameEl || !statusEl || typeof DataStore === 'undefined') {
+            return;
+        }
+
+        var devices = DataStore.getDevices();
+        var device = devices.find(function (d) { return d.status === 'Active'; }) || devices[0];
+
+        if (!device) {
+            return;
+        }
+
+        nameEl.textContent = device.deviceName;
+
+        var isOnline = device.status === 'Active';
+        statusEl.classList.toggle('pp-device-status-connected', isOnline);
+        statusEl.classList.toggle('pp-device-status-disconnected', !isOnline);
+        statusEl.innerHTML = '<span class="pp-device-dot"></span>' + (isOnline ? 'Connected' : 'Disconnected');
+    })();
+
 })();

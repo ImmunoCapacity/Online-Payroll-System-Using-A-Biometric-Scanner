@@ -1,0 +1,10 @@
+{
+    "name": "sti-balayan/payroll-biometric-system",
+    "description": "Online Payroll System Using a Biometric Scanner",
+    "require": {
+        "php": ">=7.4",
+        "ext-sockets": "*",
+        "ext-pdo": "*",
+        "rats/zkteco": "^1.0"
+    }
+}

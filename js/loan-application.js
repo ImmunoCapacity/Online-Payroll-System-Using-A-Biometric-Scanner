@@ -1,159 +1,154 @@
 (function () {
+    'use strict';
+
     PayrollProLayout.init({
         activeNav: 'loans',
         navMode: 'staff',
-        user: { name: 'Dr. Maria Santos', role: 'Faculty Staff', initials: 'MS' },
-        institution: { name: 'STI Balayan', short: 'STI' },
+        user: {
+            name: 'Dr. Maria Santos',
+            role: 'Faculty Staff',
+            initials: 'MS'
+        },
+        institution: {
+            name: 'STI Balayan',
+            short: 'STI'
+        },
         notifications: false
     });
 
-    var loans = [
-        {
-            id: 1,
-            type: 'Pag-IBIG Loan',
-            principal: 120000,
-            term: 24,
-            monthlyDeduction: 5000,
-            remainingBalance: 85000,
-            status: 'Approved',
-            filedDate: '2025-03-15'
-        },
-        {
-            id: 2,
-            type: 'Institutional Loan',
-            principal: 30000,
-            term: 12,
-            monthlyDeduction: 2500,
-            remainingBalance: 0,
-            status: 'Fully Paid',
-            filedDate: '2024-06-01'
-        },
-        {
-            id: 3,
-            type: 'SSS Salary Loan',
-            principal: 50000,
-            term: 18,
-            monthlyDeduction: 2777.78,
-            remainingBalance: 50000,
-            status: 'Pending',
-            filedDate: '2026-07-02'
-        }
-    ];
+    var CURRENT_EMPLOYEE_ID = 'EMP-2021-014';
+    var CURRENT_EMPLOYEE_ROLE = 'Faculty Staff';
 
-    var nextId = 4;
+    var loans = DataStore.getLoans().filter(function (loan) {
+        return loan.employeeId === CURRENT_EMPLOYEE_ID;
+    });
 
-    function peso(n) {
-        return '₱' + n.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    function peso(value) {
+        var amount = Number(value) || 0;
+        return '₱' + amount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
-    function calcMonthly(principal, term) {
-        if (!principal || !term || term <= 0) return 0;
-        return principal / term;
+    function formatDate(iso) {
+        if (!iso) return '—';
+        var date = new Date(iso + 'T00:00:00');
+        return date.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    function escapeHtml(value) {
+        return String(value == null ? '' : value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function getInitials(name) {
+        var parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+        if (!parts.length) return '--';
+        if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+        return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
     }
 
     function statusBadge(status) {
-        var map = {
-            Pending: 'pp-badge-pending',
-            Approved: 'pp-badge-approved',
-            Rejected: 'pp-badge-rejected',
-            'Fully Paid': 'pp-badge-paid'
-        };
-        return '<span class="pp-badge ' + (map[status] || 'pp-badge-cancelled') + '">' + status + '</span>';
-    }
-
-    function progressBar(loan) {
-        if (loan.status === 'Pending' || loan.status === 'Rejected') {
-            return '<span class="text-muted small">—</span>';
+        if (status === 'Paid') {
+            return '<span class="loan-status loan-status-paid">Paid</span>';
         }
-        var paid = loan.principal - loan.remainingBalance;
-        var pct = loan.principal > 0 ? Math.min(100, Math.round((paid / loan.principal) * 100)) : 0;
-        return (
-            '<div class="pp-loan-progress-wrap">' +
-                '<div class="pp-loan-progress-label"><span>' + pct + '% paid</span><span>' + peso(paid) + '</span></div>' +
-                '<div class="pp-loan-progress" role="progressbar" aria-valuenow="' + pct + '" aria-valuemin="0" aria-valuemax="100">' +
-                    '<div class="pp-loan-progress-bar" style="width:' + pct + '%"></div>' +
-                '</div>' +
-            '</div>'
-        );
+        return '<span class="loan-status loan-status-active">Active</span>';
     }
 
-    function renderHistory() {
+    function findLoan(id) {
+        return loans.find(function (loan) { return loan.id === id; });
+    }
+
+    function renderLoans() {
         var tbody = document.getElementById('loanHistoryBody');
         var empty = document.getElementById('loanEmptyState');
-        var sorted = loans.slice().sort(function (a, b) {
-            return b.filedDate.localeCompare(a.filedDate);
-        });
 
-        if (!sorted.length) {
+        if (!loans.length) {
             tbody.innerHTML = '';
             empty.classList.remove('d-none');
             return;
         }
 
         empty.classList.add('d-none');
-        tbody.innerHTML = sorted.map(function (l) {
+        tbody.innerHTML = loans.map(function (loan) {
+            var totalDeducted = DataStore.getLoanTotalDeducted(loan);
+            var remaining = DataStore.getLoanRemainingBalance(loan);
+            var status = DataStore.getLoanStatus(loan);
+
             return (
                 '<tr>' +
-                    '<td><strong>' + l.type + '</strong></td>' +
-                    '<td class="col-money">' + peso(l.principal) + '</td>' +
-                    '<td class="col-units">' + l.term + ' mo</td>' +
-                    '<td class="col-money">' + peso(l.monthlyDeduction) + '</td>' +
-                    '<td class="col-money">' + (l.status === 'Pending' || l.status === 'Rejected' ? '—' : peso(l.remainingBalance)) + '</td>' +
-                    '<td>' + statusBadge(l.status) + '</td>' +
-                    '<td>' + progressBar(l) + '</td>' +
+                    '<td>' + escapeHtml(loan.type) + '</td>' +
+                    '<td>' + escapeHtml(loan.reference) + '</td>' +
+                    '<td class="loan-money">' + peso(loan.amount) + '</td>' +
+                    '<td class="loan-money">' + peso(loan.deductionPerPayroll) + '</td>' +
+                    '<td class="loan-money">' + peso(totalDeducted) + '</td>' +
+                    '<td class="loan-balance ' + (remaining <= 0 ? 'loan-balance-paid' : '') + '">' + peso(remaining) + '</td>' +
+                    '<td>' + statusBadge(status) + '</td>' +
+                    '<td class="col-actions">' +
+                        '<button type="button" class="loan-view-btn" data-loan-id="' + loan.id + '">View Details</button>' +
+                    '</td>' +
                 '</tr>'
             );
         }).join('');
     }
 
-    function updateDeductionPreview() {
-        var principal = parseFloat(document.getElementById('loanPrincipal').value) || 0;
-        var term = parseInt(document.getElementById('loanTerm').value, 10) || 0;
-        var monthly = calcMonthly(principal, term);
-        document.getElementById('monthlyDeductionDisplay').textContent = peso(monthly);
-    }
+    function renderDeductionHistory(loan) {
+        var tbody = document.getElementById('loanDeductionHistoryBody');
+        var empty = document.getElementById('loanDeductionHistoryEmpty');
 
-    document.getElementById('loanPrincipal').addEventListener('input', updateDeductionPreview);
-    document.getElementById('loanTerm').addEventListener('change', updateDeductionPreview);
-
-    document.getElementById('loanForm').addEventListener('submit', function (e) {
-        e.preventDefault();
-        var form = e.target;
-        if (!form.checkValidity()) {
-            form.classList.add('was-validated');
+        var history = loan.deductionHistory || [];
+        if (!history.length) {
+            tbody.innerHTML = '';
+            empty.classList.remove('d-none');
             return;
         }
 
-        var type = document.getElementById('loanType').value;
-        var principal = parseFloat(document.getElementById('loanPrincipal').value);
-        var term = parseInt(document.getElementById('loanTerm').value, 10);
-        var monthly = calcMonthly(principal, term);
+        empty.classList.add('d-none');
+        tbody.innerHTML = history.slice().reverse().map(function (item) {
+            return (
+                '<tr>' +
+                    '<td>' + escapeHtml(item.period) + '</td>' +
+                    '<td class="loan-money">' + peso(item.amount) + '</td>' +
+                    '<td class="loan-money">' + peso(item.remainingBalance) + '</td>' +
+                    '<td>' + formatDate(item.dateProcessed) + '</td>' +
+                '</tr>'
+            );
+        }).join('');
+    }
 
-        loans.unshift({
-            id: nextId++,
-            type: type,
-            principal: principal,
-            term: term,
-            monthlyDeduction: monthly,
-            remainingBalance: principal,
-            status: 'Pending',
-            filedDate: new Date().toISOString().slice(0, 10)
-        });
+    function showLoanDetails(loan) {
+        var totalDeducted = DataStore.getLoanTotalDeducted(loan);
+        var remaining = DataStore.getLoanRemainingBalance(loan);
+        var status = DataStore.getLoanStatus(loan);
 
-        form.reset();
-        form.classList.remove('was-validated');
-        updateDeductionPreview();
-        bootstrap.Modal.getInstance(document.getElementById('loanFormModal')).hide();
-        renderHistory();
+        document.getElementById('detailEmployeeInitials').textContent = getInitials(loan.employeeName);
+        document.getElementById('detailEmployeeName').textContent = loan.employeeName;
+        document.getElementById('detailEmployeeMeta').textContent = CURRENT_EMPLOYEE_ROLE;
+        document.getElementById('detailLoanStatus').innerHTML = statusBadge(status);
+        document.getElementById('detailLoanType').textContent = loan.type;
+        document.getElementById('detailReference').textContent = loan.reference;
+        document.getElementById('detailStartPeriod').textContent = loan.startPeriodLabel;
+        document.getElementById('detailDeduction').textContent = peso(loan.deductionPerPayroll);
+        document.getElementById('detailLoanAmount').textContent = peso(loan.amount);
+        document.getElementById('detailTotalDeducted').textContent = peso(totalDeducted);
+        document.getElementById('detailRemainingBalance').textContent = peso(remaining);
+
+        renderDeductionHistory(loan);
+
+        var modal = new bootstrap.Modal(document.getElementById('loanDetailsModal'));
+        modal.show();
+    }
+
+    document.getElementById('loanHistoryBody').addEventListener('click', function (event) {
+        var button = event.target.closest('[data-loan-id]');
+        if (!button) return;
+
+        var loanId = parseInt(button.getAttribute('data-loan-id'), 10);
+        var loan = findLoan(loanId);
+        if (loan) showLoanDetails(loan);
     });
 
-    document.getElementById('loanFormModal').addEventListener('hidden.bs.modal', function () {
-        var form = document.getElementById('loanForm');
-        form.reset();
-        form.classList.remove('was-validated');
-        updateDeductionPreview();
-    });
-
-    renderHistory();
-    updateDeductionPreview();
+    renderLoans();
 })();

@@ -16,151 +16,18 @@
     });
 
 
-    var employees = [
-        {
-            id: 'EMP-2023-007',
-            name: 'Anna Cruz',
-            role: 'Admin Staff'
-        },
-        {
-            id: 'EMP-2024-012',
-            name: 'Dr. Maria Santos',
-            role: 'Faculty Staff'
-        },
-        {
-            id: 'EMP-2022-031',
-            name: 'Juan Dela Cruz',
-            role: 'Admin Staff'
-        },
-        {
-            id: 'EMP-2021-089',
-            name: 'Elena Villanueva',
-            role: 'Faculty Staff'
-        }
-    ];
+    var employees = DataStore.getEmployees()
+        .filter(function (e) { return e.status !== 'Inactive'; })
+        .map(function (e) {
+            return { id: e.id, name: e.displayName, role: e.type === 'Faculty' ? 'Faculty Staff' : 'Administrative Staff' };
+        });
 
 
-    var loans = [
-        {
-            id: 1,
-            employeeId: 'EMP-2023-007',
-            employeeName: 'Anna Cruz',
-            employeeRole: 'Admin Staff',
-            type: 'SSS Salary Loan',
-            reference: 'SSS-2026-00123',
-            amount: 20000,
-            deductionPerPayroll: 1000,
-            startPeriod: '2026-03-11_2026-03-25',
-            startPeriodLabel: 'March 11 – March 25, 2026',
-            status: 'Active',
-            remarks: '',
-            deductionHistory: [
-                {
-                    period: 'March 11 – March 25, 2026',
-                    amount: 1000,
-                    remainingBalance: 19000,
-                    dateProcessed: '2026-03-25'
-                },
-                {
-                    period: 'March 26 – April 10, 2026',
-                    amount: 1000,
-                    remainingBalance: 18000,
-                    dateProcessed: '2026-04-10'
-                },
-                {
-                    period: 'April 11 – April 25, 2026',
-                    amount: 1000,
-                    remainingBalance: 17000,
-                    dateProcessed: '2026-04-25'
-                },
-                {
-                    period: 'April 26 – May 10, 2026',
-                    amount: 1000,
-                    remainingBalance: 16000,
-                    dateProcessed: '2026-05-10'
-                },
-                {
-                    period: 'May 11 – May 25, 2026',
-                    amount: 1000,
-                    remainingBalance: 15000,
-                    dateProcessed: '2026-05-25'
-                },
-                {
-                    period: 'May 26 – June 10, 2026',
-                    amount: 1000,
-                    remainingBalance: 14000,
-                    dateProcessed: '2026-06-10'
-                },
-                {
-                    period: 'June 11 – June 25, 2026',
-                    amount: 1000,
-                    remainingBalance: 13000,
-                    dateProcessed: '2026-06-25'
-                },
-                {
-                    period: 'June 26 – July 10, 2026',
-                    amount: 1000,
-                    remainingBalance: 12000,
-                    dateProcessed: '2026-07-10'
-                },
-                {
-                    period: 'July 11 – July 25, 2026',
-                    amount: 1000,
-                    remainingBalance: 11000,
-                    dateProcessed: '2026-07-25'
-                },
-                {
-                    period: 'July 26 – August 10, 2026',
-                    amount: 1000,
-                    remainingBalance: 10000,
-                    dateProcessed: '2026-08-10'
-                },
-                {
-                    period: 'August 11 – August 25, 2026',
-                    amount: 1000,
-                    remainingBalance: 9000,
-                    dateProcessed: '2026-08-25'
-                },
-                {
-                    period: 'August 26 – September 10, 2026',
-                    amount: 1000,
-                    remainingBalance: 8000,
-                    dateProcessed: '2026-09-10'
-                }
-            ]
-        },
-        {
-            id: 2,
-            employeeId: 'EMP-2021-089',
-            employeeName: 'Elena Villanueva',
-            employeeRole: 'Faculty Staff',
-            type: 'Pag-IBIG MPL',
-            reference: 'HDMF-2025-0456',
-            amount: 15000,
-            deductionPerPayroll: 750,
-            startPeriod: '2025-11-11_2025-11-25',
-            startPeriodLabel: 'November 11 – November 25, 2025',
-            status: 'Paid',
-            remarks: '',
-            deductionHistory: [
-                {
-                    period: 'August 26 – September 10, 2026',
-                    amount: 750,
-                    remainingBalance: 750,
-                    dateProcessed: '2026-09-10'
-                },
-                {
-                    period: 'September 11 – September 25, 2026',
-                    amount: 750,
-                    remainingBalance: 0,
-                    dateProcessed: '2026-09-25'
-                }
-            ]
-        }
-    ];
+    var loans = DataStore.getLoans();
 
-
-    var nextLoanId = 3;
+    function persistLoans() {
+        DataStore.saveLoans(loans);
+    }
 
 
     function peso(value) {
@@ -199,24 +66,17 @@
 
 
     function getTotalDeducted(loan) {
-        return loan.deductionHistory.reduce(function (total, item) {
-            return total + Number(item.amount || 0);
-        }, 0);
+        return DataStore.getLoanTotalDeducted(loan);
     }
 
 
     function getRemainingBalance(loan) {
-        return Math.max(
-            0,
-            Number(loan.amount || 0) - getTotalDeducted(loan)
-        );
+        return DataStore.getLoanRemainingBalance(loan);
     }
 
 
     function getLoanStatus(loan) {
-        return getRemainingBalance(loan) <= 0
-            ? 'Paid'
-            : 'Active';
+        return DataStore.getLoanStatus(loan);
     }
 
 
@@ -792,7 +652,7 @@
 
 
                 loans.push({
-                    id: nextLoanId++,
+                    id: DataStore.nextNumericId(loans),
                     employeeId: employee.id,
                     employeeName: employee.name,
                     employeeRole: employee.role,
@@ -802,10 +662,10 @@
                     deductionPerPayroll: deduction,
                     startPeriod: startPeriod,
                     startPeriodLabel: startPeriodLabel,
-                    status: 'Active',
                     remarks: remarks,
                     deductionHistory: []
                 });
+                persistLoans();
 
 
                 form.reset();
@@ -833,6 +693,10 @@
 
 
                 renderLoans();
+
+                if (window.PPToast) {
+                    PPToast.success('Loan recorded for ' + employee.name + '.');
+                }
             }
         );
     }

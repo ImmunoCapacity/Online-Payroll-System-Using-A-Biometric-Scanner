@@ -7,18 +7,9 @@
     });
 
     var CURRENT_USER = 'Maria Elena Reyes';
-    var auditLog = [];
 
     function logAudit(section, action, detail) {
-        var entry = {
-            section: section,
-            action: action,
-            detail: detail,
-            user: CURRENT_USER,
-            at: new Date().toISOString()
-        };
-        auditLog.unshift(entry);
-        return entry;
+        return DataStore.logAudit(section, action, detail, CURRENT_USER);
     }
 
     function formatAudit(entry) {
@@ -77,27 +68,18 @@
         });
     });
 
-    var EMPLOYEES = [
-        { id: 'EMP-2021-014', name: 'Dr. Maria Santos' },
-        { id: 'EMP-2022-031', name: 'Juan Dela Cruz' },
-        { id: 'EMP-2023-007', name: 'Elena Villanueva' },
-        { id: 'EMP-2020-052', name: 'Michael Tan' },
-        { id: 'EMP-2021-089', name: 'Ana Reyes' }
-    ];
+    var EMPLOYEES = DataStore.getEmployees().filter(function (e) { return e.status !== 'Inactive'; });
 
-    var rates = [
-        { id: 1, empId: 'EMP-2021-014', rateType: 'Per Unit', amount: 850, effective: '2024-01-01', end: '2025-12-31', active: false },
-        { id: 2, empId: 'EMP-2021-014', rateType: 'Per Unit', amount: 920, effective: '2026-01-01', end: null, active: true },
-        { id: 3, empId: 'EMP-2022-031', rateType: 'Per Hour', amount: 185.50, effective: '2025-06-01', end: null, active: true },
-        { id: 4, empId: 'EMP-2023-007', rateType: 'Per Hour', amount: 172.00, effective: '2025-01-01', end: null, active: true },
-        { id: 5, empId: 'EMP-2020-052', rateType: 'Per Unit', amount: 780, effective: '2023-08-01', end: null, active: true }
-    ];
-    var nextRateId = 6;
+    var rates = DataStore.getRates();
     var ratesAuditEntry = null;
+
+    function persistRates() {
+        DataStore.saveRates(rates);
+    }
 
     function empName(empId) {
         var e = EMPLOYEES.find(function (x) { return x.id === empId; });
-        return e ? e.name : empId;
+        return e ? e.displayName : empId;
     }
 
     function renderRates() {
@@ -125,7 +107,7 @@
 
     function populateRateEmployees() {
         document.getElementById('rateEmployee').innerHTML = EMPLOYEES.map(function (e) {
-            return '<option value="' + e.id + '">' + e.name + '</option>';
+            return '<option value="' + e.id + '">' + e.displayName + '</option>';
         }).join('');
     }
 
@@ -156,7 +138,7 @@
         });
 
         rates.push({
-            id: nextRateId++,
+            id: DataStore.nextNumericId(rates),
             empId: empId,
             rateType: document.getElementById('rateType').value,
             amount: parseFloat(document.getElementById('rateAmount').value),
@@ -165,21 +147,20 @@
             active: true
         });
 
+        persistRates();
         ratesAuditEntry = logAudit('Employee Rates', 'Added rate', empName(empId) + ' · ' + peso(parseFloat(document.getElementById('rateAmount').value)) + ' effective ' + formatDate(effective));
         bootstrap.Modal.getInstance(document.getElementById('rateModal')).hide();
         renderRates();
+        PPToast.success('Rate added for ' + empName(empId) + '.');
     });
 
-    var leaveCategories = [
-        { id: 1, name: 'Sick Leave', paid: true, maxDays: 12, active: true },
-        { id: 2, name: 'Vacation Leave', paid: true, maxDays: 15, active: true },
-        { id: 3, name: 'Maternity Leave', paid: true, maxDays: 105, active: true },
-        { id: 4, name: 'Paternity Leave', paid: true, maxDays: 7, active: true },
-        { id: 5, name: 'Leave Without Pay', paid: false, maxDays: 30, active: true }
-    ];
-    var nextLeaveId = 6;
+    var leaveCategories = DataStore.getLeaveCategories();
     var leaveEditId = null;
     var leaveAuditEntry = null;
+
+    function persistLeaveCategories() {
+        DataStore.saveLeaveCategories(leaveCategories);
+    }
 
     function renderLeave() {
         document.getElementById('leaveBody').innerHTML = leaveCategories.map(function (c) {
@@ -214,10 +195,20 @@
             btn.addEventListener('click', function () {
                 var row = btn.closest('tr');
                 var cat = leaveCategories.find(function (c) { return c.id === parseInt(row.dataset.id, 10); });
-                if (!cat || !confirm('Deactivate "' + cat.name + '"? Employees will no longer be able to file this leave type.')) return;
-                cat.active = false;
-                leaveAuditEntry = logAudit('Leave Categories', 'Deactivated', cat.name);
-                renderLeave();
+                if (!cat) return;
+                ConfirmModal.show({
+                    title: 'Deactivate Leave Category',
+                    message: 'Deactivate "' + cat.name + '"? Employees will no longer be able to file this leave type.',
+                    confirmText: 'Deactivate',
+                    tone: 'danger'
+                }).then(function (confirmed) {
+                    if (!confirmed) return;
+                    cat.active = false;
+                    persistLeaveCategories();
+                    leaveAuditEntry = logAudit('Leave Categories', 'Deactivated', cat.name);
+                    renderLeave();
+                    PPToast.success('"' + cat.name + '" deactivated.');
+                });
             });
         });
     }
@@ -248,64 +239,39 @@
             Object.assign(cat, data);
             leaveAuditEntry = logAudit('Leave Categories', 'Updated', data.name);
         } else {
-            leaveCategories.push(Object.assign({ id: nextLeaveId++ }, data));
+            leaveCategories.push(Object.assign({ id: DataStore.nextNumericId(leaveCategories) }, data));
             leaveAuditEntry = logAudit('Leave Categories', 'Added', data.name);
         }
+        persistLeaveCategories();
         bootstrap.Modal.getInstance(document.getElementById('leaveModal')).hide();
         renderLeave();
+        PPToast.success('Leave category saved.');
     });
+
+    var TAX_BRACKETS = DataStore.getTaxBrackets();
 
     function makeBracketStore(seed) {
-        var store = JSON.parse(JSON.stringify(seed));
+        var store = JSON.parse(JSON.stringify(seed || {}));
         var audits = {};
         Object.keys(store).forEach(function (y) { audits[y] = null; });
-        return { data: store, audits: audits, nextId: 100 };
+        var maxId = 0;
+        Object.keys(store).forEach(function (y) {
+            store[y].forEach(function (b) { if (b.id > maxId) maxId = b.id; });
+        });
+        return { data: store, audits: audits, nextId: maxId + 1 };
     }
 
-    var birStore = makeBracketStore({
-        2025: [
-            { id: 1, min: 0, max: 20833, base: 0, rate: 0 },
-            { id: 2, min: 20833.01, max: 33333, base: 0, rate: 15 },
-            { id: 3, min: 33333.01, max: 66667, base: 1875, rate: 20 },
-            { id: 4, min: 66667.01, max: 166667, base: 8541.80, rate: 25 },
-            { id: 5, min: 166667.01, max: 666667, base: 33541.80, rate: 30 },
-            { id: 6, min: 666667.01, max: null, base: 183541.80, rate: 35 }
-        ],
-        2026: [
-            { id: 11, min: 0, max: 20833, base: 0, rate: 0 },
-            { id: 12, min: 20833.01, max: 33333, base: 0, rate: 15 },
-            { id: 13, min: 33333.01, max: 66667, base: 1875, rate: 20 },
-            { id: 14, min: 66667.01, max: 166667, base: 8541.80, rate: 25 },
-            { id: 15, min: 166667.01, max: 666667, base: 33541.80, rate: 30 },
-            { id: 16, min: 666667.01, max: null, base: 183541.80, rate: 35 }
-        ]
-    });
+    function persistTaxBrackets() {
+        DataStore.saveTaxBrackets({
+            bir: birStore.data,
+            philhealth: phStore.data,
+            pagibig: pagStore.data
+        });
+    }
 
-    var phStore = makeBracketStore({
-        2025: [
-            { id: 21, min: 0, max: 10000, premium: 500, rate: 5.0 },
-            { id: 22, min: 10000.01, max: 80000, premium: null, rate: 5.0 },
-            { id: 23, min: 80000.01, max: null, premium: 5000, rate: 5.0 }
-        ],
-        2026: [
-            { id: 31, min: 0, max: 10000, premium: 500, rate: 5.0 },
-            { id: 32, min: 10000.01, max: 89999.99, premium: null, rate: 5.0 },
-            { id: 33, min: 90000, max: null, premium: 5000, rate: 5.0 }
-        ]
-    });
-
-    var pagStore = makeBracketStore({
-        2025: [
-            { id: 41, min: 0, max: 1500, share: 0, rate: 0 },
-            { id: 42, min: 1500.01, max: 10000, share: null, rate: 2.0 },
-            { id: 43, min: 10000.01, max: null, share: 200, rate: 2.0 }
-        ],
-        2026: [
-            { id: 51, min: 0, max: 1500, share: 0, rate: 0 },
-            { id: 52, min: 1500.01, max: 10000, share: null, rate: 2.0 },
-            { id: 53, min: 10000.01, max: null, share: 200, rate: 2.0 }
-        ]
-    });
+    var birStore = makeBracketStore(TAX_BRACKETS.bir);
+    var phStore = makeBracketStore(TAX_BRACKETS.philhealth);
+    var pagStore = makeBracketStore(TAX_BRACKETS.pagibig);
 
     var bracketConfigs = {
         bir: {
@@ -433,11 +399,20 @@
                 var brackets = getYearBrackets(config);
                 var idx = brackets.findIndex(function (b) { return b.id === id; });
                 if (idx < 0) return;
-                if (!confirm('Remove this bracket row? Ensure remaining brackets still cover all salary ranges.')) return;
-                var removed = brackets.splice(idx, 1)[0];
-                var year = document.getElementById(config.yearSelect).value;
-                config.store.audits[year] = logAudit(config.label, 'Removed bracket', config.summary(removed) + ' (' + year + ')');
-                renderBracketTable(configKey);
+                ConfirmModal.show({
+                    title: 'Remove Bracket Row',
+                    message: 'Remove this bracket row? Ensure remaining brackets still cover all salary ranges.',
+                    confirmText: 'Remove Row',
+                    tone: 'danger'
+                }).then(function (confirmed) {
+                    if (!confirmed) return;
+                    var removed = brackets.splice(idx, 1)[0];
+                    var year = document.getElementById(config.yearSelect).value;
+                    persistTaxBrackets();
+                    config.store.audits[year] = logAudit(config.label, 'Removed bracket', config.summary(removed) + ' (' + year + ')');
+                    renderBracketTable(configKey);
+                    PPToast.success('Bracket row removed.');
+                });
             });
         });
     }
@@ -521,6 +496,7 @@
             Object.assign(existing, record);
         }
 
+        persistTaxBrackets();
         config.store.audits[pendingBracketSave.year] = logAudit(
             config.label,
             pendingBracketSave.isNew ? 'Added bracket' : 'Updated bracket',
@@ -530,6 +506,7 @@
         pendingBracketSave = null;
         highStakesModal.hide();
         renderBracketTable(configKey);
+        PPToast.success('Bracket table updated.');
     });
 
     Object.keys(bracketConfigs).forEach(function (key) {

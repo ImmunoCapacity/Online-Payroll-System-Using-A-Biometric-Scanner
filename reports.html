@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>window.PP_ALLOWED_ROLES = ['Payroll Master', 'System Administrator'];</script>
+    <script src="js/auth-guard.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reports — Payroll</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="css/payrollpro.css" rel="stylesheet">
+</head>
+<body class="pp-app pp-app-shell">
+
+    <div id="pp-sidebar-mount"></div>
+
+    <div class="pp-shell-main">
+        <div id="pp-topbar-mount"></div>
+
+        <main class="pp-content">
+            <header class="pp-content-header">
+                <h1 class="pp-content-title">Reports</h1>
+                <p class="pp-content-subtitle">Payroll, leave, and loan summaries across the institution.</p>
+            </header>
+
+            <div class="pp-approval-tabs mb-3" role="tablist">
+                <button type="button" class="pp-approval-tab active" data-tab="payroll" role="tab">Payroll Summary</button>
+                <button type="button" class="pp-approval-tab" data-tab="leave" role="tab">Leave Summary</button>
+                <button type="button" class="pp-approval-tab" data-tab="loans" role="tab">Loan Summary</button>
+            </div>
+
+            <div class="pp-widget" id="panelPayroll">
+                <div class="pp-widget-header"><h2 class="pp-widget-title">Released Payroll Runs</h2></div>
+                <div class="pp-widget-body">
+                    <div class="pp-table-wrap">
+                        <table class="pp-table w-100">
+                            <thead>
+                                <tr>
+                                    <th>Pay Period</th>
+                                    <th class="col-num">Employees Paid</th>
+                                    <th class="col-money">Total Gross</th>
+                                    <th class="col-money">Total Deductions</th>
+                                    <th class="col-money">Total Net</th>
+                                </tr>
+                            </thead>
+                            <tbody id="payrollReportBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="pp-empty-state d-none" id="payrollReportEmpty">No payroll has been released yet. Release a pay period from Payroll Processing to see it here.</div>
+                </div>
+            </div>
+
+            <div class="pp-widget d-none" id="panelLeave">
+                <div class="pp-widget-header"><h2 class="pp-widget-title">Leave Requests by Category</h2></div>
+                <div class="pp-widget-body">
+                    <div class="pp-table-wrap">
+                        <table class="pp-table w-100">
+                            <thead>
+                                <tr>
+                                    <th>Category</th>
+                                    <th class="col-num">Pending</th>
+                                    <th class="col-num">Approved</th>
+                                    <th class="col-num">Rejected</th>
+                                    <th class="col-num">Cancelled</th>
+                                    <th class="col-num">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="leaveReportBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="pp-empty-state d-none" id="leaveReportEmpty">No leave requests on file.</div>
+                </div>
+            </div>
+
+            <div class="pp-widget d-none" id="panelLoans">
+                <div class="pp-widget-header"><h2 class="pp-widget-title">Loans by Type</h2></div>
+                <div class="pp-widget-body">
+                    <div class="pp-table-wrap">
+                        <table class="pp-table w-100">
+                            <thead>
+                                <tr>
+                                    <th>Loan Type</th>
+                                    <th class="col-num">Active Loans</th>
+                                    <th class="col-money">Total Principal</th>
+                                    <th class="col-money">Outstanding Balance</th>
+                                </tr>
+                            </thead>
+                            <tbody id="loanReportBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="pp-empty-state d-none" id="loanReportEmpty">No loans on file.</div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/data-store.js"></script>
+    <script src="js/confirm-modal.js"></script>
+    <script src="js/toast.js"></script>
+    <script src="js/payrollpro-layout.js"></script>
+    <script src="js/reports.js"></script>
+</body>
+</html>
