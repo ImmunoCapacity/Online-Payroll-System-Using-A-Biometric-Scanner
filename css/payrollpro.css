@@ -448,6 +448,20 @@ body.pp-app {
     border-left: 4px solid transparent;
 }
 
+.pp-summary-card.clickable {
+    cursor: pointer;
+    transition: box-shadow 0.15s ease;
+}
+
+.pp-summary-card.clickable:hover {
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+}
+
+.pp-summary-card.clickable.is-active {
+    box-shadow: 0 0 0 2px var(--pp-primary) inset;
+    background: var(--pp-bg);
+}
+
 .pp-summary-card.present { border-left-color: #22c55e; }
 .pp-summary-card.late { border-left-color: #f59e0b; }
 .pp-summary-card.absent { border-left-color: var(--pp-error); }

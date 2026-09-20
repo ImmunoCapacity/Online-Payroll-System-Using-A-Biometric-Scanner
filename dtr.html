@@ -72,16 +72,16 @@
                 </div>
 
                 <!-- Summary cards -->
-                <div class="pp-summary-row" aria-label="Today's attendance summary">
-                    <div class="pp-summary-card present">
+                <div class="pp-summary-row" aria-label="Today's attendance summary — click a card to filter the table">
+                    <div class="pp-summary-card present clickable" data-status="present" role="button" tabindex="0" aria-pressed="false">
                         <div class="pp-summary-label">Total Present Today</div>
                         <div class="pp-summary-value" id="summaryPresent">0</div>
                     </div>
-                    <div class="pp-summary-card late">
+                    <div class="pp-summary-card late clickable" data-status="late" role="button" tabindex="0" aria-pressed="false">
                         <div class="pp-summary-label">Total Late</div>
                         <div class="pp-summary-value" id="summaryLate">0</div>
                     </div>
-                    <div class="pp-summary-card absent">
+                    <div class="pp-summary-card absent clickable" data-status="absent" role="button" tabindex="0" aria-pressed="false">
                         <div class="pp-summary-label">Total Absent</div>
                         <div class="pp-summary-value" id="summaryAbsent">0</div>
                     </div>
@@ -107,6 +107,11 @@
                             <i class="bi bi-search"></i>
                             <input type="search" class="form-control pp-form-control" id="filterSearch" placeholder="Search by employee name…">
                         </div>
+                    </div>
+                    <div class="pp-filter-group d-flex align-items-end d-none" id="statusFilterClearGroup">
+                        <button type="button" class="btn btn-pp-outline" id="statusFilterClearBtn">
+                            <i class="bi bi-x-lg me-1"></i> <span id="statusFilterClearLabel">Show All</span>
+                        </button>
                     </div>
                     <div class="pp-filter-group d-flex align-items-end">
                         <button type="button" class="btn btn-pp-outline" data-bs-toggle="modal" data-bs-target="#manualEntryModal">
