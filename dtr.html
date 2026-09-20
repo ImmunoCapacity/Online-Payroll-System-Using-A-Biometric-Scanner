@@ -22,76 +22,268 @@
             <header class="pp-content-header">
                 <div>
                     <h1 class="pp-content-title">Daily Time Record</h1>
-                    <p class="pp-content-subtitle">Real-time attendance logs from the ZKTeco scanner. Late marking applies after a 15-minute grace period.</p>
+                    <p class="pp-content-subtitle">Manage attendance records from biometric scanner or encode faculty teaching hours manually.</p>
                 </div>
-                <button type="button" class="btn btn-pp-outline" data-bs-toggle="modal" data-bs-target="#manualEntryModal">
-                    <i class="bi bi-pencil-square me-1"></i> Manual Entry
-                </button>
             </header>
 
-        <!-- Summary cards -->
-        <div class="pp-summary-row" aria-label="Today's attendance summary">
-            <div class="pp-summary-card present">
-                <div class="pp-summary-label">Total Present Today</div>
-                <div class="pp-summary-value" id="summaryPresent">0</div>
+            <!-- Mode tabs -->
+            <div class="pp-dtr-tabs" role="tablist">
+                <button type="button" class="pp-dtr-tab active" data-tab="biometric" role="tab" aria-selected="true">
+                    <span class="pp-dtr-tab-icon"><i class="bi bi-fingerprint"></i></span>
+                    <span>
+                        <span class="pp-dtr-tab-title d-block">Biometric Records</span>
+                        <span class="pp-dtr-tab-subtitle">View and manage logs from the biometric scanner</span>
+                    </span>
+                </button>
+                <button type="button" class="pp-dtr-tab" data-tab="teaching" role="tab" aria-selected="false">
+                    <span class="pp-dtr-tab-icon"><i class="bi bi-easel2"></i></span>
+                    <span>
+                        <span class="pp-dtr-tab-title d-block">Faculty Teaching Hours</span>
+                        <span class="pp-dtr-tab-subtitle">Manage teaching schedules and encode attendance</span>
+                    </span>
+                </button>
             </div>
-            <div class="pp-summary-card late">
-                <div class="pp-summary-label">Total Late</div>
-                <div class="pp-summary-value" id="summaryLate">0</div>
-            </div>
-            <div class="pp-summary-card absent">
-                <div class="pp-summary-label">Total Absent</div>
-                <div class="pp-summary-value" id="summaryAbsent">0</div>
-            </div>
-        </div>
 
-        <!-- Filter bar -->
-        <div class="pp-filter-bar" role="search">
-            <div class="pp-filter-group">
-                <label for="filterDate" class="pp-form-label">Date</label>
-                <input type="date" class="form-control pp-form-control" id="filterDate">
-            </div>
-            <div class="pp-filter-group">
-                <label for="filterType" class="pp-form-label">Employee Type</label>
-                <select class="form-select pp-form-select" id="filterType">
-                    <option value="all">All</option>
-                    <option value="Faculty">Faculty</option>
-                    <option value="Admin">Admin</option>
-                </select>
-            </div>
-            <div class="pp-filter-group search">
-                <label for="filterSearch" class="pp-form-label">Search</label>
-                <div class="pp-search-input">
-                    <i class="bi bi-search"></i>
-                    <input type="search" class="form-control pp-form-control" id="filterSearch" placeholder="Search by employee name…">
+            <!-- ============================================================
+                 BIOMETRIC RECORDS PANEL
+                 ============================================================ -->
+            <div class="pp-dtr-panel active" id="panelBiometric">
+
+                <!-- Scanner status bar -->
+                <div class="pp-card pp-scanner-bar">
+                    <div class="pp-card-body pp-scanner-bar-info">
+                        <span class="pp-icon-box"><i class="bi bi-fingerprint"></i></span>
+                        <div>
+                            <div class="d-flex align-items-center gap-2">
+                                <strong>Biometric Scanner</strong>
+                                <span class="pp-device-status pp-device-status-connected" id="scannerStatus">
+                                    <span class="pp-device-dot"></span> Connected
+                                </span>
+                            </div>
+                            <div class="text-muted small" id="scannerLastSync">Last synchronization: —</div>
+                        </div>
+                    </div>
+                    <div class="pp-card-body text-end">
+                        <button type="button" class="btn btn-pp-outline" id="syncNowBtn">
+                            <i class="bi bi-arrow-repeat me-1"></i> Sync Now
+                        </button>
+                        <div class="pp-scanner-last-sync" id="syncLastLabel">Last synced: —</div>
+                    </div>
+                </div>
+
+                <!-- Summary cards -->
+                <div class="pp-summary-row" aria-label="Today's attendance summary">
+                    <div class="pp-summary-card present">
+                        <div class="pp-summary-label">Total Present Today</div>
+                        <div class="pp-summary-value" id="summaryPresent">0</div>
+                    </div>
+                    <div class="pp-summary-card late">
+                        <div class="pp-summary-label">Total Late</div>
+                        <div class="pp-summary-value" id="summaryLate">0</div>
+                    </div>
+                    <div class="pp-summary-card absent">
+                        <div class="pp-summary-label">Total Absent</div>
+                        <div class="pp-summary-value" id="summaryAbsent">0</div>
+                    </div>
+                </div>
+
+                <!-- Filter bar -->
+                <div class="pp-filter-bar" role="search">
+                    <div class="pp-filter-group">
+                        <label for="filterDate" class="pp-form-label">Date</label>
+                        <input type="date" class="form-control pp-form-control" id="filterDate">
+                    </div>
+                    <div class="pp-filter-group">
+                        <label for="filterType" class="pp-form-label">Employee Type</label>
+                        <select class="form-select pp-form-select" id="filterType">
+                            <option value="all">All</option>
+                            <option value="Faculty">Faculty</option>
+                            <option value="Admin">Admin</option>
+                        </select>
+                    </div>
+                    <div class="pp-filter-group search">
+                        <label for="filterSearch" class="pp-form-label">Search</label>
+                        <div class="pp-search-input">
+                            <i class="bi bi-search"></i>
+                            <input type="search" class="form-control pp-form-control" id="filterSearch" placeholder="Search by employee name…">
+                        </div>
+                    </div>
+                    <div class="pp-filter-group d-flex align-items-end">
+                        <button type="button" class="btn btn-pp-outline" data-bs-toggle="modal" data-bs-target="#manualEntryModal">
+                            <i class="bi bi-pencil-square me-1"></i> Manual Entry
+                        </button>
+                    </div>
+                </div>
+
+                <!-- DTR table -->
+                <div class="pp-table-wrap">
+                    <table class="pp-table" id="dtrTable">
+                        <thead>
+                            <tr>
+                                <th>Employee Name</th>
+                                <th>Employee Type</th>
+                                <th>Time In</th>
+                                <th>Time Out</th>
+                                <th>Total Hours</th>
+                                <th>Status</th>
+                                <th class="text-center" title="Present during scheduled teaching period (Faculty only)">
+                                    <i class="bi bi-mortarboard"></i> Teaching
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="dtrBody"></tbody>
+                    </table>
+                    <div class="pp-empty-state d-none" id="emptyTable">No records match the current filters.</div>
                 </div>
             </div>
-        </div>
 
-        <!-- DTR table -->
-        <div class="pp-table-wrap">
-            <table class="pp-table" id="dtrTable">
-                <thead>
-                    <tr>
-                        <th>Employee Name</th>
-                        <th>Employee Type</th>
-                        <th>Time In</th>
-                        <th>Time Out</th>
-                        <th>Total Hours</th>
-                        <th>Status</th>
-                        <th class="text-center" title="Present during scheduled teaching period (Faculty only)">
-                            <i class="bi bi-mortarboard"></i> Teaching
-                        </th>
-                    </tr>
-                </thead>
-                <tbody id="dtrBody"></tbody>
-            </table>
-            <div class="pp-empty-state d-none" id="emptyTable">No records match the current filters.</div>
-        </div>
+            <!-- ============================================================
+                 FACULTY TEACHING HOURS PANEL
+                 ============================================================ -->
+            <div class="pp-dtr-panel" id="panelTeaching">
+
+                <!-- Teaching schedule -->
+                <div class="pp-widget mb-3">
+                    <div class="pp-widget-header">
+                        <h2 class="pp-widget-title">Teaching Schedule</h2>
+                        <button type="button" class="btn btn-pp-primary btn-sm" id="addScheduleBtn">
+                            <i class="bi bi-plus-lg me-1"></i> Add Schedule
+                        </button>
+                    </div>
+                    <div class="pp-widget-body">
+                        <div class="pp-split-layout">
+
+                            <!-- Faculty list -->
+                            <section class="pp-panel-left pp-card" aria-label="Faculty list">
+                                <div class="pp-card-header">Faculty</div>
+                                <div class="pp-card-body border-bottom p-2">
+                                    <div class="pp-search-input">
+                                        <i class="bi bi-search"></i>
+                                        <input
+                                            type="search"
+                                            class="form-control pp-form-control"
+                                            id="scheduleFacultySearch"
+                                            placeholder="Search faculty…"
+                                            autocomplete="off"
+                                        >
+                                    </div>
+                                </div>
+                                <div class="pp-employee-list" id="scheduleFacultyList" role="listbox" aria-label="Select a faculty member"></div>
+                            </section>
+
+                            <!-- Selected faculty's schedule -->
+                            <section class="pp-card" aria-label="Faculty schedule">
+                                <div class="pp-card-header">Weekly Schedule</div>
+                                <div id="scheduleDetailWrap">
+                                    <div class="pp-no-selection" id="scheduleDetailEmpty">
+                                        <i class="bi bi-calendar3 display-6 text-muted d-block mb-2"></i>
+                                        Select a faculty member to view their teaching schedule.
+                                    </div>
+                                    <div class="pp-card-body d-none" id="scheduleDetailContent">
+                                        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+                                            <div>
+                                                <div class="pp-selected-name mb-0" id="scheduleDetailName"></div>
+                                                <div class="pp-selected-meta mb-0" id="scheduleDetailMeta"></div>
+                                            </div>
+                                            <div class="d-flex gap-2">
+                                                <button type="button" class="btn btn-sm btn-pp-outline" id="editScheduleBtn">
+                                                    <i class="bi bi-pencil me-1"></i> Edit
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-pp-outline" id="deleteScheduleBtn">
+                                                    <i class="bi bi-trash me-1"></i> Delete
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="pp-table-wrap">
+                                            <table class="pp-table pp-grid-table w-100">
+                                                <thead>
+                                                    <tr>
+                                                        <th class="pp-grid-time-col">TIME</th>
+                                                        <th class="text-center">MON</th>
+                                                        <th class="text-center">TUE</th>
+                                                        <th class="text-center">WED</th>
+                                                        <th class="text-center">THU</th>
+                                                        <th class="text-center">FRI</th>
+                                                        <th class="text-center">SAT</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="scheduleDetailBody"></tbody>
+                                            </table>
+                                        </div>
+                                        <div class="pp-empty-state d-none" id="scheduleDetailNoSchedule">No teaching schedule set for this faculty member yet.</div>
+                                    </div>
+                                </div>
+                            </section>
+
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Teaching attendance -->
+                <div class="pp-widget">
+                    <div class="pp-widget-header">
+                        <h2 class="pp-widget-title">Teaching Attendance</h2>
+                    </div>
+                    <div class="pp-widget-body">
+                        <form id="teachingAttendanceForm" class="row g-3 mb-4" novalidate>
+                            <div class="col-md-4">
+                                <label for="teachingFacultySearch" class="pp-form-label">Faculty</label>
+                                <div class="pp-search-input">
+                                    <i class="bi bi-search"></i>
+                                    <input
+                                        type="text"
+                                        class="form-control pp-form-control"
+                                        id="teachingFacultySearch"
+                                        placeholder="Type to search faculty…"
+                                        autocomplete="off"
+                                        list="facultyDatalist"
+                                        required
+                                    >
+                                </div>
+                                <datalist id="facultyDatalist"></datalist>
+                                <input type="hidden" id="teachingFaculty">
+                                <div class="small text-danger mt-1 d-none" id="teachingFacultyError">Please select a faculty member from the list.</div>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="teachingDate" class="pp-form-label">Date</label>
+                                <input type="date" class="form-control pp-form-control" id="teachingDate" required>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="teachingTimeIn" class="pp-form-label">Time In</label>
+                                <input type="time" class="form-control pp-form-control" id="teachingTimeIn" required>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="teachingTimeOut" class="pp-form-label">Time Out</label>
+                                <input type="time" class="form-control pp-form-control" id="teachingTimeOut">
+                            </div>
+                            <div class="col-md-2 d-flex align-items-end">
+                                <button type="submit" class="btn btn-pp-primary w-100">Log Attendance</button>
+                            </div>
+                            <div class="col-12" id="teachingScheduleHint"></div>
+                        </form>
+
+                        <div class="pp-table-wrap">
+                            <table class="pp-table w-100">
+                                <thead>
+                                    <tr>
+                                        <th>Faculty</th>
+                                        <th>Date</th>
+                                        <th>Time In</th>
+                                        <th>Time Out</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="teachingAttendanceBody"></tbody>
+                            </table>
+                        </div>
+                        <div class="pp-empty-state d-none" id="teachingAttendanceEmpty">No teaching attendance has been logged yet.</div>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
 
-    <!-- Manual Entry Modal -->
+    <!-- Manual Entry Modal (Biometric Records) -->
     <div class="modal fade pp-modal" id="manualEntryModal" tabindex="-1" aria-labelledby="manualEntryTitle" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -149,6 +341,49 @@
                     <div class="modal-footer">
                         <button type="button" class="btn btn-pp-outline" data-bs-dismiss="modal">Cancel</button>
                         <button type="submit" class="btn btn-pp-primary">Save Entry</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Teaching Schedule Modal -->
+    <div class="modal fade pp-modal" id="scheduleModal" tabindex="-1" aria-labelledby="scheduleModalTitle" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title" id="scheduleModalTitle">Add Teaching Schedule</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="scheduleForm" novalidate>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="scheduleFaculty" class="pp-form-label">Faculty</label>
+                            <select class="form-select pp-form-select" id="scheduleFaculty" required></select>
+                        </div>
+
+                        <label class="pp-form-label d-block mb-2">Weekly Schedule</label>
+                        <div class="pp-table-wrap">
+                            <table class="pp-table pp-grid-table pp-grid-edit-table w-100">
+                                <thead>
+                                    <tr>
+                                        <th class="pp-grid-time-col">TIME</th>
+                                        <th class="text-center">MON</th>
+                                        <th class="text-center">TUE</th>
+                                        <th class="text-center">WED</th>
+                                        <th class="text-center">THU</th>
+                                        <th class="text-center">FRI</th>
+                                        <th class="text-center">SAT</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="gridEditBody"></tbody>
+                            </table>
+                        </div>
+                        <p class="small text-muted mb-0 mt-2">Type a course name into every hour that faculty member teaches. A course spanning several hours just means typing the same name into each of those cells — leave the rest blank.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-pp-outline" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-pp-primary">Save Schedule</button>
                     </div>
                 </form>
             </div>

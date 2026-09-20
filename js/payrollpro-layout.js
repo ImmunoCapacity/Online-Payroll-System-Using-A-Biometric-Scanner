@@ -332,6 +332,7 @@
                 '<a href="' + item.href + '"' +
                 ' class="pp-sidebar-link' + active + '"' +
                 current +
+                ' title="' + item.label + '"' +
                 '>' +
 
                     '<i class="bi ' + item.icon + '"></i>' +
@@ -350,6 +351,10 @@
         return (
 
             '<aside class="pp-sidebar" id="ppSidebar" aria-label="Main navigation">' +
+
+                '<button type="button" class="pp-sidebar-collapse-btn" id="ppSidebarCollapseBtn" aria-label="Collapse sidebar">' +
+                    '<i class="bi bi-chevron-left"></i>' +
+                '</button>' +
 
                 '<a href="' + brandHref + '" class="pp-sidebar-brand">' +
 
@@ -793,6 +798,30 @@
     }
 
 
+    function bindSidebarCollapse() {
+
+        var btn = document.getElementById('ppSidebarCollapseBtn');
+        if (!btn) return;
+
+        function updateAriaLabel() {
+            var collapsed = document.body.classList.contains('pp-sidebar-collapsed');
+            btn.setAttribute('aria-label', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
+        }
+
+        updateAriaLabel();
+
+        btn.addEventListener('click', function () {
+            var collapsed = document.body.classList.toggle('pp-sidebar-collapsed');
+            updateAriaLabel();
+            try {
+                localStorage.setItem('ppSidebarCollapsed', String(collapsed));
+            } catch (error) {
+                // ignore — collapse still works for this page view
+            }
+        });
+    }
+
+
     // ============================================================
     // PROFILE / SETTINGS MODALS
     // ============================================================
@@ -911,6 +940,14 @@
                 };
                 try {
                     localStorage.setItem('ppSettings', JSON.stringify(settings));
+                    // This becomes the explicit sidebar state from now on,
+                    // taking effect immediately rather than only on next load.
+                    localStorage.setItem('ppSidebarCollapsed', String(settings.compactSidebar));
+                    document.body.classList.toggle('pp-sidebar-collapsed', settings.compactSidebar);
+                    var collapseBtn = document.getElementById('ppSidebarCollapseBtn');
+                    if (collapseBtn) {
+                        collapseBtn.setAttribute('aria-label', settings.compactSidebar ? 'Expand sidebar' : 'Collapse sidebar');
+                    }
                 } catch (error) {
                     console.warn('[PayrollProLayout] Could not save settings:', error);
                 }
@@ -930,6 +967,24 @@
     function init(options) {
 
         try {
+
+            // Apply sidebar collapsed state as early as possible, before any
+            // markup is injected, to avoid a flash of the expanded sidebar.
+            (function applyInitialSidebarState() {
+                try {
+                    var explicit = localStorage.getItem('ppSidebarCollapsed');
+                    var collapsed;
+                    if (explicit !== null) {
+                        collapsed = explicit === 'true';
+                    } else {
+                        var settings = JSON.parse(localStorage.getItem('ppSettings') || '{}');
+                        collapsed = !!settings.compactSidebar;
+                    }
+                    document.body.classList.toggle('pp-sidebar-collapsed', collapsed);
+                } catch (error) {
+                    // ignore — sidebar just stays expanded
+                }
+            })();
 
             var navModeExplicitlySet =
                 !!(options && options.navMode !== undefined);
@@ -1122,6 +1177,8 @@
 
 
             bindSidebarToggle();
+
+            bindSidebarCollapse();
 
             bindUserMenu();
 

@@ -468,6 +468,179 @@ body.pp-app {
     line-height: 1.2;
 }
 
+/* DTR mode tabs (Biometric Records / Faculty Teaching Hours) */
+.pp-dtr-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+}
+
+.pp-dtr-tab {
+    flex: 1 1 260px;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: var(--pp-surface);
+    border: 1px solid var(--pp-border);
+    border-bottom: 3px solid transparent;
+    border-radius: var(--pp-radius);
+    padding: 0.875rem 1rem;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.pp-dtr-tab:hover {
+    border-color: var(--pp-primary);
+}
+
+.pp-dtr-tab.active {
+    background: var(--pp-primary-light);
+    border-color: var(--pp-primary);
+    border-bottom-color: var(--pp-primary);
+}
+
+.pp-dtr-tab-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--pp-radius-sm);
+    background: #e8efff;
+    color: #2f64c7;
+    font-size: 1.125rem;
+    flex-shrink: 0;
+}
+
+.pp-dtr-tab-title {
+    font-weight: 700;
+    color: var(--pp-text);
+    font-size: 0.9375rem;
+}
+
+.pp-dtr-tab-subtitle {
+    font-size: 0.8125rem;
+    color: var(--pp-text-muted);
+}
+
+.pp-dtr-panel {
+    display: none;
+}
+
+.pp-dtr-panel.active {
+    display: block;
+}
+
+/* Scanner status bar (reuses .pp-card / .pp-icon-box / .pp-device-status) */
+.pp-scanner-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.pp-scanner-bar-info {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+}
+
+.pp-scanner-last-sync {
+    font-size: 0.75rem;
+    color: var(--pp-text-muted);
+    text-align: right;
+    margin-top: 0.25rem;
+}
+
+/* Day-of-week pills for the teaching schedule table */
+.pp-day-pill {
+    display: inline-block;
+    background: var(--pp-primary-light);
+    color: var(--pp-primary-dark);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    padding: 0.1rem 0.4rem;
+    border-radius: 999px;
+    margin: 0 2px 2px 0;
+}
+
+/* Faculty list + schedule detail split layout (also used by
+   fingerprint-registration.html via its own stylesheet) */
+.pp-split-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+}
+
+@media (min-width: 992px) {
+    .pp-split-layout {
+        grid-template-columns: 300px 1fr;
+        align-items: start;
+    }
+}
+
+.pp-panel-left .pp-card-body {
+    padding: 0;
+}
+
+.pp-selected-name {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--pp-primary-dark);
+    margin-bottom: 0.25rem;
+}
+
+.pp-selected-meta {
+    font-size: 0.8125rem;
+    color: var(--pp-text-muted);
+    margin-bottom: 1rem;
+}
+
+.pp-no-selection {
+    color: var(--pp-text-muted);
+    font-size: 0.875rem;
+    text-align: center;
+    padding: 2.5rem 1.25rem;
+}
+
+.pp-schedule-day-cell {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--pp-primary-dark);
+}
+
+.pp-schedule-day-cell.is-off {
+    color: var(--pp-text-muted);
+    font-weight: 400;
+}
+
+.pp-grid-table th, .pp-grid-table td { text-align: center; vertical-align: middle; }
+.pp-grid-time-col {
+    background: #f1f5f9;
+    font-weight: 600;
+    font-size: 0.8125rem;
+    color: var(--pp-text-muted);
+    white-space: nowrap;
+    text-align: left !important;
+}
+.pp-grid-cell {
+    font-size: 0.8125rem;
+    color: var(--pp-text-muted);
+    background: #fafbfc;
+}
+.pp-grid-cell.is-scheduled {
+    background: var(--pp-primary-light);
+    color: var(--pp-primary-dark);
+    font-weight: 600;
+}
+.pp-grid-edit-table td {
+    padding: 0.25rem;
+}
+
 /* Filter bar */
 .pp-filter-bar {
     display: flex;
@@ -611,7 +784,7 @@ body.pp-app-shell {
     left: 0;
     bottom: 0;
     z-index: 1040;
-    transition: transform 0.25s ease;
+    transition: transform 0.25s ease, width 0.25s ease;
 }
 
 .pp-sidebar-brand {
@@ -657,6 +830,7 @@ body.pp-app-shell {
 .pp-sidebar-nav {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 0.75rem 0.625rem;
 }
 
@@ -712,6 +886,7 @@ body.pp-app-shell {
     flex-direction: column;
     min-width: 0;
     min-height: 100vh;
+    transition: margin-left 0.25s ease;
 }
 
 .pp-topbar {
@@ -853,6 +1028,85 @@ body.pp-app-shell {
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+}
+
+/* Desktop sidebar collapse */
+.pp-sidebar-collapse-btn {
+    position: absolute;
+    top: 50%;
+    right: -13px;
+    transform: translateY(-50%);
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: #3f6f9f;
+    border: 1px solid #3f6f9f;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    cursor: pointer;
+    z-index: 1041;
+}
+
+.pp-sidebar-collapse-btn:hover {
+    background: #365f89;
+    border-color: #365f89;
+    color: #ffffff;
+}
+
+@media (max-width: 991px) {
+    .pp-sidebar-collapse-btn {
+        display: none;
+    }
+}
+
+body.pp-sidebar-collapsed .pp-sidebar {
+    width: 76px;
+}
+
+body.pp-sidebar-collapsed .pp-shell-main {
+    margin-left: 76px;
+}
+
+body.pp-sidebar-collapsed .pp-sidebar-brand-text,
+body.pp-sidebar-collapsed .pp-sidebar-link span,
+body.pp-sidebar-collapsed .pp-sidebar-footer {
+    display: none;
+}
+
+body.pp-sidebar-collapsed .pp-sidebar-brand {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+}
+
+body.pp-sidebar-collapsed .pp-sidebar-link {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+}
+
+body.pp-sidebar-collapsed .pp-sidebar-collapse-btn i {
+    transform: rotate(180deg);
+}
+
+@media (max-width: 991px) {
+    body.pp-sidebar-collapsed .pp-sidebar {
+        width: 260px;
+    }
+    body.pp-sidebar-collapsed .pp-shell-main {
+        margin-left: 0;
+    }
+    body.pp-sidebar-collapsed .pp-sidebar-brand-text,
+    body.pp-sidebar-collapsed .pp-sidebar-link span,
+    body.pp-sidebar-collapsed .pp-sidebar-footer {
+        display: block;
+    }
+    body.pp-sidebar-collapsed .pp-sidebar-link {
+        justify-content: flex-start;
+    }
 }
 
 .pp-content {

@@ -76,6 +76,14 @@
             { id: 8, employeeId: 'EMP-2023-019', deviceId: 2, date: 'TODAY', timeIn: '13:55', timeOut: '17:20', status: 'present', manual: false }
         ],
 
+        teachingSchedule: [
+            { id: 1, employeeId: 'EMP-2021-014', days: ['Mon', 'Wed', 'Fri'], timeStart: '07:30', timeEnd: '09:30', subject: 'Data Structures' },
+            { id: 2, employeeId: 'EMP-2022-031', days: ['Tue', 'Thu'], timeStart: '10:00', timeEnd: '12:00', subject: 'Web Development' },
+            { id: 3, employeeId: 'EMP-2020-052', days: ['Mon', 'Wed'], timeStart: '13:00', timeEnd: '15:00', subject: 'Networking Fundamentals' },
+            { id: 4, employeeId: 'EMP-2024-003', days: ['Tue', 'Thu', 'Fri'], timeStart: '08:00', timeEnd: '10:00', subject: 'Systems Analysis' },
+            { id: 5, employeeId: 'EMP-2023-019', days: ['Mon', 'Thu'], timeStart: '14:00', timeEnd: '16:00', subject: 'Database Management' }
+        ],
+
         leaveCategories: [
             { id: 1, name: 'Sick Leave', paid: true, maxDays: 12, active: true },
             { id: 2, name: 'Vacation Leave', paid: true, maxDays: 15, active: true },
@@ -233,6 +241,11 @@
     function ensureSeeded() {
         if (read('seeded', false)) {
             resolveTodayPlaceholders();
+            // Backfill any collection added in a later update (existing
+            // browsers won't have it since the full seed only runs once).
+            if (read('teachingSchedule', null) === null) {
+                write('teachingSchedule', SEED.teachingSchedule);
+            }
             return;
         }
         Object.keys(SEED).forEach(function (key) {
@@ -290,6 +303,10 @@
         // ---- DTR ----
         getDTR: function () { return read('dtr', []); },
         saveDTR: function (list) { return write('dtr', list); },
+
+        // ---- Faculty teaching schedule ----
+        getTeachingSchedule: function () { return read('teachingSchedule', []); },
+        saveTeachingSchedule: function (list) { return write('teachingSchedule', list); },
 
         // ---- Leave categories & requests ----
         getLeaveCategories: function () { return read('leaveCategories', []); },
