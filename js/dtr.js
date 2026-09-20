@@ -151,6 +151,8 @@
         return '<td class="text-center"><i class="bi bi-exclamation-circle-fill pp-teaching-icon missed" title="Not present during full scheduled teaching period"></i></td>';
     }
 
+    let selectedStatus = null; // set by clicking a summary card: 'present' | 'late' | 'absent' | null
+
     function getFilteredRows() {
         const date = filterDate.value;
         const type = filterType.value;
@@ -166,6 +168,7 @@
                 if (!row.employee) return false;
                 if (type !== 'all' && row.employee.type !== type) return false;
                 if (q && !row.employee.displayName.toLowerCase().includes(q)) return false;
+                if (selectedStatus && row.record.status !== selectedStatus) return false;
                 return true;
             })
             .sort(function (a, b) { return a.employee.displayName.localeCompare(b.employee.displayName); });
@@ -183,7 +186,41 @@
         document.getElementById('summaryPresent').textContent = present;
         document.getElementById('summaryLate').textContent = late;
         document.getElementById('summaryAbsent').textContent = absent;
+
+        document.querySelectorAll('.pp-summary-card[data-status]').forEach(function (card) {
+            const active = card.dataset.status === selectedStatus;
+            card.classList.toggle('is-active', active);
+            card.setAttribute('aria-pressed', String(active));
+        });
+
+        const clearGroup = document.getElementById('statusFilterClearGroup');
+        const clearLabel = document.getElementById('statusFilterClearLabel');
+        if (selectedStatus) {
+            clearGroup.classList.remove('d-none');
+            clearLabel.textContent = 'Showing: ' + selectedStatus.charAt(0).toUpperCase() + selectedStatus.slice(1);
+        } else {
+            clearGroup.classList.add('d-none');
+        }
     }
+
+    document.querySelectorAll('.pp-summary-card[data-status]').forEach(function (card) {
+        function toggleStatus() {
+            selectedStatus = selectedStatus === card.dataset.status ? null : card.dataset.status;
+            renderTable();
+        }
+        card.addEventListener('click', toggleStatus);
+        card.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                toggleStatus();
+            }
+        });
+    });
+
+    document.getElementById('statusFilterClearBtn').addEventListener('click', function () {
+        selectedStatus = null;
+        renderTable();
+    });
 
     function renderTable() {
         const rows = getFilteredRows();
