@@ -32,3 +32,40 @@
     color: var(--pp-text-muted);
     font-size: 0.875rem;
 }
+
+
+/* Moved here from the shared payrollpro.css — exclusive to this page */
+
+.pp-badge-enrolled {
+    background: var(--pp-success-bg);
+    color: var(--pp-success);
+    font-size: 0.75rem;
+    padding: 0.35rem 0.625rem;
+    border-radius: var(--pp-radius-sm);
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+.pp-enroll-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    min-height: 360px;
+    padding: 2rem 1.5rem;
+}
+
+.pp-enroll-instruction {
+    font-size: 0.9375rem;
+    color: var(--pp-text-muted);
+    max-width: 280px;
+    margin-bottom: 1.5rem;
+    line-height: 1.5;
+}
+
+.pp-enrolled-info {
+    font-size: 0.875rem;
+    color: var(--pp-text-muted);
+    margin: 0.75rem 0 1.25rem;
+}

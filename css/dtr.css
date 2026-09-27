@@ -1,0 +1,123 @@
+/* ============================================================
+   Daily Time Record — Page-specific styles
+   Loaded alongside css/payrollpro.css (shared/common styles).
+   ============================================================ */
+
+.pp-dtr-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+}
+
+.pp-dtr-tab {
+    flex: 1 1 260px;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: var(--pp-surface);
+    border: 1px solid var(--pp-border);
+    border-bottom: 3px solid transparent;
+    border-radius: var(--pp-radius);
+    padding: 0.875rem 1rem;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.pp-dtr-tab:hover {
+    border-color: var(--pp-primary);
+}
+
+.pp-dtr-tab-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--pp-radius-sm);
+    background: #e8efff;
+    color: #2f64c7;
+    font-size: 1.125rem;
+    flex-shrink: 0;
+}
+
+.pp-dtr-tab-title {
+    font-weight: 700;
+    color: var(--pp-text);
+    font-size: 0.9375rem;
+}
+
+.pp-dtr-tab-subtitle {
+    font-size: 0.8125rem;
+    color: var(--pp-text-muted);
+}
+
+.pp-dtr-panel {
+    display: none;
+}
+
+.pp-scanner-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.pp-scanner-bar-info {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+}
+
+.pp-scanner-last-sync {
+    font-size: 0.75rem;
+    color: var(--pp-text-muted);
+    text-align: right;
+    margin-top: 0.25rem;
+}
+
+.pp-day-pill {
+    display: inline-block;
+    background: var(--pp-primary-light);
+    color: var(--pp-primary-dark);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    padding: 0.1rem 0.4rem;
+    border-radius: 999px;
+    margin: 0 2px 2px 0;
+}
+
+.pp-grid-table th, .pp-grid-table td { text-align: center; vertical-align: middle; }
+
+.pp-grid-time-col {
+    background: #f1f5f9;
+    font-weight: 600;
+    font-size: 0.8125rem;
+    color: var(--pp-text-muted);
+    white-space: nowrap;
+    text-align: left !important;
+}
+
+.pp-grid-edit-table td {
+    padding: 0.25rem;
+}
+
+.pp-teaching-icon {
+    font-size: 1rem;
+    cursor: help;
+}
+
+.pp-teaching-icon.met {
+    color: var(--pp-success);
+}
+
+.pp-teaching-icon.missed {
+    color: var(--pp-error);
+}
+
+.pp-teaching-icon.na {
+    color: var(--pp-border);
+}

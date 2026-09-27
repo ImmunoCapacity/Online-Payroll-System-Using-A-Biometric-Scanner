@@ -1,0 +1,95 @@
+/* ============================================================
+   Leave Application — Page-specific styles
+   Loaded alongside css/payrollpro.css (shared/common styles).
+   ============================================================ */
+
+.pp-leave-balance-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.875rem;
+    margin-bottom: 1.25rem;
+}
+
+@media (max-width: 991px) {
+.pp-leave-balance-row {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 575px) {
+.pp-leave-balance-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+.pp-balance-card {
+    background: var(--pp-surface);
+    border: 1px solid var(--pp-border);
+    border-radius: var(--pp-radius);
+    padding: 1rem 1.125rem;
+    box-shadow: var(--pp-shadow);
+}
+
+.pp-balance-card-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--pp-text-muted);
+    margin-bottom: 0.375rem;
+}
+
+.pp-balance-card-value {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--pp-primary-dark);
+    font-variant-numeric: tabular-nums;
+}
+
+.pp-balance-card-meta {
+    font-size: 0.6875rem;
+    color: var(--pp-text-muted);
+    margin-top: 0.25rem;
+}
+
+.pp-balance-card.sick { border-left: 4px solid #3b82f6; }
+
+.pp-balance-card.vacation { border-left: 4px solid #22c55e; }
+
+.pp-balance-card.maternity { border-left: 4px solid #a855f7; }
+
+.pp-balance-card.paternity { border-left: 4px solid #06b6d4; }
+
+.pp-badge-pending {
+    background: var(--pp-warning-bg);
+    color: var(--pp-warning);
+}
+
+.pp-badge-approved {
+    background: var(--pp-success-bg);
+    color: var(--pp-success);
+}
+
+.pp-badge-rejected {
+    background: var(--pp-error-bg);
+    color: var(--pp-error);
+}
+
+.pp-badge-cancelled {
+    background: #f1f5f9;
+    color: var(--pp-text-muted);
+}
+
+.pp-btn-cancel {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--pp-text-muted);
+    background: none;
+    border: none;
+    padding: 0.25rem 0.5rem;
+    cursor: pointer;
+    border-radius: var(--pp-radius-sm);
+}
+
+.pp-btn-cancel:hover {
+    color: var(--pp-error);
+    background: var(--pp-error-bg);
+}

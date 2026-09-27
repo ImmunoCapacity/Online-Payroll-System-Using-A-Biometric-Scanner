@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script>window.PP_ALLOWED_ROLES = ['System Administrator'];</script>
+    <script src="js/auth-guard.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -20,6 +22,7 @@
 
     <!-- Main System CSS -->
     <link href="css/payrollpro.css" rel="stylesheet">
+    <link href="css/system-admin.css" rel="stylesheet">
 </head>
 
 <body class="pp-app pp-app-shell">
@@ -81,12 +84,12 @@
                         Total Employees
                     </div>
 
-                    <div class="pp-stat-value">
-                        248
+                    <div class="pp-stat-value" id="statTotalEmployees">
+                        0
                     </div>
 
-                    <div class="pp-stat-meta">
-                        142 Faculty · 106 Admin Staff
+                    <div class="pp-stat-meta" id="statTotalEmployeesMeta">
+                        —
                     </div>
 
                 </div>
@@ -106,8 +109,8 @@
                         System Users
                     </div>
 
-                    <div class="pp-stat-value">
-                        12
+                    <div class="pp-stat-value" id="statSystemUsers">
+                        0
                     </div>
 
                     <div class="pp-stat-meta">
@@ -131,12 +134,12 @@
                         Active Users
                     </div>
 
-                    <div class="pp-stat-value">
-                        10
+                    <div class="pp-stat-value" id="statActiveUsers">
+                        0
                     </div>
 
-                    <div class="pp-stat-meta">
-                        2 accounts inactive
+                    <div class="pp-stat-meta" id="statActiveUsersMeta">
+                        —
                     </div>
 
                 </div>
@@ -156,8 +159,8 @@
                         Biometric Device
                     </div>
 
-                    <div class="pp-stat-value text-status">
-                        Online
+                    <div class="pp-stat-value text-status" id="statDeviceStatus">
+                        —
                     </div>
 
                     <div class="pp-stat-meta">
@@ -864,6 +867,12 @@
     <script
         src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js">
     </script>
+
+    <script src="js/data-store.js"></script>
+
+    <script src="js/confirm-modal.js"></script>
+
+    <script src="js/toast.js"></script>
 
     <script src="js/payrollpro-layout.js"></script>
 

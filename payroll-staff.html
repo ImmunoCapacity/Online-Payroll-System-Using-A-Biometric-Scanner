@@ -3,6 +3,9 @@
 
 <head>
 
+    <script>window.PP_ALLOWED_ROLES = ['Payroll Staff'];</script>
+    <script src="js/auth-guard.js"></script>
+
     <meta charset="UTF-8">
 
     <meta
@@ -41,6 +44,11 @@
 
     <link
         href="css/payrollpro.css"
+        rel="stylesheet"
+    >
+
+    <link
+        href="css/payroll-staff.css"
         rel="stylesheet"
     >
 
@@ -1538,6 +1546,18 @@
     <!-- =========================================================
          SHARED LAYOUT JS
          ========================================================= -->
+
+    <script
+        src="js/data-store.js"
+    ></script>
+
+    <script
+        src="js/confirm-modal.js"
+    ></script>
+
+    <script
+        src="js/toast.js"
+    ></script>
 
     <script
         src="js/payrollpro-layout.js"

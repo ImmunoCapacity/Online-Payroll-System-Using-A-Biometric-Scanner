@@ -142,59 +142,62 @@
 
     function loadDashboardData() {
 
-        /*
-         * Temporary demonstration data.
-         *
-         * These can later be replaced with
-         * Spring Boot API calls.
-         */
+        var employees = DataStore.getEmployees().filter(function (e) { return e.status === 'Active'; });
+        var today = new Date().toISOString().slice(0, 10);
+        var todaysDtr = DataStore.getDTR().filter(function (r) { return r.date === today; });
 
+        var present = todaysDtr.filter(function (r) { return r.status === 'present'; }).length;
+        var late = todaysDtr.filter(function (r) { return r.status === 'late'; }).length;
+        var absent = todaysDtr.filter(function (r) { return r.status === 'absent'; }).length;
+        var onLeave = todaysDtr.filter(function (r) { return r.status === 'leave'; }).length;
+
+        var total = employees.length;
 
         setText(
             'totalEmployees',
-            '120'
+            String(total)
         );
 
 
         setText(
             'presentToday',
-            '96'
+            String(present)
         );
 
 
         setText(
             'lateToday',
-            '8'
+            String(late)
         );
 
 
         setText(
             'absentToday',
-            '6'
+            String(absent)
         );
 
 
         setText(
             'overviewPresent',
-            '96'
+            String(present)
         );
 
 
         setText(
             'overviewLate',
-            '8'
+            String(late)
         );
 
 
         setText(
             'overviewAbsent',
-            '6'
+            String(absent)
         );
 
 
         setText(
             'overviewLeave',
-            '10'
+            String(onLeave)
         );
 
 
@@ -202,15 +205,10 @@
         // PRESENT PERCENTAGE
         // --------------------------------------------------------
 
-        var total = 120;
-
-        var present = 96;
-
-
         var percentage =
-            Math.round(
-                (present / total) * 100
-            );
+            total > 0
+                ? Math.round((present / total) * 100)
+                : 0;
 
 
         setText(

@@ -1,3 +1,13 @@
+/* ============================================================
+   PayrollPro — Shared / Common Styles
+   Design tokens, layout shell (sidebar/topbar), and components
+   used across two or more pages (buttons, cards, tables, forms,
+   modals, badges, toasts, etc.)
+
+   Page-specific styles now live in their own file per module —
+   e.g. css/dashboard.css, css/dtr.css — loaded alongside this one.
+   ============================================================ */
+
 :root {
     --pp-primary: #1a5f7a;
     --pp-primary-dark: #134a61;
@@ -35,7 +45,6 @@ body.pp-app {
     background-color: var(--pp-bg);
 }
 
-/* Navbar */
 .pp-navbar {
     background: var(--pp-surface);
     border-bottom: 1px solid var(--pp-border);
@@ -90,7 +99,6 @@ body.pp-app {
     border-radius: 999px;
 }
 
-/* Page layout */
 .pp-main {
     padding: 1.25rem 1rem 2rem;
     max-width: 1400px;
@@ -98,7 +106,7 @@ body.pp-app {
 }
 
 @media (min-width: 768px) {
-    .pp-main {
+.pp-main {
         padding: 1.5rem 1.5rem 2.5rem;
     }
 }
@@ -126,7 +134,6 @@ body.pp-app {
     margin: 0;
 }
 
-/* Device status */
 .pp-device-status {
     display: inline-flex;
     align-items: center;
@@ -158,7 +165,6 @@ body.pp-app {
     box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.2);
 }
 
-/* Cards & panels */
 .pp-card {
     background: var(--pp-surface);
     border: 1px solid var(--pp-border);
@@ -180,7 +186,6 @@ body.pp-app {
     padding: 1rem;
 }
 
-/* Form controls */
 .pp-form-label {
     font-size: 0.8125rem;
     font-weight: 600;
@@ -188,16 +193,14 @@ body.pp-app {
     margin-bottom: 0.375rem;
 }
 
-.pp-form-control,
-.pp-form-select {
+.pp-form-control, .pp-form-select {
     border-radius: var(--pp-radius-sm);
     border: 1px solid var(--pp-border);
     font-size: 0.875rem;
     padding: 0.5rem 0.75rem;
 }
 
-.pp-form-control:focus,
-.pp-form-select:focus {
+.pp-form-control:focus, .pp-form-select:focus {
     border-color: var(--pp-primary);
     box-shadow: 0 0 0 3px rgba(26, 95, 122, 0.12);
 }
@@ -220,7 +223,6 @@ body.pp-app {
     pointer-events: none;
 }
 
-/* Buttons */
 .btn-pp-primary {
     background: var(--pp-primary);
     border: none;
@@ -256,7 +258,6 @@ body.pp-app {
     background: var(--pp-primary-light);
 }
 
-/* Badges */
 .pp-badge {
     display: inline-flex;
     align-items: center;
@@ -280,16 +281,6 @@ body.pp-app {
     color: #6b21a8;
 }
 
-.pp-badge-enrolled {
-    background: var(--pp-success-bg);
-    color: var(--pp-success);
-    font-size: 0.75rem;
-    padding: 0.35rem 0.625rem;
-    border-radius: var(--pp-radius-sm);
-    text-transform: none;
-    letter-spacing: 0;
-}
-
 .pp-badge-present {
     background: var(--pp-success-bg);
     color: var(--pp-success);
@@ -310,7 +301,6 @@ body.pp-app {
     color: var(--pp-info);
 }
 
-/* Employee list */
 .pp-employee-list {
     max-height: calc(100vh - 220px);
     overflow-y: auto;
@@ -373,17 +363,6 @@ body.pp-app {
     color: var(--pp-text-muted);
 }
 
-/* Scanner enrollment panel */
-.pp-enroll-panel {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    min-height: 360px;
-    padding: 2rem 1.5rem;
-}
-
 .pp-scanner-icon {
     width: 120px;
     height: 120px;
@@ -412,21 +391,6 @@ body.pp-app {
     100% { transform: scale(1.15); opacity: 0; }
 }
 
-.pp-enroll-instruction {
-    font-size: 0.9375rem;
-    color: var(--pp-text-muted);
-    max-width: 280px;
-    margin-bottom: 1.5rem;
-    line-height: 1.5;
-}
-
-.pp-enrolled-info {
-    font-size: 0.875rem;
-    color: var(--pp-text-muted);
-    margin: 0.75rem 0 1.25rem;
-}
-
-/* Summary cards */
 .pp-summary-row {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -435,7 +399,7 @@ body.pp-app {
 }
 
 @media (max-width: 575px) {
-    .pp-summary-row {
+.pp-summary-row {
         grid-template-columns: 1fr;
     }
 }
@@ -463,7 +427,9 @@ body.pp-app {
 }
 
 .pp-summary-card.present { border-left-color: #22c55e; }
+
 .pp-summary-card.late { border-left-color: #f59e0b; }
+
 .pp-summary-card.absent { border-left-color: var(--pp-error); }
 
 .pp-summary-label {
@@ -482,108 +448,16 @@ body.pp-app {
     line-height: 1.2;
 }
 
-/* DTR mode tabs (Biometric Records / Faculty Teaching Hours) */
-.pp-dtr-tabs {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-    margin-bottom: 1.25rem;
-}
-
-.pp-dtr-tab {
-    flex: 1 1 260px;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    background: var(--pp-surface);
-    border: 1px solid var(--pp-border);
-    border-bottom: 3px solid transparent;
-    border-radius: var(--pp-radius);
-    padding: 0.875rem 1rem;
-    text-align: left;
-    cursor: pointer;
-    transition: border-color 0.15s ease, background 0.15s ease;
-}
-
-.pp-dtr-tab:hover {
-    border-color: var(--pp-primary);
-}
-
 .pp-dtr-tab.active {
     background: var(--pp-primary-light);
     border-color: var(--pp-primary);
     border-bottom-color: var(--pp-primary);
 }
 
-.pp-dtr-tab-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
-    border-radius: var(--pp-radius-sm);
-    background: #e8efff;
-    color: #2f64c7;
-    font-size: 1.125rem;
-    flex-shrink: 0;
-}
-
-.pp-dtr-tab-title {
-    font-weight: 700;
-    color: var(--pp-text);
-    font-size: 0.9375rem;
-}
-
-.pp-dtr-tab-subtitle {
-    font-size: 0.8125rem;
-    color: var(--pp-text-muted);
-}
-
-.pp-dtr-panel {
-    display: none;
-}
-
 .pp-dtr-panel.active {
     display: block;
 }
 
-/* Scanner status bar (reuses .pp-card / .pp-icon-box / .pp-device-status) */
-.pp-scanner-bar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    margin-bottom: 1.25rem;
-}
-
-.pp-scanner-bar-info {
-    display: flex;
-    align-items: center;
-    gap: 0.875rem;
-}
-
-.pp-scanner-last-sync {
-    font-size: 0.75rem;
-    color: var(--pp-text-muted);
-    text-align: right;
-    margin-top: 0.25rem;
-}
-
-/* Day-of-week pills for the teaching schedule table */
-.pp-day-pill {
-    display: inline-block;
-    background: var(--pp-primary-light);
-    color: var(--pp-primary-dark);
-    font-size: 0.6875rem;
-    font-weight: 700;
-    padding: 0.1rem 0.4rem;
-    border-radius: 999px;
-    margin: 0 2px 2px 0;
-}
-
-/* Faculty list + schedule detail split layout (also used by
-   fingerprint-registration.html via its own stylesheet) */
 .pp-split-layout {
     display: grid;
     grid-template-columns: 1fr;
@@ -591,7 +465,7 @@ body.pp-app {
 }
 
 @media (min-width: 992px) {
-    .pp-split-layout {
+.pp-split-layout {
         grid-template-columns: 300px 1fr;
         align-items: start;
     }
@@ -632,30 +506,18 @@ body.pp-app {
     font-weight: 400;
 }
 
-.pp-grid-table th, .pp-grid-table td { text-align: center; vertical-align: middle; }
-.pp-grid-time-col {
-    background: #f1f5f9;
-    font-weight: 600;
-    font-size: 0.8125rem;
-    color: var(--pp-text-muted);
-    white-space: nowrap;
-    text-align: left !important;
-}
 .pp-grid-cell {
     font-size: 0.8125rem;
     color: var(--pp-text-muted);
     background: #fafbfc;
 }
+
 .pp-grid-cell.is-scheduled {
     background: var(--pp-primary-light);
     color: var(--pp-primary-dark);
     font-weight: 600;
 }
-.pp-grid-edit-table td {
-    padding: 0.25rem;
-}
 
-/* Filter bar */
 .pp-filter-bar {
     display: flex;
     flex-wrap: wrap;
@@ -677,7 +539,6 @@ body.pp-app {
     flex: 2 1 200px;
 }
 
-/* Data table */
 .pp-table-wrap {
     overflow-x: auto;
     border: 1px solid var(--pp-border);
@@ -728,23 +589,6 @@ body.pp-app {
     color: var(--pp-text-muted);
 }
 
-.pp-teaching-icon {
-    font-size: 1rem;
-    cursor: help;
-}
-
-.pp-teaching-icon.met {
-    color: var(--pp-success);
-}
-
-.pp-teaching-icon.missed {
-    color: var(--pp-error);
-}
-
-.pp-teaching-icon.na {
-    color: var(--pp-border);
-}
-
 .pp-empty-state {
     text-align: center;
     padding: 2.5rem 1rem;
@@ -752,7 +596,6 @@ body.pp-app {
     font-size: 0.875rem;
 }
 
-/* Modal */
 .pp-modal .modal-content {
     border-radius: var(--pp-radius);
     border: 1px solid var(--pp-border);
@@ -777,8 +620,6 @@ body.pp-app {
     border-top: 1px solid var(--pp-border);
     padding: 0.875rem 1.25rem;
 }
-
-/* ── App shell layout (sidebar + topbar) ── */
 
 body.pp-app-shell {
     display: flex;
@@ -828,7 +669,6 @@ body.pp-app-shell {
     font-size: 1.125rem;
     flex-shrink: 0;
 }
-
 
 .pp-sidebar-brand-text {
     font-weight: 700;
@@ -999,7 +839,7 @@ body.pp-app-shell {
 }
 
 @media (min-width: 768px) {
-    .pp-topbar-user-info {
+.pp-topbar-user-info {
         display: block;
     }
 }
@@ -1044,7 +884,6 @@ body.pp-app-shell {
     flex-shrink: 0;
 }
 
-/* Desktop sidebar collapse */
 .pp-sidebar-collapse-btn {
     position: absolute;
     top: 50%;
@@ -1071,7 +910,7 @@ body.pp-app-shell {
 }
 
 @media (max-width: 991px) {
-    .pp-sidebar-collapse-btn {
+.pp-sidebar-collapse-btn {
         display: none;
     }
 }
@@ -1084,9 +923,7 @@ body.pp-sidebar-collapsed .pp-shell-main {
     margin-left: 76px;
 }
 
-body.pp-sidebar-collapsed .pp-sidebar-brand-text,
-body.pp-sidebar-collapsed .pp-sidebar-link span,
-body.pp-sidebar-collapsed .pp-sidebar-footer {
+body.pp-sidebar-collapsed .pp-sidebar-brand-text, body.pp-sidebar-collapsed .pp-sidebar-link span, body.pp-sidebar-collapsed .pp-sidebar-footer {
     display: none;
 }
 
@@ -1107,18 +944,19 @@ body.pp-sidebar-collapsed .pp-sidebar-collapse-btn i {
 }
 
 @media (max-width: 991px) {
-    body.pp-sidebar-collapsed .pp-sidebar {
+body.pp-sidebar-collapsed .pp-sidebar {
         width: 260px;
     }
-    body.pp-sidebar-collapsed .pp-shell-main {
+
+body.pp-sidebar-collapsed .pp-shell-main {
         margin-left: 0;
     }
-    body.pp-sidebar-collapsed .pp-sidebar-brand-text,
-    body.pp-sidebar-collapsed .pp-sidebar-link span,
-    body.pp-sidebar-collapsed .pp-sidebar-footer {
+
+body.pp-sidebar-collapsed .pp-sidebar-brand-text, body.pp-sidebar-collapsed .pp-sidebar-link span, body.pp-sidebar-collapsed .pp-sidebar-footer {
         display: block;
     }
-    body.pp-sidebar-collapsed .pp-sidebar-link {
+
+body.pp-sidebar-collapsed .pp-sidebar-link {
         justify-content: flex-start;
     }
 }
@@ -1157,32 +995,31 @@ body.pp-sidebar-collapsed .pp-sidebar-collapse-btn i {
 }
 
 @media (max-width: 991px) {
-    .pp-sidebar {
+.pp-sidebar {
         transform: translateX(-100%);
     }
 
-    .pp-sidebar.open {
+.pp-sidebar.open {
         transform: translateX(0);
     }
 
-    .pp-sidebar-overlay.show {
+.pp-sidebar-overlay.show {
         display: block;
     }
 
-    .pp-shell-main {
+.pp-shell-main {
         margin-left: 0;
     }
 
-    .pp-sidebar-toggle {
+.pp-sidebar-toggle {
         display: flex;
     }
 
-    .pp-content {
+.pp-content {
         padding: 1rem;
     }
 }
 
-/* Dashboard stat cards */
 .pp-stat-row {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -1191,13 +1028,13 @@ body.pp-sidebar-collapsed .pp-sidebar-collapse-btn i {
 }
 
 @media (max-width: 1199px) {
-    .pp-stat-row {
+.pp-stat-row {
         grid-template-columns: repeat(2, 1fr);
     }
 }
 
 @media (max-width: 575px) {
-    .pp-stat-row {
+.pp-stat-row {
         grid-template-columns: 1fr;
     }
 }
@@ -1222,8 +1059,11 @@ body.pp-sidebar-collapsed .pp-sidebar-collapse-btn i {
 }
 
 .pp-stat-card-icon.employees { background: var(--pp-primary-light); color: var(--pp-primary); }
+
 .pp-stat-card-icon.present { background: var(--pp-success-bg); color: var(--pp-success); }
+
 .pp-stat-card-icon.leave { background: var(--pp-info-bg); color: var(--pp-info); }
+
 .pp-stat-card-icon.payroll { background: var(--pp-warning-bg); color: var(--pp-warning); }
 
 .pp-stat-label {
@@ -1253,7 +1093,6 @@ body.pp-sidebar-collapsed .pp-sidebar-collapse-btn i {
     margin-top: 0.375rem;
 }
 
-/* Dashboard grid */
 .pp-dash-grid {
     display: grid;
     grid-template-columns: 2fr 1fr;
@@ -1262,7 +1101,7 @@ body.pp-sidebar-collapsed .pp-sidebar-collapse-btn i {
 }
 
 @media (max-width: 991px) {
-    .pp-dash-grid {
+.pp-dash-grid {
         grid-template-columns: 1fr;
     }
 }
@@ -1298,7 +1137,6 @@ body.pp-sidebar-collapsed .pp-sidebar-collapse-btn i {
     height: 260px;
 }
 
-/* Payroll calendar */
 .pp-calendar-period {
     padding: 0.875rem 0;
     border-bottom: 1px solid var(--pp-border);
@@ -1342,11 +1180,6 @@ body.pp-sidebar-collapsed .pp-sidebar-collapse-btn i {
     color: var(--pp-success);
 }
 
-.pp-calendar-period-status.processing {
-    background: var(--pp-warning-bg);
-    color: var(--pp-warning);
-}
-
 .pp-calendar-period-status.released {
     background: var(--pp-primary-light);
     color: var(--pp-primary);
@@ -1355,13 +1188,6 @@ body.pp-sidebar-collapsed .pp-sidebar-collapse-btn i {
 .pp-calendar-period-status.upcoming {
     background: #f1f5f9;
     color: var(--pp-text-muted);
-}
-
-/* Activity feed */
-.pp-activity-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
 }
 
 .pp-activity-item {
@@ -1392,8 +1218,11 @@ body.pp-sidebar-collapsed .pp-sidebar-collapse-btn i {
 }
 
 .pp-activity-icon.leave { background: var(--pp-info-bg); color: var(--pp-info); }
+
 .pp-activity-icon.payroll { background: var(--pp-success-bg); color: var(--pp-success); }
+
 .pp-activity-icon.employee { background: var(--pp-primary-light); color: var(--pp-primary); }
+
 .pp-activity-icon.attendance { background: var(--pp-warning-bg); color: var(--pp-warning); }
 
 .pp-activity-text {
@@ -1408,7 +1237,6 @@ body.pp-sidebar-collapsed .pp-sidebar-collapse-btn i {
     color: var(--pp-text-muted);
 }
 
-/* Quick actions */
 .pp-quick-actions {
     display: flex;
     flex-wrap: wrap;
@@ -1449,52 +1277,12 @@ body.pp-sidebar-collapsed .pp-sidebar-collapse-btn i {
 }
 
 @media (max-width: 991px) {
-    .pp-dash-bottom {
+.pp-dash-bottom {
         grid-template-columns: 1fr;
     }
 }
 
-/* ── Payroll Processing ── */
-
-.pp-payroll-toolbar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 1rem;
-    padding: 1rem 1.25rem;
-    background: var(--pp-surface);
-    border: 1px solid var(--pp-border);
-    border-radius: var(--pp-radius);
-    margin-bottom: 1.25rem;
-}
-
-.pp-payroll-toolbar-left {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-end;
-    gap: 1rem;
-}
-
-.pp-period-select {
-    min-width: 220px;
-}
-
-.pp-period-badge {
-    display: inline-flex;
-    align-items: center;
-    font-size: 0.75rem;
-    font-weight: 700;
-    padding: 0.35rem 0.75rem;
-    border-radius: var(--pp-radius-sm);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-}
-
 .pp-period-badge.open { background: var(--pp-success-bg); color: var(--pp-success); }
-.pp-period-badge.processing { background: var(--pp-warning-bg); color: var(--pp-warning); }
-.pp-period-badge.released { background: var(--pp-primary-light); color: var(--pp-primary); }
-.pp-period-badge.closed { background: #f1f5f9; color: var(--pp-text-muted); }
 
 .pp-table-financial {
     font-size: 0.8125rem;
@@ -1512,175 +1300,8 @@ body.pp-sidebar-collapsed .pp-sidebar-collapse-btn i {
     text-align: right;
 }
 
-.pp-table-financial thead th.col-money,
-.pp-table-financial thead th.col-units {
+.pp-table-financial thead th.col-money, .pp-table-financial thead th.col-units {
     text-align: right;
-}
-
-.pp-badge-computed { background: #f1f5f9; color: var(--pp-text-muted); }
-.pp-badge-reviewed { background: var(--pp-info-bg); color: var(--pp-info); }
-.pp-badge-released { background: var(--pp-success-bg); color: var(--pp-success); }
-
-.pp-btn-link {
-    font-size: 0.8125rem;
-    font-weight: 600;
-    color: var(--pp-primary);
-    background: none;
-    border: none;
-    padding: 0;
-    text-decoration: none;
-    cursor: pointer;
-}
-
-.pp-btn-link:hover {
-    color: var(--pp-primary-dark);
-    text-decoration: underline;
-}
-
-.pp-payroll-summary {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    padding: 1rem 1.25rem;
-    background: var(--pp-surface);
-    border: 1px solid var(--pp-border);
-    border-radius: var(--pp-radius);
-    margin-top: 1rem;
-}
-
-.pp-payroll-summary-totals {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1.5rem 2.5rem;
-}
-
-.pp-summary-total-item {
-    display: flex;
-    flex-direction: column;
-    gap: 0.2rem;
-}
-
-.pp-summary-total-label {
-    font-size: 0.6875rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--pp-text-muted);
-}
-
-.pp-summary-total-value {
-    font-family: "Cascadia Mono", "Consolas", "SF Mono", monospace;
-    font-size: 1.125rem;
-    font-weight: 700;
-    color: var(--pp-primary-dark);
-    font-variant-numeric: tabular-nums;
-}
-
-.pp-summary-total-value.net {
-    font-size: 1.375rem;
-    color: var(--pp-accent);
-}
-
-/* Breakdown offcanvas */
-.pp-breakdown-offcanvas .offcanvas-header {
-    border-bottom: 1px solid var(--pp-border);
-    padding: 1rem 1.25rem;
-}
-
-.pp-breakdown-offcanvas .offcanvas-title {
-    font-size: 1rem;
-    font-weight: 700;
-    color: var(--pp-primary-dark);
-}
-
-.pp-breakdown-offcanvas .offcanvas-body {
-    padding: 1.25rem;
-}
-
-.pp-breakdown-section {
-    margin-bottom: 1.25rem;
-}
-
-.pp-breakdown-section-title {
-    font-size: 0.6875rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--pp-text-muted);
-    margin-bottom: 0.625rem;
-    padding-bottom: 0.375rem;
-    border-bottom: 1px solid var(--pp-border);
-}
-
-.pp-breakdown-line {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    padding: 0.375rem 0;
-    font-size: 0.875rem;
-}
-
-.pp-breakdown-line .amount {
-    font-family: "Cascadia Mono", "Consolas", "SF Mono", monospace;
-    font-variant-numeric: tabular-nums;
-    font-weight: 500;
-}
-
-.pp-breakdown-line.total {
-    font-weight: 700;
-    padding-top: 0.625rem;
-    margin-top: 0.375rem;
-    border-top: 2px solid var(--pp-border);
-}
-
-.pp-breakdown-meta {
-    font-size: 0.8125rem;
-    color: var(--pp-text-muted);
-    margin-bottom: 1rem;
-}
-
-/* ── Employee Payslip ── */
-
-.pp-payslip-toolbar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    margin-bottom: 1.25rem;
-}
-
-.pp-payslip-period-select {
-    min-width: 240px;
-}
-
-.pp-staff-tabs {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    margin-bottom: 1.25rem;
-    border-bottom: 1px solid var(--pp-border);
-    padding-bottom: 0;
-}
-
-.pp-staff-tab {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
-    padding: 0.625rem 1rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: var(--pp-text-muted);
-    text-decoration: none;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -1px;
-    transition: color 0.12s, border-color 0.12s;
-}
-
-.pp-staff-tab:hover {
-    color: var(--pp-primary);
 }
 
 .pp-staff-tab.active {
@@ -1689,203 +1310,24 @@ body.pp-sidebar-collapsed .pp-sidebar-collapse-btn i {
     border-bottom-color: var(--pp-accent);
 }
 
-.pp-payslip-document {
-    max-width: 816px;
-    margin: 0 auto;
-    background: var(--pp-surface);
-    border: 1px solid var(--pp-border);
-    border-radius: var(--pp-radius);
-    box-shadow: var(--pp-shadow);
-    padding: 2.5rem 2.75rem;
-    aspect-ratio: auto;
-}
-
 @media print {
-    body.pp-app-shell .pp-sidebar,
-    body.pp-app-shell .pp-topbar,
-    body.pp-app-shell .pp-sidebar-overlay,
-    .pp-payslip-toolbar,
-    .pp-staff-tabs,
-    .pp-no-print {
+body.pp-app-shell .pp-sidebar, body.pp-app-shell .pp-topbar, body.pp-app-shell .pp-sidebar-overlay {
         display: none !important;
     }
 
-    body.pp-app-shell .pp-shell-main {
+body.pp-app-shell .pp-shell-main {
         margin-left: 0 !important;
     }
 
-    body.pp-app-shell .pp-content {
+body.pp-app-shell .pp-content {
         padding: 0 !important;
         max-width: none !important;
     }
-
-    .pp-payslip-document {
-        box-shadow: none;
-        border: none;
-        border-radius: 0;
-        padding: 0;
-        max-width: 100%;
-    }
-}
-
-.pp-payslip-header {
-    text-align: center;
-    padding-bottom: 1.5rem;
-    margin-bottom: 1.5rem;
-    border-bottom: 2px solid var(--pp-primary);
-}
-
-.pp-payslip-inst-logo {
-    width: 48px;
-    height: 48px;
-    margin: 0 auto 0.75rem;
-    border-radius: var(--pp-radius-sm);
-    background: linear-gradient(145deg, var(--pp-primary-light), var(--pp-accent-light));
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--pp-primary);
-    font-size: 1.5rem;
-}
-
-.pp-payslip-inst-name {
-    font-size: 1.125rem;
-    font-weight: 700;
-    color: var(--pp-primary-dark);
-    margin-bottom: 0.25rem;
-}
-
-.pp-payslip-doc-title {
-    font-size: 0.8125rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--pp-text-muted);
-}
-
-.pp-payslip-employee-info {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.75rem 2rem;
-    margin-bottom: 1.75rem;
-    font-size: 0.875rem;
-}
-
-@media (max-width: 575px) {
-    .pp-payslip-employee-info {
-        grid-template-columns: 1fr;
-    }
-
-    .pp-payslip-document {
-        padding: 1.5rem 1.25rem;
-    }
-}
-
-.pp-payslip-info-label {
-    font-size: 0.6875rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--pp-text-muted);
-    margin-bottom: 0.15rem;
-}
-
-.pp-payslip-info-value {
-    font-weight: 600;
-    color: var(--pp-text);
-}
-
-.pp-payslip-section {
-    margin-bottom: 1.5rem;
-}
-
-.pp-payslip-section-title {
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--pp-primary-dark);
-    padding-bottom: 0.5rem;
-    margin-bottom: 0.75rem;
-    border-bottom: 1px solid var(--pp-border);
-}
-
-.pp-payslip-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    padding: 0.5rem 0;
-    font-size: 0.9375rem;
-}
-
-.pp-payslip-row.sub {
-    padding-left: 1rem;
-    font-size: 0.875rem;
-    color: var(--pp-text-muted);
-}
-
-.pp-payslip-row .pp-payslip-amount {
-    font-family: "Cascadia Mono", "Consolas", "SF Mono", monospace;
-    font-variant-numeric: tabular-nums;
-    font-weight: 500;
-    min-width: 110px;
-    text-align: right;
-}
-
-.pp-payslip-row.subtotal {
-    font-weight: 600;
-    border-top: 1px solid var(--pp-border);
-    margin-top: 0.375rem;
-    padding-top: 0.625rem;
-}
-
-.pp-payslip-net {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1.25rem 1.5rem;
-    margin-top: 1.5rem;
-    background: linear-gradient(135deg, var(--pp-accent-light), var(--pp-primary-light));
-    border-radius: var(--pp-radius);
-    border: 1px solid rgba(26, 95, 122, 0.15);
-}
-
-.pp-payslip-net-label {
-    font-size: 1rem;
-    font-weight: 700;
-    color: var(--pp-primary-dark);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-}
-
-.pp-payslip-net-amount {
-    font-family: "Cascadia Mono", "Consolas", "SF Mono", monospace;
-    font-size: 1.75rem;
-    font-weight: 700;
-    color: var(--pp-primary-dark);
-    font-variant-numeric: tabular-nums;
-}
-
-.pp-payslip-footer-note {
-    margin-top: 1.5rem;
-    padding-top: 1rem;
-    border-top: 1px dashed var(--pp-border);
-    font-size: 0.75rem;
-    color: var(--pp-text-muted);
-    text-align: center;
-    line-height: 1.5;
-}
-
-.pp-staff-panel {
-    max-width: 816px;
-    margin: 0 auto;
 }
 
 .pp-staff-panel.d-none {
     display: none !important;
 }
-
-/* ── Leave & Loan self-service ── */
 
 .pp-page-toolbar {
     display: flex;
@@ -1896,81 +1338,8 @@ body.pp-sidebar-collapsed .pp-sidebar-collapse-btn i {
     margin-bottom: 1.25rem;
 }
 
-.pp-leave-balance-row {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 0.875rem;
-    margin-bottom: 1.25rem;
-}
-
-@media (max-width: 991px) {
-    .pp-leave-balance-row {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
-@media (max-width: 575px) {
-    .pp-leave-balance-row {
-        grid-template-columns: 1fr;
-    }
-}
-
-.pp-balance-card {
-    background: var(--pp-surface);
-    border: 1px solid var(--pp-border);
-    border-radius: var(--pp-radius);
-    padding: 1rem 1.125rem;
-    box-shadow: var(--pp-shadow);
-}
-
-.pp-balance-card-label {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--pp-text-muted);
-    margin-bottom: 0.375rem;
-}
-
-.pp-balance-card-value {
-    font-size: 1.125rem;
-    font-weight: 700;
-    color: var(--pp-primary-dark);
-    font-variant-numeric: tabular-nums;
-}
-
 .pp-balance-card-value .remaining {
     color: var(--pp-accent);
-}
-
-.pp-balance-card-meta {
-    font-size: 0.6875rem;
-    color: var(--pp-text-muted);
-    margin-top: 0.25rem;
-}
-
-.pp-balance-card.sick { border-left: 4px solid #3b82f6; }
-.pp-balance-card.vacation { border-left: 4px solid #22c55e; }
-.pp-balance-card.maternity { border-left: 4px solid #a855f7; }
-.pp-balance-card.paternity { border-left: 4px solid #06b6d4; }
-
-/* Request status badges (aligned with DTR color coding) */
-.pp-badge-pending {
-    background: var(--pp-warning-bg);
-    color: var(--pp-warning);
-}
-
-.pp-badge-approved {
-    background: var(--pp-success-bg);
-    color: var(--pp-success);
-}
-
-.pp-badge-rejected {
-    background: var(--pp-error-bg);
-    color: var(--pp-error);
-}
-
-.pp-badge-cancelled {
-    background: #f1f5f9;
-    color: var(--pp-text-muted);
 }
 
 .pp-badge-paid {
@@ -2056,67 +1425,10 @@ body.pp-sidebar-collapsed .pp-sidebar-collapse-btn i {
     text-align: right;
 }
 
-.pp-btn-cancel {
-    font-size: 0.8125rem;
-    font-weight: 600;
-    color: var(--pp-text-muted);
-    background: none;
-    border: none;
-    padding: 0.25rem 0.5rem;
-    cursor: pointer;
-    border-radius: var(--pp-radius-sm);
-}
-
-.pp-btn-cancel:hover {
-    color: var(--pp-error);
-    background: var(--pp-error-bg);
-}
-
-/* ── Approval view (Payroll Staff) ── */
-
-.pp-approval-tabs {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
-    border-bottom: 1px solid var(--pp-border);
-}
-
-.pp-approval-tab {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
-    padding: 0.625rem 1rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: var(--pp-text-muted);
-    background: none;
-    border: none;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -1px;
-    cursor: pointer;
-    transition: color 0.12s, border-color 0.12s;
-}
-
-.pp-approval-tab:hover {
-    color: var(--pp-primary);
-}
-
 .pp-approval-tab.active {
     color: var(--pp-primary-dark);
     font-weight: 600;
     border-bottom-color: var(--pp-accent);
-}
-
-.pp-approval-tab .pp-tab-count {
-    font-size: 0.6875rem;
-    font-weight: 700;
-    background: var(--pp-warning-bg);
-    color: var(--pp-warning);
-    padding: 0.1rem 0.45rem;
-    border-radius: 999px;
-    min-width: 1.25rem;
-    text-align: center;
 }
 
 .pp-approval-tab.active .pp-tab-count {
@@ -2192,66 +1504,6 @@ body.pp-sidebar-collapsed .pp-sidebar-collapse-btn i {
     display: none !important;
 }
 
-/* ── Maintenance (reference data) ── */
-
-.pp-maint-layout {
-    display: flex;
-    gap: 0;
-    min-height: calc(100vh - 180px);
-    background: var(--pp-surface);
-    border: 1px solid var(--pp-border);
-    border-radius: var(--pp-radius);
-    box-shadow: var(--pp-shadow);
-    overflow: hidden;
-}
-
-.pp-maint-nav {
-    width: 220px;
-    flex-shrink: 0;
-    background: #f8fafc;
-    border-right: 1px solid var(--pp-border);
-    padding: 0.75rem 0;
-}
-
-.pp-maint-nav-title {
-    font-size: 0.6875rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--pp-text-muted);
-    padding: 0.5rem 1rem 0.75rem;
-    margin: 0;
-}
-
-.pp-maint-nav-btn {
-    display: flex;
-    align-items: center;
-    gap: 0.625rem;
-    width: 100%;
-    padding: 0.625rem 1rem;
-    font-size: 0.8125rem;
-    font-weight: 500;
-    color: var(--pp-text-muted);
-    background: none;
-    border: none;
-    border-left: 3px solid transparent;
-    text-align: left;
-    cursor: pointer;
-    transition: background 0.12s, color 0.12s, border-color 0.12s;
-}
-
-.pp-maint-nav-btn i {
-    font-size: 1rem;
-    width: 1.125rem;
-    text-align: center;
-    flex-shrink: 0;
-}
-
-.pp-maint-nav-btn:hover {
-    background: #f1f5f9;
-    color: var(--pp-primary);
-}
-
 .pp-maint-nav-btn.active {
     background: var(--pp-surface);
     color: var(--pp-primary-dark);
@@ -2259,63 +1511,8 @@ body.pp-sidebar-collapsed .pp-sidebar-collapse-btn i {
     border-left-color: var(--pp-accent);
 }
 
-.pp-maint-panel {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-}
-
-.pp-maint-section {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    min-height: 0;
-}
-
 .pp-maint-section.d-none {
     display: none !important;
-}
-
-.pp-maint-section-header {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 0.75rem 1rem;
-    padding: 0.875rem 1rem;
-    border-bottom: 1px solid var(--pp-border);
-    background: #fafbfc;
-}
-
-.pp-maint-section-title {
-    font-size: 0.9375rem;
-    font-weight: 700;
-    color: var(--pp-primary-dark);
-    margin: 0 0 0.125rem;
-}
-
-.pp-maint-section-desc {
-    font-size: 0.75rem;
-    color: var(--pp-text-muted);
-    margin: 0;
-}
-
-.pp-maint-year-bar {
-    display: flex;
-    align-items: center;
-    gap: 0.625rem;
-    padding: 0.625rem 1rem;
-    background: #fffbeb;
-    border-bottom: 1px solid #fde68a;
-}
-
-.pp-maint-year-bar label {
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: #92400e;
-    margin: 0;
-    white-space: nowrap;
 }
 
 .pp-maint-year-bar .form-select {
@@ -2340,68 +1537,12 @@ body.pp-sidebar-collapsed .pp-sidebar-collapse-btn i {
     color: var(--pp-text-muted);
 }
 
-.pp-maint-table-wrap {
-    flex: 1;
-    overflow: auto;
-}
-
-.pp-table-maint {
-    font-size: 0.8125rem;
-    border-collapse: collapse;
-}
-
-.pp-table-maint thead th {
-    position: sticky;
-    top: 0;
-    z-index: 1;
-    background: #eef2f6;
-    font-size: 0.6875rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--pp-text-muted);
-    padding: 0.5rem 0.75rem;
-    border-bottom: 2px solid var(--pp-border);
-    border-right: 1px solid var(--pp-border);
-    white-space: nowrap;
-}
-
-.pp-table-maint thead th:last-child {
-    border-right: none;
-}
-
-.pp-table-maint tbody td {
-    padding: 0.4375rem 0.75rem;
-    border-bottom: 1px solid var(--pp-border);
-    border-right: 1px solid #f1f5f9;
-    vertical-align: middle;
-    font-variant-numeric: tabular-nums;
-}
-
-.pp-table-maint tbody td:last-child {
-    border-right: none;
-}
-
-.pp-table-maint tbody tr:nth-child(even) {
-    background: #fafbfc;
-}
-
-.pp-table-maint tbody tr:hover {
-    background: #f0f7fa;
-}
-
-.pp-table-maint tbody tr.inactive {
-    opacity: 0.55;
-}
-
-.pp-table-maint .col-money,
-.pp-table-maint .col-num {
+.pp-table-maint .col-money, .pp-table-maint .col-num {
     font-family: "Cascadia Mono", "Consolas", "SF Mono", monospace;
     text-align: right;
 }
 
-.pp-table-maint thead th.col-money,
-.pp-table-maint thead th.col-num {
+.pp-table-maint thead th.col-money, .pp-table-maint thead th.col-num {
     text-align: right;
 }
 
@@ -2410,116 +1551,6 @@ body.pp-sidebar-collapsed .pp-sidebar-collapse-btn i {
     white-space: nowrap;
 }
 
-.pp-maint-row-actions {
-    display: inline-flex;
-    gap: 0.25rem;
-}
-
-.pp-btn-row {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--pp-primary);
-    background: none;
-    border: none;
-    padding: 0.15rem 0.4rem;
-    cursor: pointer;
-    border-radius: 3px;
-}
-
-.pp-btn-row:hover {
-    background: var(--pp-primary-light);
-}
-
-.pp-btn-row.deactivate {
-    color: var(--pp-text-muted);
-}
-
-.pp-btn-row.deactivate:hover {
-    color: var(--pp-error);
-    background: var(--pp-error-bg);
-}
-
-.pp-badge-active {
-    background: var(--pp-success-bg);
-    color: var(--pp-success);
-    font-size: 0.6875rem;
-    font-weight: 700;
-    padding: 0.15rem 0.4rem;
-    border-radius: 3px;
-}
-
-.pp-badge-inactive {
-    background: #f1f5f9;
-    color: var(--pp-text-muted);
-    font-size: 0.6875rem;
-    font-weight: 700;
-    padding: 0.15rem 0.4rem;
-    border-radius: 3px;
-}
-
-.pp-badge-leave-paid {
-    background: #dbeafe;
-    color: #1e40af;
-    font-size: 0.6875rem;
-    font-weight: 700;
-    padding: 0.15rem 0.4rem;
-    border-radius: 3px;
-}
-
-.pp-badge-leave-unpaid {
-    background: #fef3c7;
-    color: #92400e;
-    font-size: 0.6875rem;
-    font-weight: 700;
-    padding: 0.15rem 0.4rem;
-    border-radius: 3px;
-}
-
-.pp-maint-audit {
-    padding: 0.5rem 1rem;
-    border-top: 1px solid var(--pp-border);
-    font-size: 0.6875rem;
-    color: var(--pp-text-muted);
-    background: #f8fafc;
-}
-
-.pp-maint-audit strong {
-    color: var(--pp-text);
-}
-
-.btn-pp-maint-add {
-    background: var(--pp-primary);
-    border: none;
-    color: #fff;
-    font-weight: 600;
-    font-size: 0.8125rem;
-    border-radius: var(--pp-radius-sm);
-    padding: 0.375rem 0.75rem;
-    white-space: nowrap;
-}
-
-.btn-pp-maint-add:hover {
-    background: var(--pp-primary-dark);
-    color: #fff;
-}
-
-.btn-pp-bracket-add {
-    background: #fff;
-    border: 1px dashed var(--pp-border);
-    color: var(--pp-text-muted);
-    font-weight: 600;
-    font-size: 0.75rem;
-    border-radius: var(--pp-radius-sm);
-    padding: 0.3rem 0.625rem;
-}
-
-.btn-pp-bracket-add:hover {
-    border-color: var(--pp-primary);
-    color: var(--pp-primary);
-    background: var(--pp-primary-light);
-}
-
-/* High-stakes deduction table confirmation */
 .pp-modal-highstakes .modal-header {
     background: linear-gradient(135deg, #fffbeb, #fef3c7);
     border-bottom: 1px solid #fcd34d;
@@ -2588,7 +1619,6 @@ body.pp-sidebar-collapsed .pp-sidebar-collapse-btn i {
     color: var(--pp-error);
 }
 
-/* Toasts */
 .pp-toast-container {
     position: fixed;
     top: 1rem;
@@ -2625,7 +1655,9 @@ body.pp-sidebar-collapsed .pp-sidebar-collapse-btn i {
 }
 
 .pp-toast-success i { color: var(--pp-success); }
+
 .pp-toast-error { border-left-color: var(--pp-error); }
+
 .pp-toast-error i { color: var(--pp-error); }
 
 .pp-toast-message { flex: 1; }
@@ -2641,11 +1673,12 @@ body.pp-sidebar-collapsed .pp-sidebar-collapse-btn i {
 }
 
 @media (max-width: 575px) {
-    .pp-toast-container {
+.pp-toast-container {
         left: 1rem;
         right: 1rem;
     }
-    .pp-toast {
+
+.pp-toast {
         min-width: 0;
         max-width: none;
     }
@@ -2662,40 +1695,11 @@ body.pp-sidebar-collapsed .pp-sidebar-collapse-btn i {
 }
 
 @media (max-width: 767px) {
-    .pp-maint-layout {
-        flex-direction: column;
-    }
-
-    .pp-maint-nav {
-        width: 100%;
-        display: flex;
-        flex-wrap: wrap;
-        padding: 0.5rem;
-        gap: 0.25rem;
-        border-right: none;
-        border-bottom: 1px solid var(--pp-border);
-    }
-
-    .pp-maint-nav-title {
-        width: 100%;
-    }
-
-    .pp-maint-nav-btn {
-        width: auto;
-        border-left: none;
-        border-radius: var(--pp-radius-sm);
-        padding: 0.5rem 0.75rem;
-    }
-
-    .pp-maint-nav-btn.active {
+.pp-maint-nav-btn.active {
         background: var(--pp-accent-light);
         border-left: none;
     }
 }
-
-/* =========================
-   USER PROFILE DROPDOWN
-   ========================= */
 
 .pp-topbar-user-wrapper {
     position: relative;
@@ -2791,9 +1795,6 @@ body.pp-sidebar-collapsed .pp-sidebar-collapse-btn i {
     background: #FEF2F2;
     color: #B91C1C;
 }
-/* =========================================================
-   PAYROLL MASTER DASHBOARD
-   ========================================================= */
 
 .pp-dash-grid {
     display: grid;
@@ -2830,20 +1831,9 @@ body.pp-sidebar-collapsed .pp-sidebar-collapse-btn i {
     color: #1681ad;
 }
 
-.pp-widget-subtitle {
-    margin-top: 4px;
-    color: #6c8190;
-    font-size: 12px;
-}
-
 .pp-widget-body {
     padding: 18px;
 }
-
-
-/* =========================================================
-   CURRENT PAYROLL / BIOMETRIC INNER CARDS
-   ========================================================= */
 
 .pp-widget-body > .pp-card {
     background: #f3f8fc;
@@ -2854,11 +1844,6 @@ body.pp-sidebar-collapsed .pp-sidebar-collapse-btn i {
 .pp-widget-body > .pp-card .pp-card-body {
     padding: 18px;
 }
-
-
-/* =========================================================
-   ICON BOX
-   ========================================================= */
 
 .pp-icon-box {
     display: flex;
@@ -2883,28 +1868,6 @@ body.pp-sidebar-collapsed .pp-sidebar-collapse-btn i {
     background: #e4f6ed;
     color: #168456;
 }
-
-
-/* =========================================================
-   PAYROLL PERIOD STATUS
-   ========================================================= */
-
-.pp-badge-warning {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 6px 11px;
-    background: #fff1d5;
-    border-radius: 7px;
-    color: #98610f;
-    font-size: 11px;
-    font-weight: 700;
-}
-
-
-/* =========================================================
-   BIOMETRIC STATUS
-   ========================================================= */
 
 .pp-device-status {
     display: inline-flex;
@@ -2933,11 +1896,6 @@ body.pp-sidebar-collapsed .pp-sidebar-collapse-btn i {
     background: currentColor;
 }
 
-
-/* =========================================================
-   DASHBOARD BUTTONS
-   ========================================================= */
-
 .pp-widget-body .btn-pp-primary {
     background: #126d8c;
     border-color: #126d8c;
@@ -2947,11 +1905,6 @@ body.pp-sidebar-collapsed .pp-sidebar-collapse-btn i {
     background: #0d5d78;
     border-color: #0d5d78;
 }
-
-
-/* =========================================================
-   QUICK ACTIONS
-   ========================================================= */
 
 .pp-quick-actions {
     display: grid;
@@ -3000,72 +1953,6 @@ body.pp-sidebar-collapsed .pp-sidebar-collapse-btn i {
     box-shadow: 0 4px 10px rgba(30, 78, 110, 0.08);
 }
 
-
-/* =========================================================
-   CURRENT PAYROLL PERIOD - CALENDAR
-   ========================================================= */
-
-.payroll-period-dashboard {
-    display: grid;
-    grid-template-columns: minmax(285px, 0.95fr) minmax(250px, 1.05fr);
-    gap: 18px;
-    margin-bottom: 16px;
-}
-
-.payroll-calendar-card {
-    min-width: 0;
-    padding: 14px;
-    background: #f8fbfd;
-    border: 1px solid #dbe8f0;
-    border-radius: 10px;
-}
-
-.payroll-calendar-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    margin-bottom: 10px;
-}
-
-.payroll-calendar-month {
-    margin: 0;
-    color: #0c4f70;
-    font-size: 14px;
-    font-weight: 700;
-    text-align: center;
-}
-
-.payroll-calendar-nav {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 30px;
-    height: 30px;
-    flex: 0 0 30px;
-    padding: 0;
-    background: transparent;
-    border: 0;
-    border-radius: 7px;
-    color: #1681ad;
-    cursor: pointer;
-    transition:
-        background 0.15s ease,
-        color 0.15s ease;
-}
-
-.payroll-calendar-nav:hover {
-    background: #e3f2f9;
-    color: #075a7e;
-}
-
-.payroll-calendar-grid {
-    display: grid;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
-    gap: 4px;
-    width: 100%;
-}
-
 .payroll-calendar-weekday {
     display: flex;
     align-items: center;
@@ -3096,121 +1983,6 @@ body.pp-sidebar-collapsed .pp-sidebar-collapse-btn i {
     color: #b8c3cc;
 }
 
-
-/* PAYROLL PERIOD HIGHLIGHT */
-
-.payroll-calendar-day-period {
-    background: #dceef5;
-    color: #0c4f70;
-    border-radius: 4px;
-    font-weight: 600;
-}
-
-.payroll-calendar-day-start,
-.payroll-calendar-day-end {
-    z-index: 2;
-    background: #126d8c;
-    color: #ffffff;
-    border-radius: 50%;
-    font-weight: 700;
-}
-
-.payroll-calendar-day-start:hover,
-.payroll-calendar-day-end:hover {
-    background: #0d5d78;
-}
-
-
-/* =========================================================
-   PAYROLL PERIOD SUMMARY
-   ========================================================= */
-
-.payroll-period-summary {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    min-width: 0;
-    padding: 5px 2px;
-}
-
-.payroll-period-title {
-    margin: 0 0 5px;
-    color: #0c4f70;
-    font-size: 17px;
-    font-weight: 700;
-    line-height: 1.35;
-}
-
-.payroll-period-dates {
-    display: flex;
-    flex-direction: column;
-    gap: 13px;
-    margin-top: 18px;
-}
-
-.payroll-period-date-item,
-.payroll-period-legend {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    min-width: 0;
-}
-
-.payroll-period-marker {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    flex: 0 0 32px;
-    border-radius: 50%;
-    background: #126d8c;
-    color: #ffffff;
-    font-size: 11px;
-    font-weight: 700;
-}
-
-.payroll-period-date-item > div:last-child,
-.payroll-period-legend > div:last-child {
-    min-width: 0;
-}
-
-.payroll-period-date-item strong,
-.payroll-period-legend strong {
-    display: block;
-    margin-bottom: 2px;
-    color: #29465d;
-    font-size: 12px;
-    font-weight: 700;
-    line-height: 1.3;
-}
-
-.payroll-period-date-item span,
-.payroll-period-legend span {
-    display: block;
-    color: #8293a3;
-    font-size: 11px;
-    line-height: 1.35;
-}
-
-.payroll-period-legend-box {
-    width: 32px;
-    height: 24px;
-    flex: 0 0 32px;
-    background: #dceef5;
-    border: 1px solid #c9e0eb;
-    border-radius: 6px;
-}
-
-
-/* =========================================================
-   RECENT ACTIVITY
-   ========================================================= */
-
-.pp-activity-feed {
-    background: #ffffff;
-}
-
 .pp-activity-item {
     display: flex;
     align-items: flex-start;
@@ -3234,31 +2006,6 @@ body.pp-sidebar-collapsed .pp-sidebar-collapse-btn i {
     font-size: 15px;
 }
 
-.pp-activity-icon-success {
-    background: #e3f6ea;
-    color: #18864b;
-}
-
-.pp-activity-icon-warning {
-    background: #fff2dc;
-    color: #b77718;
-}
-
-.pp-activity-icon-info {
-    background: #e3f2f9;
-    color: #0878a5;
-}
-
-.pp-activity-icon-primary {
-    background: #e8efff;
-    color: #3569d4;
-}
-
-.pp-activity-content {
-    min-width: 0;
-    flex: 1;
-}
-
 .pp-activity-text {
     margin: 0 0 4px;
     color: #29465d;
@@ -3271,90 +2018,38 @@ body.pp-sidebar-collapsed .pp-sidebar-collapse-btn i {
     font-size: 11px;
 }
 
-
-/* =========================================================
-   RESPONSIVE
-   ========================================================= */
-
 @media (max-width: 1200px) {
-
-    .pp-quick-actions {
+.pp-quick-actions {
         grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .payroll-period-dashboard {
-        grid-template-columns: 1fr;
-    }
-
-    .payroll-period-summary {
-        padding: 4px 0;
     }
 }
 
 @media (max-width: 1050px) {
-
-    .pp-dash-grid {
+.pp-dash-grid {
         grid-template-columns: 1fr;
     }
 }
 
 @media (max-width: 700px) {
-
-    .pp-quick-actions {
+.pp-quick-actions {
         grid-template-columns: 1fr;
     }
 
-    .pp-widget-header {
+.pp-widget-header {
         align-items: flex-start;
-    }
-
-    .payroll-period-dashboard {
-        gap: 14px;
-    }
-
-    .payroll-period-dates {
-        margin-top: 15px;
     }
 }
 
 @media (max-width: 576px) {
-
-    .payroll-calendar-card {
-        padding: 10px;
-    }
-
-    .payroll-calendar-grid {
-        gap: 2px;
-    }
-
-    .payroll-calendar-weekday {
+.payroll-calendar-weekday {
         font-size: 9px;
     }
 
-    .payroll-calendar-day {
+.payroll-calendar-day {
         height: 27px;
         font-size: 10px;
     }
-
-    .payroll-period-title {
-        font-size: 15px;
-    }
-
-    .payroll-period-marker {
-        width: 29px;
-        height: 29px;
-        flex-basis: 29px;
-        font-size: 10px;
-    }
-
-    .payroll-period-legend-box {
-        width: 29px;
-        flex-basis: 29px;
-    }
 }
-/* ============================================================
-   LOAN MANAGEMENT
-   ============================================================ */
 
 .loan-info-note {
     display: flex;
@@ -3376,34 +2071,6 @@ body.pp-sidebar-collapsed .pp-sidebar-collapse-btn i {
     font-size: 16px;
     margin-top: 1px;
 }
-
-.loan-toolbar {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 16px;
-    padding: 16px;
-    border-bottom: 1px solid var(--pp-border);
-}
-
-.loan-filters {
-    display: flex;
-    align-items: flex-end;
-    gap: 12px;
-    flex: 1;
-    flex-wrap: wrap;
-}
-
-.loan-search {
-    width: 280px;
-}
-
-.loan-filter {
-    width: 180px;
-}
-
-
-/* Loan management table */
 
 #loanTable {
     font-size: 13px;
@@ -3479,46 +2146,6 @@ body.pp-sidebar-collapsed .pp-sidebar-collapse-btn i {
     text-decoration: underline;
 }
 
-
-/* ============================================================
-   FULL PAGE LOAN DETAILS
-   ============================================================ */
-
-.loan-details-page-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 16px;
-    margin-bottom: 18px;
-}
-
-.loan-back-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    color: var(--pp-primary);
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-}
-
-.loan-back-btn:hover {
-    color: var(--pp-primary-dark);
-    text-decoration: underline;
-}
-
-.loan-details-page {
-    width: 100%;
-    overflow: visible;
-}
-
-
-/* Employee header */
-
 .loan-detail-header {
     display: flex;
     align-items: center;
@@ -3542,10 +2169,6 @@ body.pp-sidebar-collapsed .pp-sidebar-collapse-btn i {
     font-weight: 700;
 }
 
-.loan-detail-employee {
-    min-width: 0;
-}
-
 .loan-detail-name {
     margin: 0;
     color: var(--pp-primary-dark);
@@ -3562,17 +2185,6 @@ body.pp-sidebar-collapsed .pp-sidebar-collapse-btn i {
 .loan-detail-status {
     margin-left: auto;
     flex-shrink: 0;
-}
-
-
-/* Loan info*/
-
-.loan-details-overview {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 18px;
-    padding: 18px;
-    background: #f8fbfd;
 }
 
 .loan-detail-section {
@@ -3598,9 +2210,6 @@ body.pp-sidebar-collapsed .pp-sidebar-collapse-btn i {
 .loan-detail-section-title i {
     color: var(--pp-primary);
 }
-
-
-/* Loan information */
 
 .loan-detail-grid {
     display: grid;
@@ -3630,9 +2239,6 @@ body.pp-sidebar-collapsed .pp-sidebar-collapse-btn i {
     font-weight: 600;
     overflow-wrap: anywhere;
 }
-
-
-/* Loan balance */
 
 .loan-balance-grid {
     display: grid;
@@ -3670,12 +2276,6 @@ body.pp-sidebar-collapsed .pp-sidebar-collapse-btn i {
 
 .loan-balance-value.remaining {
     color: var(--pp-primary);
-}
-
-
-.loan-history-section {
-    width: auto;
-    margin: 0 18px 18px;
 }
 
 .loan-history-section .table-responsive {
@@ -3718,7 +2318,6 @@ body.pp-sidebar-collapsed .pp-sidebar-collapse-btn i {
     background: #f8fbfd;
 }
 
-
 #recordLoanModal .modal-dialog {
     max-width: 760px;
 }
@@ -3742,103 +2341,61 @@ body.pp-sidebar-collapsed .pp-sidebar-collapse-btn i {
 }
 
 @media (max-width: 1100px) {
-    .loan-details-overview {
-        grid-template-columns: 1fr;
-    }
-
-    .loan-balance-grid {
+.loan-balance-grid {
         grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
-    .loan-balance-card {
+.loan-balance-card {
         display: block;
     }
 
-    .loan-balance-value {
+.loan-balance-value {
         display: block;
         margin-top: 5px;
     }
 }
 
-
 @media (max-width: 900px) {
-    .loan-toolbar {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .loan-filters {
-        width: 100%;
-    }
-
-    .loan-search,
-    .loan-filter {
-        width: 100%;
-    }
-
-    .loan-details-overview {
-        padding: 14px;
-    }
-
-    .loan-detail-grid,
-    .loan-balance-grid {
+.loan-detail-grid, .loan-balance-grid {
         grid-template-columns: 1fr;
-    }
-
-    .loan-history-section {
-        margin: 0 14px 14px;
     }
 }
 
-
 @media (max-width: 576px) {
-    .loan-details-page-header {
-        margin-bottom: 14px;
-    }
-
-    .loan-detail-header {
+.loan-detail-header {
         align-items: flex-start;
         padding: 16px;
     }
 
-    .loan-avatar {
+.loan-avatar {
         width: 42px;
         height: 42px;
         flex-basis: 42px;
         font-size: 12px;
     }
 
-    .loan-detail-name {
+.loan-detail-name {
         font-size: 15px;
     }
 
-    .loan-detail-meta {
+.loan-detail-meta {
         font-size: 12px;
     }
 
-    .loan-detail-status {
+.loan-detail-status {
         margin-left: auto;
     }
 
-    .loan-details-overview {
-        gap: 14px;
-        padding: 12px;
-    }
-
-    .loan-detail-grid {
+.loan-detail-grid {
         gap: 16px;
         padding: 16px;
     }
 
-    .loan-balance-grid {
+.loan-balance-grid {
         padding: 14px;
     }
 
-    .loan-history-section {
-        margin: 0 12px 12px;
-    }
-
-    .loan-history-table {
+.loan-history-table {
         min-width: 650px;
     }
 }
