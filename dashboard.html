@@ -3,10 +3,11 @@
 <head>
     <script>window.PP_ALLOWED_ROLES = ['Payroll Master'];</script>
     <script src="js/auth-guard.js"></script>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Dashboard — PayrollPro</title>
+    <title>Dashboard</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
@@ -24,10 +25,7 @@
 
         <main class="pp-content">
 
-
-            <!-- =====================================================
-                 PAGE HEADER
-                 ===================================================== -->
+            <!-- Page header -->
 
             <header class="pp-content-header">
 
@@ -42,113 +40,11 @@
             </header>
 
 
-
-            <!-- =====================================================
-                 QUICK ACTIONS
-                 ===================================================== -->
-
-            <section class="pp-widget mb-4">
-
-                <div class="pp-widget-header">
-
-                    <div>
-
-                        <h2 class="pp-widget-title">
-                            <i class="bi bi-lightning-charge me-2"></i>
-                            Quick Actions
-                        </h2>
-
-                        <p class="pp-widget-subtitle mb-0">
-                            Perform common payroll tasks quickly.
-                        </p>
-
-                    </div>
-
-                </div>
-
-
-                <div class="pp-widget-body">
-
-                    <div class="pp-quick-actions">
-
-
-                        <!-- PROCESS PAYROLL -->
-
-                        <a
-                            href="payroll-processing.html"
-                            class="pp-quick-action">
-
-                            <i class="bi bi-cash-stack"></i>
-
-                            <span>
-                                Process Payroll
-                            </span>
-
-                        </a>
-
-
-                        <!-- DTR -->
-
-                        <a
-                            href="dtr.html"
-                            class="pp-quick-action">
-
-                            <i class="bi bi-clock-history"></i>
-
-                            <span>
-                                View Daily Time Record
-                            </span>
-
-                        </a>
-
-
-                        <!-- EMPLOYEE RECORDS -->
-
-                        <a
-                            href="employee-records.html"
-                            class="pp-quick-action">
-
-                            <i class="bi bi-people"></i>
-
-                            <span>
-                                Employee Records
-                            </span>
-
-                        </a>
-
-
-                        <!-- REPORTS -->
-
-                        <a
-                            href="reports.html"
-                            class="pp-quick-action">
-
-                            <i class="bi bi-file-earmark-bar-graph"></i>
-
-                            <span>
-                                Generate Report
-                            </span>
-
-                        </a>
-
-                    </div>
-
-                </div>
-
-            </section>
-
-
-
-            <!-- =====================================================
-                 MAIN DASHBOARD
-                 ===================================================== -->
+            <!-- Main dashboard -->
 
             <div class="pp-dash-grid mb-4">
 
-
-                <!-- =================================================
-                     CURRENT PAYROLL PERIOD
-                     ================================================= -->
+                <!-- Current payroll period -->
 
                 <section class="pp-widget">
 
@@ -157,20 +53,15 @@
                         <div>
 
                             <h2 class="pp-widget-title">
-
                                 <i class="bi bi-calendar2-week me-2"></i>
-
                                 Current Payroll Period
-
                             </h2>
-
 
                             <p class="pp-widget-subtitle mb-0">
                                 Manage and process payroll for the current period.
                             </p>
 
                         </div>
-
 
                         <span
                             class="pp-badge pp-badge-warning"
@@ -183,24 +74,15 @@
                     </div>
 
 
-
                     <div class="pp-widget-body">
-
-
-                        <!-- CALENDAR + PERIOD INFORMATION -->
 
                         <div class="payroll-period-dashboard">
 
-
-                            <!-- =====================================
-                                 ACTUAL CALENDAR
-                                 ===================================== -->
+                            <!-- Calendar -->
 
                             <div class="payroll-calendar-card">
 
-
                                 <div class="payroll-calendar-header">
-
 
                                     <button
                                         type="button"
@@ -212,7 +94,6 @@
 
                                     </button>
 
-
                                     <h3
                                         class="payroll-calendar-month"
                                         id="payrollCalendarMonth">
@@ -220,7 +101,6 @@
                                         September 2026
 
                                     </h3>
-
 
                                     <button
                                         type="button"
@@ -232,35 +112,25 @@
 
                                     </button>
 
-
                                 </div>
-
-
-                                <!-- JS GENERATES CALENDAR HERE -->
 
                                 <div
                                     class="payroll-calendar-grid"
                                     id="payrollCalendar">
                                 </div>
 
-
                             </div>
 
 
-
-                            <!-- =====================================
-                                 PAYROLL PERIOD INFORMATION
-                                 ===================================== -->
+                            <!-- Payroll period information -->
 
                             <div class="payroll-period-summary">
-
 
                                 <div>
 
                                     <div class="pp-text-muted small mb-1">
                                         Current Period
                                     </div>
-
 
                                     <h3
                                         class="payroll-period-title"
@@ -269,7 +139,6 @@
                                         September 11 – September 25, 2026
 
                                     </h3>
-
 
                                     <p
                                         class="pp-text-muted small mb-0"
@@ -282,19 +151,15 @@
                                 </div>
 
 
-
                                 <div class="payroll-period-dates">
 
-
-                                    <!-- PERIOD START -->
+                                    <!-- Period start -->
 
                                     <div class="payroll-period-date-item">
-
 
                                         <div class="payroll-period-marker">
                                             11
                                         </div>
-
 
                                         <div>
 
@@ -308,20 +173,16 @@
 
                                         </div>
 
-
                                     </div>
 
 
-
-                                    <!-- PERIOD END -->
+                                    <!-- Period end -->
 
                                     <div class="payroll-period-date-item">
-
 
                                         <div class="payroll-period-marker">
                                             25
                                         </div>
-
 
                                         <div>
 
@@ -335,18 +196,14 @@
 
                                         </div>
 
-
                                     </div>
 
 
-
-                                    <!-- PAYROLL PERIOD LEGEND -->
+                                    <!-- Payroll period legend -->
 
                                     <div class="payroll-period-legend">
 
-
                                         <span class="payroll-period-legend-box"></span>
-
 
                                         <div>
 
@@ -360,24 +217,18 @@
 
                                         </div>
 
-
                                     </div>
-
 
                                 </div>
 
-
                             </div>
-
 
                         </div>
 
 
-
-                        <!-- PAYROLL BUTTONS -->
+                        <!-- Payroll buttons -->
 
                         <div class="d-flex gap-2 flex-wrap">
-
 
                             <a
                                 href="payroll-processing.html"
@@ -389,7 +240,6 @@
 
                             </a>
 
-
                             <a
                                 href="payroll-processing.html"
                                 class="btn btn-pp-outline flex-grow-1">
@@ -400,25 +250,18 @@
 
                             </a>
 
-
                         </div>
-
 
                     </div>
 
                 </section>
 
 
-
-                <!-- =================================================
-                     BIOMETRIC DEVICE
-                     ================================================= -->
+                <!-- Biometric device -->
 
                 <section class="pp-widget">
 
-
                     <div class="pp-widget-header">
-
 
                         <div>
 
@@ -430,14 +273,11 @@
 
                             </h2>
 
-
                             <p class="pp-widget-subtitle mb-0">
                                 Scanner status and attendance synchronization.
                             </p>
 
                         </div>
-
-
 
                         <span
                             class="pp-device-status pp-device-status-connected"
@@ -449,33 +289,22 @@
 
                         </span>
 
-
                     </div>
-
 
 
                     <div class="pp-widget-body">
 
-
                         <div class="pp-card mb-3">
-
 
                             <div class="pp-card-body">
 
-
                                 <div class="d-flex align-items-center gap-3">
 
-
                                     <div class="pp-icon-box">
-
                                         <i class="bi bi-fingerprint"></i>
-
                                     </div>
 
-
-
                                     <div>
-
 
                                         <h3
                                             class="pp-card-title mb-1"
@@ -485,11 +314,9 @@
 
                                         </h3>
 
-
                                         <p class="pp-text-muted small mb-1">
                                             Attendance Device
                                         </p>
-
 
                                         <p class="pp-text-muted small mb-0">
 
@@ -501,22 +328,16 @@
 
                                         </p>
 
-
                                     </div>
-
 
                                 </div>
 
-
                             </div>
-
 
                         </div>
 
 
-
                         <div class="d-flex gap-2 flex-wrap">
-
 
                             <a
                                 href="dtr.html"
@@ -528,7 +349,6 @@
 
                             </a>
 
-
                             <a
                                 href="dtr.html"
                                 class="btn btn-pp-outline flex-grow-1">
@@ -539,36 +359,35 @@
 
                             </a>
 
-
                         </div>
-
 
                     </div>
 
-
                 </section>
-
 
             </div>
 
 
-            <!-- =====================================================
-                RECENT ACTIVITY
-                ===================================================== -->
+            <!-- Recent activity -->
 
             <section class="pp-widget mb-4">
 
                 <div class="pp-widget-header">
 
                     <div>
+
                         <h2 class="pp-widget-title">
+
                             <i class="bi bi-clock-history me-2"></i>
+
                             Recent Activity
+
                         </h2>
 
                         <p class="pp-widget-subtitle mb-0">
                             Latest payroll, attendance, and employee record activities.
                         </p>
+
                     </div>
 
                 </div>
@@ -580,8 +399,7 @@
                         class="pp-activity-feed"
                         id="recentActivityList">
 
-
-                        <!-- PAYROLL ACTIVITY -->
+                        <!-- Payroll activity -->
 
                         <div class="pp-activity-item">
 
@@ -592,9 +410,11 @@
                             <div class="pp-activity-content">
 
                                 <p class="pp-activity-text">
+
                                     Payroll for
                                     <strong>August 26 – September 10, 2026</strong>
                                     was finalized.
+
                                 </p>
 
                                 <span class="pp-activity-time">
@@ -606,7 +426,7 @@
                         </div>
 
 
-                        <!-- BIOMETRIC ACTIVITY -->
+                        <!-- Biometric activity -->
 
                         <div class="pp-activity-item">
 
@@ -629,7 +449,7 @@
                         </div>
 
 
-                        <!-- EMPLOYEE RECORD ACTIVITY -->
+                        <!-- Employee record activity -->
 
                         <div class="pp-activity-item">
 
@@ -640,8 +460,10 @@
                             <div class="pp-activity-content">
 
                                 <p class="pp-activity-text">
+
                                     <strong>Michael Tan</strong>
                                     was added to Employee Records.
+
                                 </p>
 
                                 <span class="pp-activity-time">
@@ -653,7 +475,7 @@
                         </div>
 
 
-                        <!-- LOAN ACTIVITY -->
+                        <!-- Loan activity -->
 
                         <div class="pp-activity-item">
 
@@ -676,7 +498,7 @@
                         </div>
 
 
-                        <!-- LEAVE ACTIVITY -->
+                        <!-- Leave activity -->
 
                         <div class="pp-activity-item">
 
@@ -703,18 +525,13 @@
                 </div>
 
             </section>
-            </div>
-
 
         </main>
 
     </div>
 
 
-
-    <!-- =========================================================
-         SCRIPTS
-         ========================================================= -->
+    <!-- Scripts -->
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
@@ -724,7 +541,6 @@
     <script src="js/payrollpro-layout.js"></script>
 
     <script src="js/dashboard.js"></script>
-
 
 </body>
 </html>
