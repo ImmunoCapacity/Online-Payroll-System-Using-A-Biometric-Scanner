@@ -46,7 +46,7 @@
             id: 'leave',
             label: 'Leave Management',
             icon: 'bi-calendar-check',
-            href: 'leave-loan-approval.html'
+            href: 'leave-application.html'
         },
 
         {
@@ -60,7 +60,58 @@
             id: 'reports',
             label: 'Reports',
             icon: 'bi-file-earmark-bar-graph',
-            href: 'reports.html'
+            href: 'reports.html',
+            children: [
+                {
+                    id: 'payroll-report',
+                    label: 'Payroll Report',
+                    icon: 'bi-file-earmark-text',
+                    href: 'reports.html?report=payroll'
+                },
+                {
+                    id: 'payslip-report',
+                    label: 'Payslip',
+                    icon: 'bi-receipt',
+                    href: 'reports.html?report=payslip'
+                },
+                {
+                    id: 'thirteenth-report',
+                    label: '13th Month Pay',
+                    icon: 'bi-calendar-check',
+                    href: 'reports.html?report=13th-month'
+                },
+                {
+                    id: 'government-remittance',
+                    label: 'Government Contribution / Remittance',
+                    icon: 'bi-folder2-open',
+                    children: [
+                        {
+                            id: 'sss-report',
+                            label: 'SSS',
+                            icon: 'bi-file-earmark-text',
+                            href: 'reports.html?report=sss'
+                        },
+                        {
+                            id: 'philhealth-report',
+                            label: 'PhilHealth',
+                            icon: 'bi-file-earmark-text',
+                            href: 'reports.html?report=philhealth'
+                        },
+                        {
+                            id: 'pagibig-report',
+                            label: 'Pag-IBIG',
+                            icon: 'bi-file-earmark-text',
+                            href: 'reports.html?report=pagibig'
+                        },
+                        {
+                            id: 'bir-report',
+                            label: 'BIR',
+                            icon: 'bi-file-earmark-text',
+                            href: 'reports.html?report=bir'
+                        }
+                    ]
+                }
+            ]
         },
 
         {
@@ -162,7 +213,7 @@
             id: 'leave',
             label: 'Leave Management',
             icon: 'bi-calendar-check',
-            href: 'leave-loan-approval.html'
+            href: 'leave-application.html'
         },
 
         {
