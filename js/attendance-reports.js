@@ -37,7 +37,7 @@
             return (
                 '<tr>' +
                     '<td><strong>' + emp.displayName + '</strong><br><span class="text-muted" style="font-size:0.75rem;">' + emp.employeeNumber + '</span></td>' +
-                    '<td><span class="pp-badge ' + (emp.type === 'Faculty' ? 'pp-badge-faculty' : 'pp-badge-admin') + '">' + emp.type + '</span></td>' +
+                    '<td><span class="pp-badge ' + (emp.type === 'Faculty' ? 'pp-badge-faculty' : emp.type === 'Faculty/Admin' ? 'pp-badge-faculty-admin' : 'pp-badge-admin') + '">' + emp.type + '</span></td>' +
                     '<td class="col-num">' + present + '</td>' +
                     '<td class="col-num">' + late + '</td>' +
                     '<td class="col-num">' + absent + '</td>' +

@@ -2,13 +2,6 @@
 <html lang="en">
 
 <head>
-    <script>
-        window.PP_ALLOWED_ROLES = [
-            'Payroll Master',
-            'Payroll Staff'
-        ];
-    </script>
-
     <script src="js/auth-guard.js"></script>
 
     <meta charset="UTF-8">
@@ -16,6 +9,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>Daily Time Record</title>
+    <link rel="icon" type="image/png" href="sti_logo.png">
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 
@@ -57,6 +51,11 @@
                                     View employee attendance captured by the biometric scanner.
                                 </p>
                             </div>
+
+                            <button type="button" class="btn btn-pp-primary" id="syncDeviceBtn">
+                                <i class="bi bi-arrow-repeat me-1"></i>
+                                Sync Device
+                            </button>
                         </div>
 
                         <div class="pp-filter-bar">
@@ -77,10 +76,11 @@
                                     Employee Type
                                 </label>
 
-                                <select class="form-select pp-form-select" id="filterType">
-                                    <option value="all">All</option>
+                                <select data-clearable class="form-select pp-form-select" id="filterType">
+                                    <option value="all" hidden data-hint>All employee types</option>
                                     <option value="Faculty">Faculty</option>
                                     <option value="Admin">Admin</option>
+                                    <option value="Faculty/Admin">Faculty/Admin</option>
                                 </select>
 
                             </div>
@@ -98,7 +98,7 @@
                                     <input
                                         type="search"
                                         class="form-control pp-form-control"
-                                        id="filterSearch"
+                                        id="filterSearch" maxlength="100"
                                         placeholder="Search employee..."
                                     >
 
@@ -132,7 +132,6 @@
                                             <th>Time Out</th>
                                             <th>Total Hours</th>
                                             <th>Status</th>
-                                            <th class="text-center">Teaching</th>
                                         </tr>
 
                                     </thead>
@@ -145,150 +144,6 @@
 
                             <div class="pp-empty-state d-none" id="emptyTable">
                                 No records match the current filters.
-                            </div>
-
-                        </div>
-
-                    </section>
-
-
-                    <!-- Faculty Teaching -->
-
-                    <section class="pp-dtr-section" id="sectionTeaching">
-
-                        <div class="pp-faculty-page-header">
-
-                            <div>
-                                <h1 class="pp-content-title">
-                                    Faculty Teaching Hours
-                                </h1>
-
-                                <p class="pp-content-subtitle">
-                                    View schedules and record teaching attendance by class period.
-                                </p>
-                            </div>
-
-                            <button type="button" class="btn btn-pp-primary" id="addScheduleBtn">
-                                <i class="bi bi-plus-lg me-1"></i>
-                                Add Schedule
-                            </button>
-
-                        </div>
-
-
-                        <div class="pp-card pp-faculty-schedule-card">
-
-                            <div class="pp-card-header">
-                                Faculty Teaching Schedule
-                            </div>
-
-                            <div class="pp-card-body">
-
-                                <div class="pp-faculty-search">
-
-                                    <label for="facultySearch" class="pp-form-label">
-                                        Search Faculty Staff
-                                    </label>
-
-                                    <div class="pp-search-input">
-
-                                        <i class="bi bi-search"></i>
-
-                                        <input
-                                            type="text"
-                                            class="form-control pp-form-control"
-                                            id="facultySearch"
-                                            placeholder="Search faculty..."
-                                            autocomplete="off"
-                                        >
-
-                                    </div>
-
-                                    <div id="facultySearchResults" class="pp-faculty-search-results"></div>
-
-                                </div>
-
-
-                                <div id="scheduleDetailEmpty" class="pp-no-selection">
-
-                                    <i class="bi bi-calendar3"></i>
-
-                                    <div>
-                                        Search for a faculty member to view their teaching schedule.
-                                    </div>
-
-                                </div>
-
-
-                                <div id="scheduleDetailContent" class="d-none">
-
-                                    <div class="pp-schedule-heading">
-
-                                        <div>
-
-                                            <div class="pp-selected-name" id="scheduleDetailName"></div>
-
-                                            <div class="pp-selected-meta" id="scheduleDetailMeta"></div>
-
-                                        </div>
-
-                                        <div class="d-flex gap-2">
-
-                                            <button type="button" class="btn btn-sm btn-pp-outline" id="editScheduleBtn">
-                                                <i class="bi bi-pencil me-1"></i>
-                                                Edit
-                                            </button>
-
-                                            <button type="button" class="btn btn-sm btn-pp-outline" id="deleteScheduleBtn">
-                                                <i class="bi bi-trash me-1"></i>
-                                                Delete
-                                            </button>
-
-                                        </div>
-
-                                    </div>
-
-
-                                    <div class="pp-table-wrap">
-
-                                        <table class="pp-table pp-grid-table">
-
-                                            <thead>
-
-                                                <tr>
-                                                    <th class="pp-grid-time-col">TIME</th>
-                                                    <th>MON</th>
-                                                    <th>TUE</th>
-                                                    <th>WED</th>
-                                                    <th>THU</th>
-                                                    <th>FRI</th>
-                                                    <th>SAT</th>
-                                                </tr>
-
-                                            </thead>
-
-                                            <tbody id="scheduleDetailBody"></tbody>
-
-                                        </table>
-
-                                    </div>
-
-
-                                    <div id="scheduleDetailNoSchedule" class="pp-empty-state d-none">
-                                        No teaching schedule set for this faculty member yet.
-                                    </div>
-
-
-                                    <div class="pp-schedule-note">
-
-                                        <i class="bi bi-info-circle me-1"></i>
-
-                                        Click a scheduled class to record the teaching status.
-
-                                    </div>
-
-                                </div>
-
                             </div>
 
                         </div>
@@ -329,17 +184,32 @@
                                             Employee
                                         </label>
 
-                                        <input
-                                            type="text"
-                                            class="form-control pp-form-control"
-                                            id="manualEmployeeSearch"
-                                            placeholder="Type to search employee..."
-                                            autocomplete="off"
-                                            list="employeeDatalist"
-                                            required
-                                        >
+                                        <div class="pp-search-input pp-employee-picker">
 
-                                        <datalist id="employeeDatalist"></datalist>
+                                            <i class="bi bi-search"></i>
+
+                                            <input
+                                                type="search"
+                                                class="form-control pp-form-control"
+                                                id="manualEmployeeSearch"
+                                                placeholder="Search by name or employee number..."
+                                                autocomplete="off"
+                                                role="combobox"
+                                                aria-autocomplete="list"
+                                                aria-expanded="false"
+                                                aria-controls="manualEmployeeResults"
+                                                data-label="Employee"
+                                                maxlength="150"
+                                                required
+                                            >
+
+                                            <div
+                                                id="manualEmployeeResults"
+                                                class="pp-faculty-search-results"
+                                                role="listbox"
+                                            ></div>
+
+                                        </div>
 
                                         <input type="hidden" id="manualEmployee">
 
@@ -360,11 +230,11 @@
                                             id="employeeType"
                                             name="employeeType"
                                             class="form-select pp-form-select"
-                                            required
+                                            disabled
+                                            title="Filled in from the selected employee"
                                         >
-                                            <option value="">Select employee type</option>
+                                            <option value="" hidden data-hint>Select an employee first</option>
                                             <option value="admin">Admin</option>
-                                            <option value="faculty">Faculty</option>
                                             <option value="admin_faculty">Admin &amp; Faculty</option>
                                         </select>
 
@@ -381,6 +251,8 @@
                                             type="date"
                                             class="form-control pp-form-control"
                                             id="manualDate"
+                                            data-validate="date"
+                                            data-not-future
                                             required
                                         >
 
@@ -398,6 +270,8 @@
                                             class="form-control pp-form-control"
                                             id="manualReason"
                                             placeholder="Reason for manual entry"
+                                            maxlength="255"
+                                            data-validate="text"
                                             required
                                         >
 
@@ -413,6 +287,7 @@
                                             type="time"
                                             class="form-control pp-form-control"
                                             id="manualTimeIn"
+                                            data-validate="time"
                                             required
                                         >
 
@@ -429,6 +304,8 @@
                                             type="time"
                                             class="form-control pp-form-control"
                                             id="manualTimeOut"
+                                        data-validate="time"
+                                        data-after="manualTimeIn"
                                         >
 
                                     </div>
@@ -441,6 +318,7 @@
                                         </label>
 
                                         <select class="form-select pp-form-select" id="manualStatus">
+                                            <option value="auto" selected>Automatic (from time in, 15-min grace)</option>
                                             <option value="present">Present</option>
                                             <option value="late">Late</option>
                                         </select>
@@ -472,260 +350,6 @@
     </div>
 
 
-    <!-- Schedule Modal -->
-
-    <div class="modal fade pp-modal" id="scheduleModal" tabindex="-1" aria-hidden="true">
-
-        <div class="modal-dialog modal-xl modal-dialog-centered">
-
-            <div class="modal-content">
-
-                <div class="modal-header">
-
-                    <h2 class="modal-title" id="scheduleModalTitle">
-                        Add Teaching Schedule
-                    </h2>
-
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-
-                </div>
-
-
-                <form id="scheduleForm" novalidate>
-
-                    <div class="modal-body">
-
-                        <div class="mb-3">
-
-                            <label for="scheduleFaculty" class="pp-form-label">
-                                Faculty
-                            </label>
-
-                            <select class="form-select pp-form-select" id="scheduleFaculty" required></select>
-
-                        </div>
-
-
-                        <label class="pp-form-label">
-                            Weekly Schedule
-                        </label>
-
-                        <div class="pp-table-wrap mt-2">
-
-                            <table class="pp-table pp-grid-table pp-grid-edit-table">
-
-                                <thead>
-
-                                    <tr>
-                                        <th class="pp-grid-time-col">TIME</th>
-                                        <th>MON</th>
-                                        <th>TUE</th>
-                                        <th>WED</th>
-                                        <th>THU</th>
-                                        <th>FRI</th>
-                                        <th>SAT</th>
-                                    </tr>
-
-                                </thead>
-
-                                <tbody id="gridEditBody"></tbody>
-
-                            </table>
-
-                        </div>
-
-                        <p class="small text-muted mt-2 mb-0">
-                            Enter the subject in each hour that the faculty member teaches.
-                        </p>
-
-                    </div>
-
-
-                    <div class="modal-footer">
-
-                        <button type="button" class="btn btn-pp-outline" data-bs-dismiss="modal">
-                            Cancel
-                        </button>
-
-                        <button type="submit" class="btn btn-pp-primary">
-                            Save Schedule
-                        </button>
-
-                    </div>
-
-                </form>
-
-            </div>
-
-        </div>
-
-    </div>
-
-
-    <!-- Teaching Monitoring Modal -->
-
-    <div class="modal fade pp-modal" id="teachingMonitoringModal" tabindex="-1" aria-hidden="true">
-
-        <div class="modal-dialog modal-lg modal-dialog-centered">
-
-            <div class="modal-content">
-
-                <div class="modal-header">
-
-                    <h2 class="modal-title">
-                        Teaching Monitoring
-                    </h2>
-
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-
-                </div>
-
-
-                <form id="teachingMonitoringForm">
-
-                    <div class="modal-body">
-
-                        <p class="text-muted small mb-4">
-                            Record the faculty member's teaching status during the scheduled class period.
-                        </p>
-
-
-                        <div class="row g-3">
-
-                            <div class="col-md-6">
-
-                                <label for="monitorFaculty" class="pp-form-label">
-                                    Faculty
-                                </label>
-
-                                <input
-                                    type="text"
-                                    class="form-control pp-form-control"
-                                    id="monitorFaculty"
-                                    readonly
-                                >
-
-                            </div>
-
-
-                            <div class="col-md-3">
-
-                                <label for="monitorDate" class="pp-form-label">
-                                    Date
-                                </label>
-
-                                <input
-                                    type="date"
-                                    class="form-control pp-form-control"
-                                    id="monitorDate"
-                                    required
-                                >
-
-                            </div>
-
-
-                            <div class="col-md-3">
-
-                                <label for="monitorCheckTime" class="pp-form-label">
-                                    Check Time
-                                </label>
-
-                                <input
-                                    type="time"
-                                    class="form-control pp-form-control"
-                                    id="monitorCheckTime"
-                                    required
-                                >
-
-                            </div>
-
-
-                            <div class="col-md-6">
-
-                                <label for="monitorSubject" class="pp-form-label">
-                                    Subject
-                                </label>
-
-                                <input
-                                    type="text"
-                                    class="form-control pp-form-control"
-                                    id="monitorSubject"
-                                    readonly
-                                >
-
-                            </div>
-
-
-                            <div class="col-md-6">
-
-                                <label for="monitorPeriod" class="pp-form-label">
-                                    Scheduled Period
-                                </label>
-
-                                <input
-                                    type="text"
-                                    class="form-control pp-form-control"
-                                    id="monitorPeriod"
-                                    readonly
-                                >
-
-                            </div>
-
-
-                            <div class="col-md-6">
-
-                                <label for="monitorStatus" class="pp-form-label">
-                                    Teaching Status
-                                </label>
-
-                                <select class="form-select pp-form-select" id="monitorStatus" required>
-                                    <option value="Teaching">Teaching</option>
-                                    <option value="Late">Late</option>
-                                    <option value="Not Teaching">Not Teaching</option>
-                                </select>
-
-                            </div>
-
-                            <div class="col-12">
-
-                                <label for="monitorRemarks" class="pp-form-label">
-                                    Remarks
-                                </label>
-
-                                <input
-                                    type="text"
-                                    class="form-control pp-form-control"
-                                    id="monitorRemarks"
-                                    placeholder="Optional remarks..."
-                                >
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-
-                    <div class="modal-footer">
-
-                        <button type="button" class="btn btn-pp-outline" data-bs-dismiss="modal">
-                            Cancel
-                        </button>
-
-                        <button type="submit" class="btn btn-pp-primary">
-                            Record Check
-                        </button>
-
-                    </div>
-
-                </form>
-
-            </div>
-
-        </div>
-
-    </div>
-
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
@@ -733,7 +357,10 @@
     <script src="js/confirm-modal.js"></script>
     <script src="js/toast.js"></script>
     <script src="js/payrollpro-layout.js"></script>
+    <script src="js/select-hint.js"></script>
+    <script src="js/form-validation.js"></script>
     <script src="js/dtr.js"></script>
+    <script src="js/biometric-sync.js"></script>
 
 </body>
 

@@ -55,6 +55,14 @@
         bir: {
             title: 'BIR Remittance Report', breadcrumb: 'BIR Remittance', parent: GOV,
             description: 'Withholding tax records for BIR reporting.'
+        },
+        loans: {
+            title: 'Loan Report', breadcrumb: 'Loan Report', parent: 'Payroll',
+            description: 'Loan balances and deduction history of admin and faculty staff.'
+        },
+        employees: {
+            title: 'Employee List Report', breadcrumb: 'Employee List', parent: 'Employees',
+            description: 'Complete list of admin and faculty staff and their employment details.'
         }
     };
 
@@ -145,10 +153,11 @@
                 getValue(record, KEYS.period, '') === selectedPeriod;
 
             var typeMatch = true;
-            if (selectedType === 'faculty') { typeMatch = type.includes('faculty'); }
-            if (selectedType === 'admin') { typeMatch = type.includes('admin'); }
+            // Exact matches, so Faculty/Admin staff only show under their own type.
+            if (selectedType === 'faculty') { typeMatch = type === 'faculty'; }
+            if (selectedType === 'admin') { typeMatch = type === 'admin'; }
             if (selectedType === 'both') {
-                typeMatch = type.includes('both') || type.includes('admin / faculty');
+                typeMatch = type === 'faculty/admin' || type.includes('both') || type.includes('admin / faculty');
             }
 
             var searchMatch = !search ||
@@ -321,6 +330,85 @@
     }
 
 
+    /* Loan Report (paper, 8.5): balances and deduction history */
+    function renderLoanReport() {
+        var search = reportSearch.value.trim().toLowerCase();
+        var loans = (typeof DataStore === 'undefined' ? [] : DataStore.getLoans()).filter(function (l) {
+            return !search ||
+                String(l.employeeName || '').toLowerCase().includes(search) ||
+                String(l.employeeId || '').toLowerCase().includes(search);
+        });
+
+        var columns = ['EMP. ID', 'EMPLOYEE', 'LOAN TYPE', 'REFERENCE', 'LOAN AMOUNT',
+            'PER PAYROLL', 'TOTAL DEDUCTED', 'BALANCE', 'STATUS'];
+        var totals = { amount: 0, deducted: 0, balance: 0 };
+
+        var rows = loans.map(function (l) {
+            var deducted = DataStore.getLoanTotalDeducted(l);
+            var balance = DataStore.getLoanRemainingBalance(l);
+            totals.amount += number(l.amount);
+            totals.deducted += deducted;
+            totals.balance += balance;
+            return [
+                escapeHtml(l.employeeId), '<strong>' + escapeHtml(l.employeeName) + '</strong>',
+                escapeHtml(l.type), escapeHtml(l.reference || '—'),
+                peso(l.amount), peso(l.deductionPerPayroll), peso(deducted), peso(balance),
+                escapeHtml(DataStore.getLoanStatus(l))
+            ];
+        });
+
+        tableHead.innerHTML = headRow(columns);
+        tableBody.innerHTML = bodyRows(rows, columns.length);
+        tableFooter.innerHTML = rows.length
+            ? '<tr><th colspan="4">Total</th><th>' + peso(totals.amount) + '</th><th></th><th>' +
+              peso(totals.deducted) + '</th><th>' + peso(totals.balance) + '</th><th></th></tr>'
+            : '';
+        setText('reportRecordLabel', rows.length + (rows.length === 1 ? ' record' : ' records'));
+    }
+
+    /* Employee List Report (paper, 8.6): from the database via api/employees */
+    function renderEmployeeListReport() {
+        var columns = ['EMP. NO.', 'EMPLOYEE', 'TYPE', 'EMAIL', 'CONTACT', 'DATE HIRED', 'STATUS'];
+        tableHead.innerHTML = headRow(columns);
+        tableBody.innerHTML = '<tr><td colspan="' + columns.length + '" class="report-empty">Loading employees…</td></tr>';
+        tableFooter.innerHTML = '';
+
+        fetch('api/employees')
+            .then(function (response) { return response.json(); })
+            .then(function (data) {
+                if (currentReport !== 'employees') return;
+                if (!data.success) throw new Error(data.message);
+
+                var selectedType = employeeType.value;
+                var search = reportSearch.value.trim().toLowerCase();
+                var employees = data.employees.filter(function (e) {
+                    var typeMatch = selectedType === 'all' ||
+                        (selectedType === 'both' && e.department === 'Faculty/Admin') ||
+                        e.department.toLowerCase() === selectedType;
+                    var searchMatch = !search ||
+                        e.displayName.toLowerCase().includes(search) ||
+                        String(e.employeeNumber).toLowerCase().includes(search);
+                    return typeMatch && searchMatch;
+                });
+
+                var rows = employees.map(function (e) {
+                    return [
+                        escapeHtml(e.employeeNumber), '<strong>' + escapeHtml(e.displayName) + '</strong>',
+                        escapeHtml(e.department), escapeHtml(e.email), escapeHtml(e.phone),
+                        escapeHtml(e.dateHired || '—'), escapeHtml(e.status)
+                    ];
+                });
+                tableBody.innerHTML = bodyRows(rows, columns.length);
+                setText('reportRecordLabel', rows.length + (rows.length === 1 ? ' record' : ' records'));
+            })
+            .catch(function (error) {
+                console.error('[Reports] Employee list failed:', error);
+                tableBody.innerHTML = '<tr><td colspan="' + columns.length + '" class="report-empty">' +
+                    'Could not load employees from the server.</td></tr>';
+            });
+    }
+
+
     /* Select report */
     function selectReport(reportKey) {
         var def = reportDefinitions[reportKey];
@@ -333,12 +421,18 @@
         reportBreadcrumb.textContent = def.breadcrumb;
         reportDescription.textContent = def.description;
 
-        var records = filterPayrollRecords();
-
-        if (reportKey === 'payroll') {
-            renderPayrollReport(records);
+        if (reportKey === 'loans') {
+            renderLoanReport();
+        } else if (reportKey === 'employees') {
+            renderEmployeeListReport();
         } else {
-            renderSimpleReport(reportKey, records);
+            var records = filterPayrollRecords();
+
+            if (reportKey === 'payroll') {
+                renderPayrollReport(records);
+            } else {
+                renderSimpleReport(reportKey, records);
+            }
         }
 
         setSidebarState(reportKey);
@@ -393,18 +487,6 @@
     });
 
 
-    /* Sidebar tree items */
-    var NAV_ITEMS = [
-        { key: 'payroll',    label: 'Payroll Report',        icon: 'bi-file-earmark-text' },
-        { key: 'payslip',    label: 'Payslip',               icon: 'bi-receipt' },
-        { key: 'thirteenth', label: '13th Month Pay',        icon: 'bi-calendar-check' },
-        { key: 'sss',        label: 'SSS Remittance',        icon: 'bi-bank' },
-        { key: 'philhealth', label: 'PhilHealth Remittance', icon: 'bi-heart-pulse' },
-        { key: 'pagibig',    label: 'Pag-IBIG Remittance',   icon: 'bi-house-door' },
-        { key: 'bir',        label: 'BIR Remittance',        icon: 'bi-journal-text' }
-    ];
-
-
     /* Sidebar state */
     function setSidebarState(key) {
         document.querySelectorAll('.pp-reports-sidebar-link').forEach(function (a) {
@@ -412,69 +494,27 @@
         });
 
         var parent = document.querySelector('.pp-sidebar-link[href="reports.html"]');
-        var group = document.querySelector('.pp-reports-sidebar-group');
-
         if (parent) { parent.classList.add('reports-expanded'); }
-        if (group) { group.classList.add('is-open'); }
     }
 
 
-    /* Sidebar tree */
-    var reportsSidebarLink = document.querySelector('.pp-sidebar-link[href="reports.html"]');
+    /* Sidebar
+       The Reports sub-menu is rendered (always open) by payrollpro-layout.js.
+       On this page its links switch reports without reloading. */
+    document.querySelectorAll('.pp-reports-sidebar-link').forEach(function (link) {
+        link.addEventListener('click', function (e) {
+            if (link.dataset.external) return; // e.g. Attendance Report has its own page
 
-    if (reportsSidebarLink) {
-
-        var reportsGroup = document.querySelector('.pp-reports-sidebar-group');
-
-        if (!reportsGroup) {
-            reportsGroup = document.createElement('div');
-            reportsGroup.className = 'pp-reports-sidebar-group';
-
-            reportsGroup.innerHTML = NAV_ITEMS.map(function (item) {
-                return '<a href="reports.html?report=' + item.key + '"' +
-                    ' class="pp-reports-sidebar-link" data-report="' + item.key + '">' +
-                    '<i class="bi ' + item.icon + '"></i>' +
-                    '<span>' + item.label + '</span></a>';
-            }).join('');
-
-            reportsSidebarLink.parentNode.insertBefore(
-                reportsGroup,
-                reportsSidebarLink.nextSibling
-            );
-        }
-
-        /* Chevron */
-        if (!reportsSidebarLink.querySelector('.pp-reports-chevron')) {
-            var chevron = document.createElement('i');
-            chevron.className = 'bi bi-chevron-down pp-reports-chevron';
-            reportsSidebarLink.appendChild(chevron);
-        }
-
-        /* Item clicks */
-        reportsGroup.querySelectorAll('.pp-reports-sidebar-link').forEach(function (link) {
-            link.addEventListener('click', function (e) {
-                e.preventDefault();
-
-                selectReport(link.dataset.report);
-
-                window.history.replaceState(
-                    {}, '',
-                    'reports.html?report=' + encodeURIComponent(link.dataset.report)
-                );
-            });
-        });
-
-        /* Open / close */
-        reportsSidebarLink.addEventListener('click', function (e) {
             e.preventDefault();
 
-            var isOpen = reportsGroup.classList.contains('is-open');
+            selectReport(link.dataset.report);
 
-            reportsGroup.classList.toggle('is-open', !isOpen);
-            reportsSidebarLink.classList.toggle('reports-expanded', !isOpen);
+            window.history.replaceState(
+                {}, '',
+                'reports.html?report=' + encodeURIComponent(link.dataset.report)
+            );
         });
-
-    }
+    });
 
 
     /* Init */

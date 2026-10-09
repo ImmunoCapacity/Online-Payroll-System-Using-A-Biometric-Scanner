@@ -358,6 +358,13 @@
         var device = devices.find(function (d) { return d.status === 'Active'; }) || devices[0];
 
         if (!device) {
+            // No scanner added yet (System Administrator → Biometric Devices).
+            nameEl.textContent = 'No device added';
+            statusEl.classList.remove('pp-device-status-connected');
+            statusEl.classList.add('pp-device-status-disconnected');
+            statusEl.innerHTML = '<span class="pp-device-dot"></span>Not set up';
+            var syncEl = document.getElementById('biometricLastSync');
+            if (syncEl) syncEl.textContent = '—';
             return;
         }
 

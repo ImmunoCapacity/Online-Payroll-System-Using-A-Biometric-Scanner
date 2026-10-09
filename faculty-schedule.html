@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="js/auth-guard.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Faculty Schedule — PayrollPro</title>
+    <link rel="icon" type="image/png" href="sti_logo.png">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="css/payrollpro.css" rel="stylesheet">
+    <link href="css/faculty-modules.css" rel="stylesheet">
+</head>
+<body class="pp-app pp-app-shell">
+
+    <div id="pp-sidebar-mount"></div>
+
+    <div class="pp-shell-main">
+        <div id="pp-topbar-mount"></div>
+
+        <main class="pp-content">
+
+            <!-- =====================================================
+                 1. FACULTY LIST
+                 ===================================================== -->
+            <div id="listView">
+                <header class="pp-content-header">
+                    <div>
+                        <h1 class="pp-content-title">Faculty Schedule</h1>
+                        <p class="pp-content-subtitle">Planned classes of each faculty member. Classroom attendance is recorded in Faculty Teaching Hours.</p>
+                    </div>
+                </header>
+
+                <section class="pp-widget" aria-labelledby="facultyListTitle">
+                    <div class="pp-widget-header">
+                        <h2 class="pp-widget-title" id="facultyListTitle">Faculty</h2>
+                    </div>
+                    <div class="pp-widget-body">
+                        <div class="pp-filter-bar" role="search">
+                            <div class="pp-filter-group search">
+                                <label for="facultySearch" class="pp-form-label">Search</label>
+                                <div class="pp-search-input">
+                                    <i class="bi bi-search"></i>
+                                    <input type="search" class="form-control pp-form-control" id="facultySearch" maxlength="100" placeholder="Search by name or employee ID…">
+                                </div>
+                            </div>
+                        </div>
+
+                        <p class="pp-table-hint">
+                            <i class="bi bi-hand-index" aria-hidden="true"></i>
+                            Click a faculty member to open their schedule.
+                        </p>
+                        <div class="pp-table-wrap">
+                            <table class="pp-table" id="facultyTable">
+                                <thead>
+                                    <tr>
+                                        <th>Faculty</th>
+                                        <th>Employee ID</th>
+                                        <th>Status</th>
+                                        <th class="text-end">Classes This Week</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="facultyBody"></tbody>
+                            </table>
+                            <div class="pp-empty-state d-none" id="facultyEmpty">No faculty found.</div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- =====================================================
+                 2. ONE FACULTY MEMBER: ADD CLASS + SCHEDULE
+                 ===================================================== -->
+            <div id="facultyView" class="d-none">
+                <button type="button" class="fm-back-btn" id="backToList">
+                    <span class="fm-back-icon" aria-hidden="true"><i class="bi bi-arrow-left"></i></span>
+                    Back to Faculty List
+                </button>
+
+                <header class="pp-content-header mt-3">
+                    <div>
+                        <h1 class="pp-content-title" id="facultyName">Faculty</h1>
+                        <p class="pp-content-subtitle" id="facultyMeta"></p>
+                    </div>
+                </header>
+
+                <div class="row g-4">
+                    <!-- Add / edit class (Payroll Master) -->
+                    <div class="col-xl-4 d-none" id="classFormCol">
+                        <section class="pp-widget fm-form-card" aria-labelledby="classFormTitle">
+                            <div class="pp-widget-header">
+                                <h2 class="pp-widget-title" id="classFormTitle">Add Class</h2>
+                            </div>
+                            <div class="pp-widget-body">
+                                <form id="classForm" novalidate>
+                                    <div class="mb-3">
+                                        <label for="classSubject" class="pp-form-label">Subject</label>
+                                        <input type="text" class="form-control pp-form-control" id="classSubject" maxlength="100" data-validate="text" placeholder="e.g. Data Structures and Algorithms" required>
+                                    </div>
+                                    <div class="row g-3 mb-3">
+                                        <div class="col-sm-6">
+                                            <label for="classSection" class="pp-form-label">Class / Section</label>
+                                            <input type="text" class="form-control pp-form-control" id="classSection" maxlength="50" data-validate="text" placeholder="e.g. BSIT 2A" required>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <label for="classRoom" class="pp-form-label">Room <span class="text-muted fw-normal">(optional)</span></label>
+                                            <input type="text" class="form-control pp-form-control" id="classRoom" maxlength="50" data-validate="text" data-label="Room" placeholder="e.g. Room 304">
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="classDate" class="pp-form-label">Class Date</label>
+                                        <input type="date" class="form-control pp-form-control" id="classDate" data-validate="date" min="2000-01-01" required>
+                                    </div>
+                                    <div class="row g-3 mb-3">
+                                        <div class="col-6">
+                                            <label for="classStart" class="pp-form-label">Scheduled Start</label>
+                                            <input type="time" class="form-control pp-form-control" id="classStart" data-validate="time" required>
+                                        </div>
+                                        <div class="col-6">
+                                            <label for="classEnd" class="pp-form-label">Scheduled End</label>
+                                            <input type="time" class="form-control pp-form-control" id="classEnd" data-validate="time" data-after="classStart" required>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3" id="repeatGroup">
+                                        <label for="classRepeatUntil" class="pp-form-label">Repeat Weekly Until <span class="text-muted fw-normal">(optional)</span></label>
+                                        <input type="date" class="form-control pp-form-control" id="classRepeatUntil" data-validate="date" data-label="Repeat until" data-after="classDate">
+                                        <div class="fm-note mt-1">Adds the same class every week on the same weekday, up to 26 weeks.</div>
+                                    </div>
+                                    <p class="fm-note mb-3"><i class="bi bi-clock"></i> Classroom checks have a fixed 15-minute grace period.</p>
+                                    <div class="d-flex gap-2">
+                                        <button type="button" class="btn btn-pp-outline d-none" id="cancelEditBtn">Cancel Edit</button>
+                                        <button type="submit" class="btn btn-pp-primary flex-grow-1" id="saveClassBtn">
+                                            <i class="bi bi-plus-lg me-1"></i> Add Class
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </section>
+                    </div>
+
+                    <!-- Schedule -->
+                    <div class="col-xl-8" id="scheduleCol">
+                        <section class="pp-widget" aria-labelledby="scheduleTitle">
+                            <div class="pp-widget-header">
+                                <h2 class="pp-widget-title" id="scheduleTitle">Schedule</h2>
+                            </div>
+                            <div class="pp-widget-body">
+                                <div class="pp-filter-bar fm-toolbar fm-schedule-toolbar">
+                                    <div class="pp-filter-group">
+                                        <span class="pp-form-label d-block">View</span>
+                                        <div class="btn-group fm-view-toggle" role="group" aria-label="Day or week view">
+                                            <button type="button" class="btn btn-pp-outline" data-view="day">Day</button>
+                                            <button type="button" class="btn btn-pp-outline active" data-view="week">Week</button>
+                                        </div>
+                                    </div>
+                                    <div class="pp-filter-group">
+                                        <label for="anchorDate" class="pp-form-label">Date</label>
+                                        <div class="fm-date-nav">
+                                            <button type="button" class="btn btn-pp-outline" id="prevRange" aria-label="Previous"><i class="bi bi-chevron-left"></i></button>
+                                            <input type="date" class="form-control pp-form-control" id="anchorDate">
+                                            <button type="button" class="btn btn-pp-outline" id="nextRange" aria-label="Next"><i class="bi bi-chevron-right"></i></button>
+                                            <button type="button" class="btn btn-pp-outline" id="todayBtn">Today</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <p class="fm-range-label" id="rangeLabel"></p>
+                                <p class="pp-table-hint">
+                                    <i class="bi bi-hand-index" aria-hidden="true"></i>
+                                    Click a class to view its details and change history.
+                                </p>
+                                <!-- Week view: timetable (hours × days) -->
+                                <div class="fm-week-wrap d-none" id="weekWrap">
+                                    <div class="fm-week" id="weekGrid"></div>
+                                </div>
+
+                                <!-- Day view: list of the day's classes -->
+                                <div class="pp-table-wrap" id="dayWrap">
+                                    <table class="pp-table" id="classTable">
+                                        <thead>
+                                            <tr>
+                                                <th>Time</th>
+                                                <th>Subject / Section</th>
+                                                <th>Room</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="classBody"></tbody>
+                                    </table>
+                                    <div class="pp-empty-state d-none" id="emptyState">No classes in this period.</div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Class details, history and actions -->
+    <div class="modal fade pp-modal" id="detailModal" tabindex="-1" aria-labelledby="detailTitle" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title" id="detailTitle">Class Details</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="detailBody"></div>
+                <div class="modal-footer" id="detailFooter"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cancel class -->
+    <div class="modal fade pp-modal" id="cancelModal" tabindex="-1" aria-labelledby="cancelTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title" id="cancelTitle">Cancel Class</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="cancelForm" novalidate>
+                    <div class="modal-body">
+                        <p class="mb-3" id="cancelSummary"></p>
+                        <label for="cancelReason" class="pp-form-label">Reason</label>
+                        <input type="text" class="form-control pp-form-control" id="cancelReason" maxlength="255" data-validate="text" placeholder="e.g. Holiday, class merged, faculty on leave" required>
+                        <div class="fm-note mt-2">The class stays on record as cancelled and can be restored later.</div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-pp-outline" data-bs-dismiss="modal">Back</button>
+                        <button type="submit" class="btn btn-danger" id="confirmCancelBtn">Cancel Class</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/data-store.js"></script>
+    <script src="js/confirm-modal.js"></script>
+    <script src="js/toast.js"></script>
+    <script src="js/payrollpro-layout.js"></script>
+    <script src="js/select-hint.js"></script>
+    <script src="js/form-validation.js"></script>
+    <script src="js/week-timetable.js"></script>
+    <script src="js/faculty-schedule.js"></script>
+</body>
+</html>

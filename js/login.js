@@ -5,9 +5,7 @@
     var ROLE_HOME = {
         'System Administrator': 'system-admin.html',
         'Payroll Master': 'dashboard.html',
-        'Payroll Staff': 'payroll-staff.html',
-        'Faculty Staff': 'payslip.html',
-        'Administrative Staff': 'payslip.html'
+        'Payroll Staff': 'payroll-staff.html'
     };
 
     // ============================================================
@@ -184,6 +182,15 @@
                 return;
             }
 
+            // Same email rule as js/form-validation.js and the backend.
+            if (!/^[A-Za-z0-9._%+-]+@[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)*\.[A-Za-z]{2,}$/.test(email)
+                    || email.indexOf('..') !== -1 || email.length > 100) {
+                emailInput.classList.add('is-invalid');
+                if (emailError) emailError.textContent = 'Enter a valid email address (e.g. name@example.com).';
+                emailInput.focus();
+                return;
+            }
+
             if (!password) {
                 passwordInput.classList.add('is-invalid');
                 if (passwordError) {
@@ -196,7 +203,7 @@
 
             setLoading(true);
 
-            fetch('api/auth/login.php', {
+            fetch('api/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: email, password: password })
@@ -250,42 +257,8 @@
                 .catch(function (error) {
                     console.error('[Login] Request failed:', error);
                     setLoading(false);
-                    showError('Could not reach the server. Is the PHP backend running?');
+                    showError('Could not reach the server. Is the Spring Boot backend running?');
                 });
-        });
-
-        // ========================================================
-        // DEMO STATE PREVIEW BUTTONS (if present on the page)
-        // ========================================================
-        // Purely cosmetic — lets you preview the Error/Loading/Locked
-        // visual states without a real request. Harmless alongside the
-        // real login above, since it only fires on an explicit click.
-
-        document.querySelectorAll('[data-state]').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                const state = btn.getAttribute('data-state');
-                setDefaultState();
-
-                switch (state) {
-                    case 'error':
-                        emailInput.value = 'user@institution.edu';
-                        passwordInput.value = 'wrongpassword';
-                        showError('Invalid email or password');
-                        break;
-                    case 'loading':
-                        emailInput.value = 'faculty@institution.edu';
-                        passwordInput.value = '••••••••';
-                        setLoading(true);
-                        break;
-                    case 'locked':
-                        emailInput.value = 'locked@institution.edu';
-                        passwordInput.value = '••••••••';
-                        showLocked();
-                        break;
-                    default:
-                        break;
-                }
-            });
         });
 
         // ========================================================

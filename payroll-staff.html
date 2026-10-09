@@ -3,7 +3,6 @@
 
 <head>
 
-    <script>window.PP_ALLOWED_ROLES = ['Payroll Staff'];</script>
     <script src="js/auth-guard.js"></script>
 
     <meta charset="UTF-8">
@@ -16,6 +15,7 @@
     <title>
         Payroll Staff Dashboard — STI Balayan
     </title>
+    <link rel="icon" type="image/png" href="sti_logo.png">
 
 
     <!-- =========================================================
@@ -882,202 +882,9 @@
 
 
                                 <tbody>
-
-
                                     <tr>
-
-                                        <td>
-
-                                            <div class="employee-name">
-                                                Juan Dela Cruz
-                                            </div>
-
-                                            <div class="employee-number">
-                                                EMP-0001
-                                            </div>
-
-                                        </td>
-
-                                        <td>
-                                            7:54 AM
-                                        </td>
-
-                                        <td>
-                                            —
-                                        </td>
-
-                                        <td>
-                                            0.0
-                                        </td>
-
-                                        <td>
-
-                                            <span
-                                                class="status-badge status-present"
-                                            >
-                                                Present
-                                            </span>
-
-                                        </td>
-
+                                        <td colspan="5" class="text-center text-muted py-4">No attendance records for today.</td>
                                     </tr>
-
-
-                                    <tr>
-
-                                        <td>
-
-                                            <div class="employee-name">
-                                                Maria Santos
-                                            </div>
-
-                                            <div class="employee-number">
-                                                EMP-0002
-                                            </div>
-
-                                        </td>
-
-                                        <td>
-                                            8:18 AM
-                                        </td>
-
-                                        <td>
-                                            —
-                                        </td>
-
-                                        <td>
-                                            0.0
-                                        </td>
-
-                                        <td>
-
-                                            <span
-                                                class="status-badge status-late"
-                                            >
-                                                Late
-                                            </span>
-
-                                        </td>
-
-                                    </tr>
-
-
-                                    <tr>
-
-                                        <td>
-
-                                            <div class="employee-name">
-                                                Ana Reyes
-                                            </div>
-
-                                            <div class="employee-number">
-                                                EMP-0003
-                                            </div>
-
-                                        </td>
-
-                                        <td>
-                                            7:48 AM
-                                        </td>
-
-                                        <td>
-                                            —
-                                        </td>
-
-                                        <td>
-                                            0.0
-                                        </td>
-
-                                        <td>
-
-                                            <span
-                                                class="status-badge status-present"
-                                            >
-                                                Present
-                                            </span>
-
-                                        </td>
-
-                                    </tr>
-
-
-                                    <tr>
-
-                                        <td>
-
-                                            <div class="employee-name">
-                                                Mark Garcia
-                                            </div>
-
-                                            <div class="employee-number">
-                                                EMP-0004
-                                            </div>
-
-                                        </td>
-
-                                        <td>
-                                            —
-                                        </td>
-
-                                        <td>
-                                            —
-                                        </td>
-
-                                        <td>
-                                            0.0
-                                        </td>
-
-                                        <td>
-
-                                            <span
-                                                class="status-badge status-absent"
-                                            >
-                                                Absent
-                                            </span>
-
-                                        </td>
-
-                                    </tr>
-
-
-                                    <tr>
-
-                                        <td>
-
-                                            <div class="employee-name">
-                                                Carla Mendoza
-                                            </div>
-
-                                            <div class="employee-number">
-                                                EMP-0005
-                                            </div>
-
-                                        </td>
-
-                                        <td>
-                                            8:02 AM
-                                        </td>
-
-                                        <td>
-                                            —
-                                        </td>
-
-                                        <td>
-                                            0.0
-                                        </td>
-
-                                        <td>
-
-                                            <span
-                                                class="status-badge status-present"
-                                            >
-                                                Present
-                                            </span>
-
-                                        </td>
-
-                                    </tr>
-
 
                                 </tbody>
 
@@ -1286,18 +1093,18 @@
                             </div>
 
 
-                            <!-- EMPLOYEE RECORDS -->
+                            <!-- FINGERPRINT REGISTRATION -->
 
                             <div class="col-12 col-md-6">
 
                                 <a
-                                    href="employee-records.html"
+                                    href="fingerprint-registration.html"
                                     class="quick-action"
                                 >
 
                                     <div class="quick-action-icon">
 
-                                        <i class="bi bi-people"></i>
+                                        <i class="bi bi-fingerprint"></i>
 
                                     </div>
 
@@ -1305,11 +1112,11 @@
                                     <div>
 
                                         <div class="quick-action-text">
-                                            Employee Records
+                                            Fingerprint Registration
                                         </div>
 
                                         <div class="quick-action-description">
-                                            View employee information
+                                            Enroll employee fingerprints
                                         </div>
 
                                     </div>
@@ -1319,18 +1126,18 @@
                             </div>
 
 
-                            <!-- LEAVE -->
+                            <!-- ATTENDANCE RECORDING -->
 
                             <div class="col-12 col-md-6">
 
                                 <a
-                                    href="leave-loan-approval.html"
+                                    href="dtr.html?section=manual"
                                     class="quick-action"
                                 >
 
                                     <div class="quick-action-icon">
 
-                                        <i class="bi bi-calendar-check"></i>
+                                        <i class="bi bi-pencil-square"></i>
 
                                     </div>
 
@@ -1338,44 +1145,11 @@
                                     <div>
 
                                         <div class="quick-action-text">
-                                            Leave Management
+                                            Attendance Recording
                                         </div>
 
                                         <div class="quick-action-description">
-                                            Review employee leave
-                                        </div>
-
-                                    </div>
-
-                                </a>
-
-                            </div>
-
-
-                            <!-- REPORTS -->
-
-                            <div class="col-12 col-md-6">
-
-                                <a
-                                    href="#"
-                                    class="quick-action"
-                                >
-
-                                    <div class="quick-action-icon">
-
-                                        <i class="bi bi-file-earmark-bar-graph"></i>
-
-                                    </div>
-
-
-                                    <div>
-
-                                        <div class="quick-action-text">
-                                            Attendance Reports
-                                        </div>
-
-                                        <div class="quick-action-description">
-                                            Generate attendance reports
+                                            Manual entry when the scanner is unavailable
                                         </div>
 
                                     </div>
@@ -1425,100 +1199,8 @@
                     <div class="pp-widget-body">
 
 
-                        <!-- ACTIVITY 1 -->
-
-                        <div class="activity-item">
-
-                            <div class="activity-icon">
-
-                                <i class="bi bi-fingerprint"></i>
-
-                            </div>
-
-
-                            <div class="activity-text">
-
-                                Juan Dela Cruz recorded a time-in.
-
-                                <span class="activity-time">
-                                    7:54 AM
-                                </span>
-
-                            </div>
-
-                        </div>
-
-
-                        <!-- ACTIVITY 2 -->
-
-                        <div class="activity-item">
-
-                            <div class="activity-icon">
-
-                                <i class="bi bi-clock"></i>
-
-                            </div>
-
-
-                            <div class="activity-text">
-
-                                Maria Santos was marked late.
-
-                                <span class="activity-time">
-                                    8:18 AM
-                                </span>
-
-                            </div>
-
-                        </div>
-
-
-                        <!-- ACTIVITY 3 -->
-
-                        <div class="activity-item">
-
-                            <div class="activity-icon">
-
-                                <i class="bi bi-calendar-check"></i>
-
-                            </div>
-
-
-                            <div class="activity-text">
-
-                                Leave request updated.
-
-                                <span class="activity-time">
-                                    9:10 AM
-                                </span>
-
-                            </div>
-
-                        </div>
-
-
-                        <!-- ACTIVITY 4 -->
-
-                        <div class="activity-item">
-
-                            <div class="activity-icon">
-
-                                <i class="bi bi-file-earmark-text"></i>
-
-                            </div>
-
-
-                            <div class="activity-text">
-
-                                Attendance report generated.
-
-                                <span class="activity-time">
-                                    10:25 AM
-                                </span>
-
-                            </div>
-
-                        </div>
+                        <!-- Demo entries removed; activity will be listed here once it is recorded. -->
+                        <div class="text-muted small py-2">No recent activity yet.</div>
 
 
                     </div>

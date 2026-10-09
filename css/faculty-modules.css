@@ -1,0 +1,523 @@
+/* Faculty Schedule and Faculty Teaching Hours pages. */
+
+/* Space between the page subtitle and the action button below it. */
+.pp-content-header > .btn {
+    margin-top: 0.875rem;
+}
+
+/* Back button (same look as Loan Details): white pill, arrow in a tinted circle. */
+.fm-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 5px 16px 5px 5px;
+    border: 1px solid var(--pp-border);
+    border-radius: 999px;
+    background: var(--pp-surface);
+    color: var(--pp-primary);
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+    cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
+}
+
+.fm-back-btn .fm-back-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--pp-primary-light);
+    color: var(--pp-primary);
+    font-size: 14px;
+    transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+.fm-back-btn:hover {
+    border-color: var(--pp-primary);
+    color: var(--pp-primary-dark);
+    box-shadow: var(--pp-shadow);
+}
+
+.fm-back-btn:hover .fm-back-icon {
+    background: var(--pp-primary);
+    color: #fff;
+    transform: translateX(-2px);
+}
+
+.fm-back-btn:focus-visible {
+    outline: 2px solid var(--pp-primary);
+    outline-offset: 2px;
+}
+
+/* Edit mode of the inline class form. */
+.fm-form-card.is-editing {
+    box-shadow: 0 0 0 2px var(--pp-primary);
+}
+
+.fm-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0.75rem;
+}
+
+/* Faculty schedule: View and Date sit side by side with a clear gap,
+   instead of being spread across the whole bar. */
+.fm-schedule-toolbar {
+    justify-content: flex-start;
+    column-gap: 2rem;
+}
+
+.fm-schedule-toolbar .pp-filter-group {
+    flex: 0 0 auto;
+}
+
+.fm-schedule-toolbar .pp-form-label {
+    display: block;
+}
+
+.fm-date-nav {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.fm-date-nav .btn {
+    padding: 0.375rem 0.625rem;
+}
+
+.fm-range-label {
+    font-weight: 600;
+    color: var(--pp-text);
+    margin: 0 0 0.75rem;
+}
+
+.fm-view-toggle .btn.active {
+    background: var(--pp-primary);
+    border-color: var(--pp-primary);
+    color: #fff;
+}
+
+/* ---------------------------------------------------------------
+   Week timetable (Faculty Schedule → Week): hours down the side,
+   days across, each class a block placed by its start and end time.
+   --------------------------------------------------------------- */
+.fm-week-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--pp-border);
+    border-radius: var(--pp-radius);
+    background: var(--pp-surface);
+}
+
+.fm-week {
+    min-width: 560px;
+}
+
+.fm-week-head,
+.fm-week-body {
+    display: grid;
+}
+
+.fm-week-head {
+    border-bottom: 1px solid var(--pp-border);
+    background: #f8fafc;
+}
+
+.fm-week-corner {
+    border-right: 1px solid var(--pp-border);
+}
+
+.fm-week-day {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0.5rem 0.25rem;
+    border-right: 1px solid var(--pp-border);
+    line-height: 1.2;
+}
+
+.fm-week-day:last-child {
+    border-right: none;
+}
+
+.fm-week-day span {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--pp-text-muted);
+}
+
+.fm-week-day strong {
+    font-size: 1rem;
+    color: var(--pp-text);
+}
+
+.fm-week-day.is-today strong {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 50%;
+    background: var(--pp-primary);
+    color: #fff;
+}
+
+.fm-week-hours {
+    border-right: 1px solid var(--pp-border);
+}
+
+.fm-week-hour {
+    position: relative;
+    border-bottom: 1px solid var(--pp-border);
+}
+
+.fm-week-hour span {
+    position: absolute;
+    top: 0.25rem;
+    right: 0.5rem;
+    font-size: 0.6875rem;
+    color: var(--pp-text-muted);
+    white-space: nowrap;
+}
+
+/* One day: hour lines drawn as a repeating background. */
+.fm-week-col {
+    position: relative;
+    border-right: 1px solid var(--pp-border);
+    background-image: linear-gradient(to bottom, transparent calc(100% - 1px), var(--pp-border) calc(100% - 1px));
+}
+
+.fm-week-col:last-child {
+    border-right: none;
+}
+
+.fm-week-col.is-today {
+    background-color: #f5fafc;
+}
+
+.fm-week-class {
+    position: absolute;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    padding: 0.3rem 0.45rem;
+    border-radius: 6px;
+    border-left: 3px solid var(--pp-primary);
+    background: var(--pp-primary-light);
+    color: var(--pp-primary-dark);
+    font-size: 0.6875rem;
+    line-height: 1.25;
+    cursor: pointer;
+    transition: box-shadow 0.15s ease;
+}
+
+.fm-week-class:hover,
+.fm-week-class:focus-visible {
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.15);
+    outline: none;
+    z-index: 2;
+}
+
+.fm-week-class strong {
+    font-size: 0.75rem;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    word-break: break-word;
+}
+
+.fm-week-class span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.fm-week-class em {
+    font-style: normal;
+    font-weight: 700;
+}
+
+/* Keep each line whole; extra lines are cut off rather than squeezed. */
+.fm-week-class > * {
+    flex-shrink: 0;
+}
+
+.fm-week-class.is-short strong {
+    -webkit-line-clamp: 1;
+}
+
+.fm-week-class.is-approved {
+    border-left-color: var(--pp-success);
+    background: var(--pp-success-bg);
+    color: var(--pp-success);
+}
+
+.fm-week-class.is-overlap {
+    border-left-color: var(--pp-warning);
+    background: var(--pp-warning-bg);
+    color: var(--pp-warning);
+}
+
+/* Colour key under the Teaching Hours timetable */
+.fm-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.25rem;
+    margin-top: 0.75rem;
+    font-size: 0.75rem;
+    color: var(--pp-text-muted);
+}
+
+.fm-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+.fm-legend-item::before {
+    content: "";
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 3px;
+    border-left: 3px solid var(--pp-primary);
+    background: var(--pp-primary-light);
+}
+
+.fm-legend-item.is-not-checked::before { border-left-color: #94a3b8; background: #f8fafc; box-shadow: inset 0 0 0 1px var(--pp-border); }
+.fm-legend-item.is-incomplete::before { border-left-color: var(--pp-warning); background: var(--pp-warning-bg); }
+.fm-legend-item.is-pending::before { border-left-color: var(--pp-info); background: var(--pp-info-bg); }
+.fm-legend-item.is-approved::before { border-left-color: var(--pp-success); background: var(--pp-success-bg); }
+.fm-legend-item.is-rejected::before { border-left-color: var(--pp-error); background: var(--pp-error-bg); }
+
+/* Faculty Teaching Hours statuses */
+.fm-week-class.is-not-checked {
+    border-left-color: #94a3b8;
+    background: #f8fafc;
+    color: #475569;
+    box-shadow: inset 0 0 0 1px var(--pp-border);
+}
+
+.fm-week-class.is-incomplete {
+    border-left-color: var(--pp-warning);
+    background: var(--pp-warning-bg);
+    color: var(--pp-warning);
+}
+
+.fm-week-class.is-pending {
+    border-left-color: var(--pp-info);
+    background: var(--pp-info-bg);
+    color: var(--pp-info);
+}
+
+.fm-week-class.is-rejected {
+    border-left-color: var(--pp-error);
+    background: var(--pp-error-bg);
+    color: var(--pp-error);
+}
+
+.fm-week-class.is-cancelled {
+    border-left-color: #94a3b8;
+    background: #f1f5f9;
+    color: #64748b;
+}
+
+.fm-week-class.is-cancelled strong {
+    text-decoration: line-through;
+}
+
+/* Day heading rows inside the class tables. */
+.pp-table tbody tr.fm-day-row td {
+    background: var(--pp-bg);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--pp-text-muted);
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+}
+
+.pp-table tbody tr.fm-cancelled td {
+    color: var(--pp-text-muted);
+}
+
+.pp-table tbody tr.fm-cancelled td .fm-subject {
+    text-decoration: line-through;
+}
+
+.fm-subject {
+    font-weight: 600;
+    color: var(--pp-text);
+}
+
+.fm-sub {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--pp-text-muted);
+}
+
+/* Status pills */
+.fm-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.fm-status.scheduled { background: var(--pp-primary-light); color: var(--pp-primary-dark); }
+.fm-status.cancelled { background: #f1f5f9; color: #64748b; }
+.fm-status.not-checked { background: #f1f5f9; color: #475569; }
+.fm-status.incomplete { background: var(--pp-warning-bg); color: var(--pp-warning); }
+.fm-status.pending { background: var(--pp-info-bg); color: var(--pp-info); }
+.fm-status.approved { background: var(--pp-success-bg); color: var(--pp-success); }
+.fm-status.rejected { background: var(--pp-error-bg); color: var(--pp-error); }
+
+.fm-flag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-left: 0.25rem;
+    padding: 0.15rem 0.45rem;
+    border-radius: 999px;
+    background: var(--pp-warning-bg);
+    color: var(--pp-warning);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+/* A classroom check: time + Present/Absent */
+.fm-check {
+    display: inline-flex;
+    flex-direction: column;
+    line-height: 1.2;
+}
+
+.fm-check-time {
+    font-weight: 600;
+}
+
+.fm-check-status.present { color: var(--pp-success); font-size: 0.75rem; font-weight: 600; }
+.fm-check-status.absent { color: var(--pp-error); font-size: 0.75rem; font-weight: 600; }
+.fm-check-none { color: var(--pp-text-muted); }
+
+/* Detail modal */
+.fm-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.75rem 1rem;
+    padding: 0.875rem 1rem;
+    border: 1px solid var(--pp-border);
+    border-radius: var(--pp-radius-sm);
+    background: var(--pp-bg);
+    margin-bottom: 1rem;
+}
+
+.fm-detail-label {
+    display: block;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--pp-text-muted);
+}
+
+.fm-detail-value {
+    font-weight: 600;
+    color: var(--pp-text);
+}
+
+.fm-section-title {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--pp-text-muted);
+    margin: 1.25rem 0 0.5rem;
+}
+
+.fm-check-card {
+    border: 1px solid var(--pp-border);
+    border-radius: var(--pp-radius-sm);
+    padding: 0.875rem 1rem;
+    height: 100%;
+}
+
+.fm-check-card h3 {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    margin: 0 0 0.25rem;
+}
+
+.fm-check-card .fm-window {
+    font-size: 0.75rem;
+    color: var(--pp-text-muted);
+    margin-bottom: 0.75rem;
+}
+
+.fm-check-recorded {
+    font-size: 0.75rem;
+    color: var(--pp-text-muted);
+    margin-top: 0.5rem;
+}
+
+.fm-flags {
+    margin: 0;
+    padding: 0.75rem 1rem 0.75rem 2rem;
+    border-radius: var(--pp-radius-sm);
+    background: var(--pp-warning-bg);
+    color: var(--pp-warning);
+    font-size: 0.8125rem;
+}
+
+.fm-payable {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+    align-items: baseline;
+    padding: 0.75rem 1rem;
+    border-radius: var(--pp-radius-sm);
+    background: var(--pp-accent-light);
+}
+
+.fm-payable strong {
+    font-size: 1.125rem;
+    color: var(--pp-accent);
+}
+
+.fm-history {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.fm-history li {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--pp-border);
+    font-size: 0.8125rem;
+}
+
+.fm-history li:last-child {
+    border-bottom: none;
+}
+
+.fm-history-meta {
+    color: var(--pp-text-muted);
+    font-size: 0.75rem;
+}
+
+.fm-note {
+    font-size: 0.75rem;
+    color: var(--pp-text-muted);
+}

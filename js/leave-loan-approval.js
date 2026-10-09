@@ -19,7 +19,7 @@
     var employees = DataStore.getEmployees()
         .filter(function (e) { return e.status !== 'Inactive'; })
         .map(function (e) {
-            return { id: e.id, name: e.displayName, role: e.type === 'Faculty' ? 'Faculty Staff' : 'Administrative Staff' };
+            return { id: e.id, name: e.displayName, role: e.type === 'Faculty' ? 'Faculty Staff' : e.type === 'Faculty/Admin' ? 'Administrative and Faculty Staff' : 'Administrative Staff' };
         });
 
 
@@ -118,7 +118,7 @@
         }
 
         select.innerHTML =
-            '<option value="" selected disabled>Select employee</option>' +
+            '<option value="" selected hidden data-hint>Select employee</option>' +
             employees.map(function (employee) {
                 return (
                     '<option value="' +
@@ -199,7 +199,9 @@
             var currentStatus = getLoanStatus(loan);
 
             return (
-                '<tr>' +
+                '<tr class="pp-row-clickable" tabindex="0" role="button" ' +
+                    'data-loan-id="' + loan.id + '" ' +
+                    'aria-label="View loan details for ' + escapeHtml(loan.employeeName) + '">' +
 
                     '<td>' +
                         '<strong>' +
@@ -242,18 +244,6 @@
                     '<td>' +
                         statusBadge(currentStatus) +
                     '</td>' +
-
-                    '<td class="col-actions">' +
-                        '<button ' +
-                            'type="button" ' +
-                            'class="loan-view-btn" ' +
-                            'data-loan-id="' +
-                            loan.id +
-                            '">' +
-                            'View Details' +
-                        '</button>' +
-                    '</td>' +
-
                 '</tr>'
             );
         }).join('');
@@ -507,6 +497,20 @@
                 }
             }
         );
+
+        // Rows are focusable; Enter or Space opens them like a click.
+        loanTableBody.addEventListener(
+            'keydown',
+            function (event) {
+                if (
+                    (event.key === 'Enter' || event.key === ' ') &&
+                    event.target.matches('[data-loan-id]')
+                ) {
+                    event.preventDefault();
+                    event.target.click();
+                }
+            }
+        );
     }
 
 
@@ -527,6 +531,36 @@
         document.getElementById('recordLoanForm');
 
     if (recordLoanForm) {
+
+        // Field rules beyond js/form-validation.js's data attributes.
+        var loanReferenceInput = document.getElementById('loanReference');
+        var loanAmountInput = document.getElementById('loanAmount');
+        var loanDeductionInput = document.getElementById('loanDeduction');
+
+        loanReferenceInput.ppValidator = function (value) {
+            if (!/^[A-Za-z0-9][A-Za-z0-9\/-]*$/.test(value)) {
+                return 'Reference number can only contain letters, digits, hyphens (-) and slashes (/).';
+            }
+            var taken = loans.some(function (loan) {
+                return String(loan.reference).toLowerCase() === value.toLowerCase();
+            });
+            return taken ? 'A loan with this reference number already exists.' : '';
+        };
+
+        loanDeductionInput.ppValidator = function (value) {
+            var amount = parseFloat(loanAmountInput.value);
+            return amount > 0 && Number(value) > amount
+                ? 'Deduction per payroll can\'t be more than the total loan amount.'
+                : '';
+        };
+
+        // Re-check the deduction when the total changes.
+        loanAmountInput.addEventListener('input', function () {
+            if (loanDeductionInput.value) {
+                PPValidate.validateField(loanDeductionInput);
+            }
+        });
+
         recordLoanForm.addEventListener(
             'submit',
             function (event) {
@@ -536,8 +570,7 @@
                 var form = event.target;
 
 
-                if (!form.checkValidity()) {
-                    form.classList.add('was-validated');
+                if (!PPValidate.validateForm(form)) {
                     return;
                 }
 
@@ -609,44 +642,9 @@
                     ).value.trim();
 
 
-                if (
-                    !amount ||
-                    amount <= 0 ||
-                    !deduction ||
-                    deduction <= 0
-                ) {
-                    form.classList.add(
-                        'was-validated'
-                    );
-
-                    return;
-                }
-
-
-                if (deduction > amount) {
-                    alert(
-                        'Deduction per payroll cannot be greater than the total loan amount.'
-                    );
-
-                    return;
-                }
-
-
-                var duplicateReference =
-                    loans.some(function (loan) {
-                        return (
-                            loan.reference
-                                .toLowerCase() ===
-                            reference.toLowerCase()
-                        );
-                    });
-
-
-                if (duplicateReference) {
-                    alert(
-                        'A loan with this reference number already exists.'
-                    );
-
+                // Amount, deduction and reference rules are checked by
+                // PPValidate above (see the ppValidator functions above).
+                if (!(amount > 0) || !(deduction > 0) || deduction > amount) {
                     return;
                 }
 
@@ -670,9 +668,7 @@
 
                 form.reset();
 
-                form.classList.remove(
-                    'was-validated'
-                );
+                PPValidate.clear(form);
 
 
                 var modalElement =
@@ -720,9 +716,7 @@
 
                 form.reset();
 
-                form.classList.remove(
-                    'was-validated'
-                );
+                PPValidate.clear(form);
             }
         );
     }

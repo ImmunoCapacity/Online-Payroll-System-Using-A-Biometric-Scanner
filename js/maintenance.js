@@ -6,7 +6,14 @@
         notifications: false
     });
 
-    var CURRENT_USER = 'Maria Elena Reyes';
+    // The logged-in user's name, for the change log.
+    var CURRENT_USER = (function () {
+        try {
+            return JSON.parse(localStorage.getItem('ppUser') || '{}').name || 'Payroll Master';
+        } catch (e) {
+            return 'Payroll Master';
+        }
+    })();
 
     function logAudit(section, action, detail) {
         return DataStore.logAudit(section, action, detail, CURRENT_USER);
@@ -53,7 +60,8 @@
         leave: 'sectionLeave',
         bir: 'sectionBir',
         philhealth: 'sectionPhilhealth',
-        pagibig: 'sectionPagibig'
+        pagibig: 'sectionPagibig',
+        sss: 'sectionSss'
     };
 
     document.querySelectorAll('.pp-maint-nav-btn').forEach(function (btn) {
@@ -114,16 +122,30 @@
     document.getElementById('btnAddRate').addEventListener('click', function () {
         document.getElementById('rateModalTitle').textContent = 'Add New Rate';
         document.getElementById('rateForm').reset();
-        document.getElementById('rateForm').classList.remove('was-validated');
+        PPValidate.clear(document.getElementById('rateForm'));
         populateRateEmployees();
         bootstrap.Modal.getOrCreateInstance(document.getElementById('rateModal')).show();
+    });
+
+    // A new rate ends the employee's current one the day before, so it must
+    // start after the current rate's effective date.
+    document.getElementById('rateEffective').ppValidator = function (value) {
+        var empId = document.getElementById('rateEmployee').value;
+        var current = rates.find(function (r) { return r.empId === empId && r.active; });
+        return current && value <= current.effective
+            ? 'Must be after the current rate\'s effective date (' + formatDate(current.effective) + ').'
+            : '';
+    };
+
+    document.getElementById('rateEmployee').addEventListener('change', function () {
+        var effective = document.getElementById('rateEffective');
+        if (effective.value) PPValidate.validateField(effective);
     });
 
     document.getElementById('rateForm').addEventListener('submit', function (e) {
         e.preventDefault();
         var form = e.target;
-        if (!form.checkValidity()) {
-            form.classList.add('was-validated');
+        if (!PPValidate.validateForm(form)) {
             return;
         }
         var empId = document.getElementById('rateEmployee').value;
@@ -186,7 +208,7 @@
                 document.getElementById('leaveName').value = cat.name;
                 document.getElementById('leavePaid').value = cat.paid ? 'Paid' : 'Unpaid';
                 document.getElementById('leaveMaxDays').value = cat.maxDays;
-                document.getElementById('leaveForm').classList.remove('was-validated');
+                PPValidate.clear(document.getElementById('leaveForm'));
                 bootstrap.Modal.getOrCreateInstance(document.getElementById('leaveModal')).show();
             });
         });
@@ -217,15 +239,22 @@
         leaveEditId = null;
         document.getElementById('leaveModalTitle').textContent = 'Add Leave Category';
         document.getElementById('leaveForm').reset();
-        document.getElementById('leaveForm').classList.remove('was-validated');
+        PPValidate.clear(document.getElementById('leaveForm'));
         bootstrap.Modal.getOrCreateInstance(document.getElementById('leaveModal')).show();
     });
+
+    // Leave category names must be unique.
+    document.getElementById('leaveName').ppValidator = function (value) {
+        var taken = leaveCategories.some(function (c) {
+            return c.id !== leaveEditId && String(c.name).toLowerCase() === value.toLowerCase();
+        });
+        return taken ? 'A leave category with this name already exists.' : '';
+    };
 
     document.getElementById('leaveForm').addEventListener('submit', function (e) {
         e.preventDefault();
         var form = e.target;
-        if (!form.checkValidity()) {
-            form.classList.add('was-validated');
+        if (!PPValidate.validateForm(form)) {
             return;
         }
         var data = {
@@ -265,13 +294,15 @@
         DataStore.saveTaxBrackets({
             bir: birStore.data,
             philhealth: phStore.data,
-            pagibig: pagStore.data
+            pagibig: pagStore.data,
+            sss: sssStore.data
         });
     }
 
     var birStore = makeBracketStore(TAX_BRACKETS.bir);
     var phStore = makeBracketStore(TAX_BRACKETS.philhealth);
     var pagStore = makeBracketStore(TAX_BRACKETS.pagibig);
+    var sssStore = makeBracketStore(TAX_BRACKETS.sss || {});
 
     var bracketConfigs = {
         bir: {
@@ -357,6 +388,34 @@
             summary: function (b) {
                 return 'Compensation ' + peso(b.min) + ' – ' + (b.max != null ? peso(b.max) : 'Above') + ', share ' + (b.share != null ? peso(b.share) : 'computed') + ', rate ' + b.rate + '%';
             }
+        },
+        sss: {
+            store: sssStore,
+            yearSelect: 'sssYear',
+            body: 'sssBody',
+            audit: 'sssAudit',
+            label: 'SSS Table',
+            addBtn: 'btnAddSss',
+            fields: [
+                { id: 'min', label: 'Compensation Min (₱)', type: 'number', key: 'min' },
+                { id: 'max', label: 'Compensation Max (₱)', type: 'number', key: 'max', optional: true },
+                { id: 'msc', label: 'Monthly Salary Credit (₱)', type: 'number', key: 'msc' },
+                { id: 'rate', label: 'Employee Share (%)', type: 'number', key: 'rate', step: '0.01' }
+            ],
+            renderRow: function (b) {
+                return (
+                    '<tr data-id="' + b.id + '">' +
+                        '<td class="col-money">' + peso(b.min) + '</td>' +
+                        '<td class="col-money">' + (b.max != null ? peso(b.max) : 'Above') + '</td>' +
+                        '<td class="col-money">' + peso(b.msc) + '</td>' +
+                        '<td class="col-num">' + b.rate + '%</td>' +
+                        '<td class="col-actions">' + rowActions(true) + '</td>' +
+                    '</tr>'
+                );
+            },
+            summary: function (b) {
+                return 'Compensation ' + peso(b.min) + ' – ' + (b.max != null ? peso(b.max) : 'Above') + ', MSC ' + peso(b.msc) + ', employee share ' + b.rate + '%';
+            }
         }
     };
 
@@ -422,12 +481,16 @@
             var val = values && values[f.key] != null ? values[f.key] : '';
             var req = f.optional ? '' : 'required';
             var hint = f.optional ? ' <span class="text-muted fw-normal">(leave blank for open-ended)</span>' : '';
+            // Peso amounts and percentages: not negative, 2 decimals; a rate can't exceed 100%.
+            var max = f.key === 'rate' ? '100' : '100000000';
             return (
                 '<div class="mb-3">' +
                     '<label for="bf_' + f.key + '" class="pp-form-label">' + f.label + hint + '</label>' +
                     '<input type="' + f.type + '" class="form-control pp-form-control" id="bf_' + f.key + '" ' +
-                        'step="' + (f.step || '0.01') + '" min="0" value="' + val + '" ' + req + '>' +
-                    (f.optional ? '' : '<div class="invalid-feedback">Required.</div>') +
+                        'step="' + (f.step || '0.01') + '" min="0" max="' + max + '" value="' + val + '" ' +
+                        'data-validate="number" data-decimals="2" data-label="' + f.label.replace(/\s*\(.*\)$/, '') + '" ' +
+                        'inputmode="decimal" ' + req + '>' +
+                    '<div class="invalid-feedback"></div>' +
                 '</div>'
             );
         }).join('');
@@ -445,15 +508,14 @@
         document.getElementById('bracketForm').dataset.config = configKey;
         document.getElementById('bracketForm').dataset.id = isNew ? '' : id;
         document.getElementById('bracketForm').dataset.isNew = isNew ? '1' : '0';
-        document.getElementById('bracketForm').classList.remove('was-validated');
+        PPValidate.clear(document.getElementById('bracketForm'));
         bracketModal.show();
     }
 
     document.getElementById('bracketForm').addEventListener('submit', function (e) {
         e.preventDefault();
         var form = e.target;
-        if (!form.checkValidity()) {
-            form.classList.add('was-validated');
+        if (!PPValidate.validateForm(form)) {
             return;
         }
         var configKey = form.dataset.config;
@@ -466,6 +528,27 @@
         });
 
         var isNew = form.dataset.isNew === '1';
+        var editingId = form.dataset.id ? parseInt(form.dataset.id, 10) : null;
+
+        // The range must make sense and must not overlap another bracket of the same year.
+        if (record.max != null && record.max <= record.min) {
+            PPValidate.setError(document.getElementById('bf_max'), 'Max must be greater than min (' + peso(record.min) + ').');
+            document.getElementById('bf_max').focus();
+            return;
+        }
+        var newMax = record.max == null ? Infinity : record.max;
+        var overlap = getYearBrackets(config).find(function (b) {
+            if (!isNew && b.id === editingId) return false;
+            var bMax = b.max == null ? Infinity : b.max;
+            return record.min < bMax && newMax > b.min;
+        });
+        if (overlap) {
+            PPValidate.setError(document.getElementById('bf_min'),
+                'This range overlaps the ' + peso(overlap.min) + ' – ' + (overlap.max != null ? peso(overlap.max) : 'Above') + ' bracket.');
+            document.getElementById('bf_min').focus();
+            return;
+        }
+
         pendingBracketSave = {
             configKey: configKey,
             year: year,
@@ -529,5 +612,7 @@
         document.querySelector('[data-section="leave"]').click();
     } else if (location.hash === '#bir') {
         document.querySelector('[data-section="bir"]').click();
+    } else if (location.hash === '#sss') {
+        document.querySelector('[data-section="sss"]').click();
     }
 })();

@@ -12,6 +12,12 @@
     border-bottom: 1px solid var(--pp-border);
 }
 
+/* "Click a row" note between the filters and the table, aligned with the toolbar. */
+.loan-table-hint {
+    margin: 0;
+    padding: 10px 16px 0;
+}
+
 .loan-filters {
     display: flex;
     align-items: flex-end;
@@ -36,23 +42,52 @@
     margin-bottom: 18px;
 }
 
+/* Back button: white pill with the arrow in a tinted circle. */
 .loan-back-btn {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    gap: 4px;
-    padding: 0;
-    border: 0;
-    background: transparent;
+    gap: 10px;
+    padding: 5px 16px 5px 5px;
+    border: 1px solid var(--pp-border);
+    border-radius: 999px;
+    background: var(--pp-surface);
     color: var(--pp-primary);
     font-size: 13px;
     font-weight: 600;
+    line-height: 1;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
     cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
+}
+
+.loan-back-btn .loan-back-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--pp-primary-light);
+    color: var(--pp-primary);
+    font-size: 14px;
+    transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
 }
 
 .loan-back-btn:hover {
+    border-color: var(--pp-primary);
     color: var(--pp-primary-dark);
-    text-decoration: underline;
+    box-shadow: var(--pp-shadow);
+}
+
+.loan-back-btn:hover .loan-back-icon {
+    background: var(--pp-primary);
+    color: #fff;
+    transform: translateX(-2px);
+}
+
+.loan-back-btn:focus-visible {
+    outline: 2px solid var(--pp-primary);
+    outline-offset: 2px;
 }
 
 .loan-details-page {

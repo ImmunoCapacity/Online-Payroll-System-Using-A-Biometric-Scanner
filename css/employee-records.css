@@ -5,3 +5,8 @@
    Add page-specific rules here as they come up, instead of
    adding to the shared file.
    ============================================================ */
+
+/* Space between the page title and the Add Employee button below it. */
+.pp-content-header > .btn {
+    margin-top: 0.875rem;
+}

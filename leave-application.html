@@ -3,11 +3,6 @@
 
 <head>
 
-    <!-- Role access -->
-    <script>
-        window.PP_ALLOWED_ROLES = ['Payroll Master', 'Payroll Staff'];
-    </script>
-
     <script src="js/auth-guard.js"></script>
 
     <!-- Meta -->
@@ -19,6 +14,7 @@
     >
 
     <title>Leave Management — PayrollPro</title>
+    <link rel="icon" type="image/png" href="sti_logo.png">
 
     <!-- Bootstrap -->
     <link
@@ -87,7 +83,7 @@
 
                         <input
                             type="text"
-                            id="leaveSearch"
+                            id="leaveSearch" maxlength="100"
                             class="form-control pp-form-control"
                             placeholder="Search employee or employee ID"
                         >
@@ -103,12 +99,12 @@
                         Leave Type
                     </label>
 
-                    <select
+                    <select data-clearable
                         id="leaveTypeFilter"
                         class="form-select pp-form-select"
                     >
 
-                        <option value="All">
+                        <option value="All" hidden data-hint>
                             All leave types
                         </option>
 
@@ -147,12 +143,12 @@
                         Status
                     </label>
 
-                    <select
+                    <select data-clearable
                         id="leaveStatusFilter"
                         class="form-select pp-form-select"
                     >
 
-                        <option value="All">
+                        <option value="All" hidden data-hint>
                             All statuses
                         </option>
 
@@ -298,6 +294,7 @@
     <script src="js/toast.js"></script>
 
     <script src="js/payrollpro-layout.js"></script>
+    <script src="js/select-hint.js"></script>
 
     <script src="js/leave-application.js"></script>
 

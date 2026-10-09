@@ -101,7 +101,7 @@ body.pp-app {
 
 .pp-main {
     padding: 1.25rem 1rem 2rem;
-    max-width: 1400px;
+    max-width: none;
     margin: 0 auto;
 }
 
@@ -205,6 +205,56 @@ body.pp-app {
     box-shadow: 0 0 0 3px rgba(26, 95, 122, 0.12);
 }
 
+/* Dropdown hints (js/select-hint.js): "Select type" / "All leave types"
+   shows in grey and is not one of the choices. */
+select.pp-select-is-hint {
+    color: var(--pp-text-muted);
+}
+
+select.pp-select-is-hint option {
+    color: var(--pp-text);
+}
+
+/* Filters get a small × to clear back to the hint. */
+.pp-select-wrap {
+    position: relative;
+    display: block;
+}
+
+select.pp-select-has-clear {
+    padding-right: 3.75rem;
+}
+
+.pp-select-clear {
+    position: absolute;
+    top: 50%;
+    right: 2.1rem;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.375rem;
+    height: 1.375rem;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--pp-text-muted);
+    font-size: 0.6875rem;
+    cursor: pointer;
+}
+
+.pp-select-clear:hover,
+.pp-select-clear:focus-visible {
+    background: var(--pp-bg);
+    color: var(--pp-text);
+    outline: none;
+}
+
+.pp-select-clear[hidden] {
+    display: none;
+}
+
 .pp-search-input {
     position: relative;
 }
@@ -279,6 +329,12 @@ body.pp-app {
 .pp-badge-admin {
     background: #f3e8ff;
     color: #6b21a8;
+}
+
+/* Faculty/Admin: admin staff who also teach */
+.pp-badge-faculty-admin {
+    background: #ccfbf1;
+    color: #115e59;
 }
 
 .pp-badge-present {
@@ -398,8 +454,19 @@ body.pp-app {
     margin-bottom: 1.25rem;
 }
 
+.pp-summary-row.cols-4 {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+@media (max-width: 991px) {
+    .pp-summary-row.cols-4 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
 @media (max-width: 575px) {
-.pp-summary-row {
+.pp-summary-row,
+    .pp-summary-row.cols-4 {
         grid-template-columns: 1fr;
     }
 }
@@ -431,6 +498,8 @@ body.pp-app {
 .pp-summary-card.late { border-left-color: #f59e0b; }
 
 .pp-summary-card.absent { border-left-color: var(--pp-error); }
+
+.pp-summary-card.mixed { border-left-color: var(--pp-primary); }
 
 .pp-summary-label {
     font-size: 0.75rem;
@@ -579,6 +648,30 @@ body.pp-app {
     background: #fafbfc;
 }
 
+/* Whole row opens its details (Loan Management, Payroll Processing). */
+.pp-table tbody tr.pp-row-clickable {
+    cursor: pointer;
+}
+
+.pp-table tbody tr.pp-row-clickable:hover {
+    background: var(--pp-bg);
+}
+
+.pp-table tbody tr.pp-row-clickable:focus-visible {
+    outline: 2px solid var(--pp-primary);
+    outline-offset: -2px;
+}
+
+/* Small note above a table, e.g. "Click a row to view details." */
+.pp-table-hint {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin: 0 0 0.5rem;
+    font-size: 0.75rem;
+    color: var(--pp-text-muted);
+}
+
 .pp-table .col-hours {
     font-variant-numeric: tabular-nums;
     font-weight: 600;
@@ -657,17 +750,21 @@ body.pp-app-shell {
 }
 
 .pp-sidebar-logo {
-    width: 36px;
     height: 36px;
-    border-radius: var(--pp-radius-sm);
-    background: linear-gradient(145deg, var(--pp-primary-light), var(--pp-accent-light));
-    border: 1px dashed rgba(26, 95, 122, 0.25);
     display: flex;
     align-items: center;
     justify-content: center;
     color: var(--pp-primary);
     font-size: 1.125rem;
     flex-shrink: 0;
+}
+
+/* The STI logo (sti_logo.png) — keeps its proportions; height comes from the slot. */
+.pp-logo-img {
+    display: block;
+    height: 100%;
+    width: auto;
+    border-radius: 4px;
 }
 
 .pp-sidebar-brand-text {
@@ -766,10 +863,7 @@ body.pp-app-shell {
 }
 
 .pp-topbar-inst-logo {
-    width: 32px;
     height: 32px;
-    border-radius: 6px;
-    background: linear-gradient(145deg, var(--pp-primary-light), var(--pp-accent-light));
     display: flex;
     align-items: center;
     justify-content: center;
@@ -919,6 +1013,11 @@ body.pp-sidebar-collapsed .pp-sidebar {
     width: 76px;
 }
 
+/* Smaller logo so it fits the 76px collapsed sidebar. */
+body.pp-sidebar-collapsed .pp-sidebar-logo {
+    height: 28px;
+}
+
 body.pp-sidebar-collapsed .pp-shell-main {
     margin-left: 76px;
 }
@@ -964,7 +1063,8 @@ body.pp-sidebar-collapsed .pp-sidebar-link {
 .pp-content {
     flex: 1;
     padding: 1.5rem;
-    max-width: 1440px;
+    /* Use the full width beside the sidebar; no empty band on wide screens. */
+    max-width: none;
     width: 100%;
 }
 
@@ -2398,4 +2498,86 @@ body.pp-app-shell .pp-content {
 .loan-history-table {
         min-width: 650px;
     }
+}
+/* ==================================================================
+   SIDEBAR SUB-MENUS (DTR sections, Reports)
+   Rendered by js/payrollpro-layout.js on every page and always open.
+   ================================================================== */
+
+.pp-sidebar-group {
+    position: relative;
+    margin: 0 0 0.4rem;
+    padding: 0.25rem 0 0.35rem 2.1rem;
+}
+
+.pp-sidebar-group::before {
+    content: "";
+    position: absolute;
+    left: 1.15rem;
+    top: 0.15rem;
+    bottom: 0.55rem;
+    width: 1px;
+    background: rgba(255, 255, 255, 0.28);
+}
+
+.pp-sidebar-sublink {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 38px;
+    padding: 0.55rem 0.75rem;
+    gap: 0.65rem;
+    border-radius: 0.45rem;
+    color: rgba(255, 255, 255, 0.9);
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.25;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.pp-sidebar-sublink::before {
+    content: "";
+    position: absolute;
+    left: -0.95rem;
+    top: 50%;
+    width: 0.75rem;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.28);
+}
+
+.pp-sidebar-sublink i {
+    width: 20px;
+    min-width: 20px;
+    text-align: center;
+    font-size: 0.95rem;
+    color: #fff;
+}
+
+.pp-sidebar-sublink:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.pp-sidebar-sublink.active {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.16);
+    font-weight: 600;
+}
+
+/* Icon-only (collapsed) sidebar has no room for sub-menus. */
+body.pp-sidebar-collapsed .pp-sidebar-group {
+    display: none !important;
+}
+
+/* Sidebar menu: hide the scrollbar but keep scrolling
+   (mouse wheel, trackpad, touch and keyboard still work). */
+.pp-sidebar-nav {
+    scrollbar-width: none;          /* Firefox */
+    -ms-overflow-style: none;       /* old Edge */
+}
+
+.pp-sidebar-nav::-webkit-scrollbar {
+    display: none;                  /* Chrome, Edge, Safari */
 }

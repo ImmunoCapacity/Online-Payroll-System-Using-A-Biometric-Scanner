@@ -1,0 +1,10 @@
+# Spring Boot build output
+backend/target/
+
+# JACOB binaries — each developer downloads them (see backend/README.md)
+backend/lib/
+
+# IDE files
+.idea/
+*.iml
+.vscode/

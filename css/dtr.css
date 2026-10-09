@@ -313,6 +313,17 @@
     font-size: 0.8rem;
 }
 
+/* Manual entry employee search */
+
+.pp-employee-picker .pp-faculty-search-results {
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+.pp-employee-picker .pp-faculty-result.is-active {
+    background: var(--pp-primary-light);
+}
+
 /* Schedule */
 
 .pp-schedule-heading {

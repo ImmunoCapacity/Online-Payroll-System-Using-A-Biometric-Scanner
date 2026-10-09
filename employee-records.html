@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <script>window.PP_ALLOWED_ROLES = ['Payroll Master', 'System Administrator', 'Payroll Staff'];</script>
     <script src="js/auth-guard.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Employee Records — PayrollPro</title>
+    <link rel="icon" type="image/png" href="sti_logo.png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="css/payrollpro.css" rel="stylesheet">
@@ -22,14 +22,13 @@
             <header class="pp-content-header">
                 <div>
                     <h1 class="pp-content-title">Employee Records</h1>
-                    <p class="pp-content-subtitle">Maintain the employee list, department details, and active status for payroll and attendance workflows.</p>
                 </div>
                 <button type="button" class="btn btn-pp-primary" id="addEmployeeBtn">
                     <i class="bi bi-person-plus me-1"></i> Add Employee
                 </button>
             </header>
 
-            <div class="pp-summary-row" aria-label="Employee overview">
+            <div class="pp-summary-row cols-4" aria-label="Employee overview">
                 <div class="pp-summary-card present">
                     <div class="pp-summary-label">Active Employees</div>
                     <div class="pp-summary-value" id="summaryActive">0</div>
@@ -41,6 +40,10 @@
                 <div class="pp-summary-card absent">
                     <div class="pp-summary-label">Admin</div>
                     <div class="pp-summary-value" id="summaryAdmin">0</div>
+                </div>
+                <div class="pp-summary-card mixed">
+                    <div class="pp-summary-label">Faculty/Admin</div>
+                    <div class="pp-summary-value" id="summaryFacultyAdmin">0</div>
                 </div>
             </div>
 
@@ -54,21 +57,22 @@
                             <label for="employeeSearch" class="pp-form-label">Search</label>
                             <div class="pp-search-input">
                                 <i class="bi bi-search"></i>
-                                <input type="search" class="form-control pp-form-control" id="employeeSearch" placeholder="Search by name or email…">
+                                <input type="search" class="form-control pp-form-control" id="employeeSearch" maxlength="100" placeholder="Search by name or email…">
                             </div>
                         </div>
                         <div class="pp-filter-group">
                             <label for="employeeDepartment" class="pp-form-label">Department</label>
-                            <select class="form-select pp-form-select" id="employeeDepartment">
-                                <option value="all">All</option>
+                            <select data-clearable class="form-select pp-form-select" id="employeeDepartment">
+                                <option value="all" hidden data-hint>All departments</option>
                                 <option value="Faculty">Faculty</option>
                                 <option value="Admin">Admin</option>
+                                <option value="Faculty/Admin">Faculty/Admin</option>
                             </select>
                         </div>
                         <div class="pp-filter-group">
                             <label for="employeeStatus" class="pp-form-label">Status</label>
-                            <select class="form-select pp-form-select" id="employeeStatus">
-                                <option value="all">All</option>
+                            <select data-clearable class="form-select pp-form-select" id="employeeStatus">
+                                <option value="all" hidden data-hint>All statuses</option>
                                 <option value="Active">Active</option>
                                 <option value="On Leave">On Leave</option>
                                 <option value="Inactive">Inactive</option>
@@ -98,66 +102,189 @@
     </div>
 
     <div class="modal fade pp-modal" id="employeeModal" tabindex="-1" aria-labelledby="employeeModalTitle" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
                     <h2 class="modal-title" id="employeeModalTitle">Add Employee</h2>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <form id="employeeForm" novalidate>
+                <!-- Fields follow the paper's Data Dictionary, Table 1 (Faculty Staff) and Table 2 (Admin Staff). -->
+                <!-- Flex column so the body scrolls and the Save/Cancel footer stays visible. -->
+                <form id="employeeForm" class="d-flex flex-column flex-grow-1" style="min-height: 0;" novalidate>
                     <div class="modal-body">
                         <input type="hidden" id="employeeId">
 
-                        <div class="mb-3">
-                            <label for="employeeName" class="pp-form-label">Full Name</label>
-                            <input type="text" class="form-control pp-form-control" id="employeeName" required>
-                        </div>
-
+                        <h3 class="pp-form-label text-uppercase small text-muted mb-2">Personal Information</h3>
                         <div class="row g-3 mb-3">
-                            <div class="col-md-6">
-                                <label for="employeeNumber" class="pp-form-label">Employee ID</label>
-                                <input type="text" class="form-control pp-form-control" id="employeeNumber" placeholder="e.g. EMP-2026-001" required>
-                                <div id="employeeNumberError" class="invalid-feedback"></div>
+                            <div class="col-md-4">
+                                <label for="employeeFirstName" class="pp-form-label">First Name</label>
+                                <input type="text" class="form-control pp-form-control" id="employeeFirstName" maxlength="50" data-validate="name" autocomplete="given-name" required>
                             </div>
-                            <div class="col-md-6">
-                                <label for="employeeDepartmentSelect" class="pp-form-label">Department</label>
-                                <select class="form-select pp-form-select" id="employeeDepartmentSelect" required>
-                                    <option value="">Select department</option>
-                                    <option value="Faculty">Faculty</option>
-                                    <option value="Admin">Admin</option>
+                            <div class="col-md-4">
+                                <label for="employeeMiddleName" class="pp-form-label">Middle Name</label>
+                                <input type="text" class="form-control pp-form-control" id="employeeMiddleName" maxlength="50" data-validate="name" autocomplete="additional-name">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="employeeLastName" class="pp-form-label">Last Name</label>
+                                <input type="text" class="form-control pp-form-control" id="employeeLastName" maxlength="50" data-validate="name" autocomplete="family-name" required>
+                            </div>
+                        </div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-3">
+                                <label for="employeeGender" class="pp-form-label">Gender</label>
+                                <select class="form-select pp-form-select" id="employeeGender">
+                                    <option value="">—</option>
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
                                 </select>
                             </div>
+                            <div class="col-md-3">
+                                <label for="employeeBirthdate" class="pp-form-label">Birthdate</label>
+                                <input type="date" class="form-control pp-form-control" id="employeeBirthdate" data-validate="date" data-not-future data-min-age="15" data-max-age="100">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="employeeCivilStatus" class="pp-form-label">Civil Status</label>
+                                <select class="form-select pp-form-select" id="employeeCivilStatus">
+                                    <option value="">—</option>
+                                    <option value="Single">Single</option>
+                                    <option value="Married">Married</option>
+                                    <option value="Widowed">Widowed</option>
+                                    <option value="Divorced">Divorced</option>
+                                    <option value="Separated">Separated</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="employeeDependents" class="pp-form-label">No. of Dependents</label>
+                                <input type="number" class="form-control pp-form-control" id="employeeDependents" min="0" max="20" step="1" data-validate="number" data-decimals="0" inputmode="numeric">
+                            </div>
                         </div>
-
-                        <div class="row g-3 mb-3">
+                        <div class="mb-3">
+                            <label for="employeeAddress" class="pp-form-label">Address</label>
+                            <input type="text" class="form-control pp-form-control" id="employeeAddress" maxlength="255" data-validate="text">
+                        </div>
+                        <div class="row g-3 mb-4">
                             <div class="col-md-6">
                                 <label for="employeeEmail" class="pp-form-label">Email</label>
-                                <input type="email" class="form-control pp-form-control" id="employeeEmail" required>
+                                <input type="email" class="form-control pp-form-control" id="employeeEmail" maxlength="100" data-validate="email" autocomplete="email" required>
                             </div>
                             <div class="col-md-6">
-                                <label for="employeePhone" class="pp-form-label">Phone</label>
-                                <input type="tel" class="form-control pp-form-control" id="employeePhone" placeholder="0917-000-0000" pattern="[0-9+\-\s]{7,20}" title="Digits, spaces, + and - only (7–20 characters)" required>
+                                <label for="employeePhone" class="pp-form-label">Contact Number</label>
+                                <input type="tel" class="form-control pp-form-control" id="employeePhone" placeholder="09XXXXXXXXX" maxlength="13" data-validate="phone" inputmode="tel" autocomplete="tel" required>
                             </div>
                         </div>
 
+                        <h3 class="pp-form-label text-uppercase small text-muted mb-2">Employment</h3>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <label for="employeeNumber" class="pp-form-label">Employee ID</label>
+                                <input type="text" class="form-control pp-form-control" id="employeeNumber" placeholder="e.g. 02000839239" maxlength="11" data-validate="employee-number" inputmode="numeric" required>
+                                <div id="employeeNumberError" class="invalid-feedback"></div>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="employeeDepartmentSelect" class="pp-form-label">Staff Type</label>
+                                <select class="form-select pp-form-select" id="employeeDepartmentSelect" required>
+                                    <option value="" hidden data-hint>Select staff type</option>
+                                    <option value="Faculty">Faculty</option>
+                                    <option value="Admin">Admin</option>
+                                    <option value="Faculty/Admin">Faculty/Admin (admin staff who also teach)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="employeeJoined" class="pp-form-label">Date Hired</label>
+                                <input type="date" class="form-control pp-form-control" id="employeeJoined" data-validate="date" data-not-future min="1950-01-01" data-after="employeeBirthdate" data-after-years="15" required>
+                            </div>
+                        </div>
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
-                                <label for="employeeStatusSelect" class="pp-form-label">Status</label>
+                                <label for="employeeStatusSelect" class="pp-form-label">Employment Status</label>
                                 <select class="form-select pp-form-select" id="employeeStatusSelect" required>
                                     <option value="Active">Active</option>
                                     <option value="On Leave">On Leave</option>
                                     <option value="Inactive">Inactive</option>
+                                    <option value="Resigned">Resigned</option>
+                                    <option value="Terminated">Terminated</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label for="employeeJoined" class="pp-form-label">Joined On</label>
-                                <input type="date" class="form-control pp-form-control" id="employeeJoined" required>
+                                <label for="employeeType" class="pp-form-label">Employee Type</label>
+                                <select class="form-select pp-form-select" id="employeeType">
+                                    <option value="">—</option>
+                                    <option value="Full-time">Full-time</option>
+                                    <option value="Part-time">Part-time</option>
+                                    <option value="Contractual">Contractual</option>
+                                    <option value="Temporary">Temporary</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Faculty and Faculty/Admin (Table 1) -->
+                        <div class="row g-3 mb-3 d-none" id="facultyFields">
+                            <div class="col-md-3">
+                                <label for="employeeRank" class="pp-form-label">Instructor Rank</label>
+                                <input type="text" class="form-control pp-form-control" id="employeeRank" list="instructorRanks" maxlength="20" data-validate="text" placeholder="e.g. Instructor I">
+                                <datalist id="instructorRanks">
+                                    <option value="Instructor I"></option>
+                                    <option value="Instructor II"></option>
+                                    <option value="Instructor III"></option>
+                                </datalist>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="employeeRateUnit" class="pp-form-label" id="employeeRateUnitLabel">Rate per Hour/Unit (₱)</label>
+                                <input type="number" class="form-control pp-form-control" id="employeeRateUnit" min="0" max="100000" step="0.01" data-validate="number" data-decimals="2" inputmode="decimal">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="employeeLoadUnits" class="pp-form-label">Load Units</label>
+                                <input type="number" class="form-control pp-form-control" id="employeeLoadUnits" min="0" max="99" step="1" data-validate="number" data-decimals="0" inputmode="numeric">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="employeeLectureHours" class="pp-form-label">Lecture Hours</label>
+                                <input type="number" class="form-control pp-form-control" id="employeeLectureHours" min="0" max="999.9" step="0.5" data-validate="number" data-decimals="1" inputmode="decimal">
+                            </div>
+                        </div>
+
+                        <!-- Admin and Faculty/Admin (Table 2) -->
+                        <div class="row g-3 mb-3 d-none" id="adminFields">
+                            <div class="col-md-3">
+                                <label for="employeeOfficeDept" class="pp-form-label">Department</label>
+                                <input type="text" class="form-control pp-form-control" id="employeeOfficeDept" maxlength="50" data-validate="text" placeholder="e.g. Registrar">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="employeePosition" class="pp-form-label">Position</label>
+                                <input type="text" class="form-control pp-form-control" id="employeePosition" maxlength="50" data-validate="text">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="employeeRateHour" class="pp-form-label">Rate per Hour (₱)</label>
+                                <input type="number" class="form-control pp-form-control" id="employeeRateHour" min="0" max="100000" step="0.01" data-validate="number" data-decimals="2" inputmode="decimal">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="employeeOfficeHours" class="pp-form-label">Office Hours</label>
+                                <input type="number" class="form-control pp-form-control" id="employeeOfficeHours" min="0" max="24" step="0.5" data-validate="number" data-decimals="1" inputmode="decimal">
+                            </div>
+                        </div>
+
+                        <h3 class="pp-form-label text-uppercase small text-muted mb-2 mt-4">Government IDs</h3>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-3">
+                                <label for="employeeSssId" class="pp-form-label">SSS No.</label>
+                                <input type="text" class="form-control pp-form-control" id="employeeSssId" maxlength="50" data-validate="gov-id" data-digits="10" placeholder="XX-XXXXXXX-X">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="employeePhilhealthId" class="pp-form-label">PhilHealth No.</label>
+                                <input type="text" class="form-control pp-form-control" id="employeePhilhealthId" maxlength="50" data-validate="gov-id" data-digits="12" placeholder="XX-XXXXXXXXX-X">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="employeePagibigId" class="pp-form-label">Pag-IBIG No.</label>
+                                <input type="text" class="form-control pp-form-control" id="employeePagibigId" maxlength="50" data-validate="gov-id" data-digits="12" placeholder="XXXX-XXXX-XXXX">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="employeeTinId" class="pp-form-label">TIN</label>
+                                <input type="text" class="form-control pp-form-control" id="employeeTinId" maxlength="50" data-validate="gov-id" data-digits="9,12,14" placeholder="XXX-XXX-XXX-XXX">
                             </div>
                         </div>
 
                         <div class="mb-0">
                             <label for="employeeNotes" class="pp-form-label">Notes</label>
-                            <textarea class="form-control pp-form-control" id="employeeNotes" rows="3" placeholder="Add a short note about the employee"></textarea>
+                            <textarea class="form-control pp-form-control" id="employeeNotes" rows="2" maxlength="1000" data-validate="text" placeholder="Add a short note about the employee"></textarea>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -174,6 +301,8 @@
     <script src="js/confirm-modal.js"></script>
     <script src="js/toast.js"></script>
     <script src="js/payrollpro-layout.js"></script>
+    <script src="js/select-hint.js"></script>
+    <script src="js/form-validation.js"></script>
     <script src="js/employee-records.js"></script>
 </body>
 </html>

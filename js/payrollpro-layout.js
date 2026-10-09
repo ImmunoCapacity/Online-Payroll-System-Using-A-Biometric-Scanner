@@ -9,6 +9,59 @@
 
 
     // ============================================================
+    // ROLE-BASED MENUS
+    // Each role sees only the modules it is allowed to use. Keep in
+    // step with PAGE_ACCESS in js/auth-guard.js and SystemModule.java.
+    //
+    //   Payroll Master        Dashboard, Fingerprint Registration, DTR,
+    //                         Attendance Recording, Maintenance,
+    //                         Deduction Tables, Payroll, Reports,
+    //                         Employee Record Management
+    //   Payroll Staff         Dashboard, Fingerprint Registration, DTR,
+    //                         Attendance Recording
+    //   System Administrator  Utility
+    // ============================================================
+
+
+    // ============================================================
+    // SUB-MENUS (always open; see renderSubmenu)
+    // ============================================================
+
+    // DTR sections. Manual Entry isn't listed: it's the Attendance
+    // Recording menu item.
+    var DTR_SUBMENU = {
+        groupClass: 'pp-dtr-sidebar-group',
+        linkClass: 'pp-dtr-sidebar-link',
+        dataKey: 'section',
+        hrefFor: function (key) { return 'dtr.html?section=' + key; },
+        items: [
+            { key: 'biometric', label: 'Biometric Records', icon: 'bi-fingerprint' },
+            { key: 'schedule', label: 'Faculty Schedule', icon: 'bi-calendar-week', href: 'faculty-schedule.html' },
+            { key: 'teaching', label: 'Faculty Teaching Hours', icon: 'bi-person-workspace', href: 'teaching-hours.html' }
+        ]
+    };
+
+    var REPORTS_SUBMENU = {
+        groupClass: 'pp-reports-sidebar-group',
+        linkClass: 'pp-reports-sidebar-link',
+        dataKey: 'report',
+        hrefFor: function (key) { return 'reports.html?report=' + key; },
+        items: [
+            { key: 'payroll', label: 'Payroll Report', icon: 'bi-file-earmark-text' },
+            { key: 'payslip', label: 'Payslip', icon: 'bi-receipt' },
+            { key: 'thirteenth', label: '13th Month Pay', icon: 'bi-calendar-check' },
+            { key: 'sss', label: 'SSS Remittance', icon: 'bi-bank' },
+            { key: 'philhealth', label: 'PhilHealth Remittance', icon: 'bi-heart-pulse' },
+            { key: 'pagibig', label: 'Pag-IBIG Remittance', icon: 'bi-house-door' },
+            { key: 'bir', label: 'BIR Remittance', icon: 'bi-journal-text' },
+            { key: 'loans', label: 'Loan Report', icon: 'bi-cash-coin' },
+            { key: 'employees', label: 'Employee List', icon: 'bi-people' },
+            { key: 'attendance', label: 'Attendance Report', icon: 'bi-clock-history', href: 'attendance-reports.html' }
+        ]
+    };
+
+
+    // ============================================================
     // PAYROLL MASTER NAVIGATION
     // ============================================================
 
@@ -22,17 +75,32 @@
         },
 
         {
-            id: 'employees',
-            label: 'Employee Records',
-            icon: 'bi-people',
-            href: 'employee-records.html'
+            id: 'fingerprint',
+            label: 'Fingerprint Registration',
+            icon: 'bi-fingerprint',
+            href: 'fingerprint-registration.html'
         },
 
         {
             id: 'dtr',
             label: 'Daily Time Record',
             icon: 'bi-clock-history',
-            href: 'dtr.html'
+            href: 'dtr.html',
+            submenu: DTR_SUBMENU
+        },
+
+        {
+            id: 'attendance-recording',
+            label: 'Attendance Recording',
+            icon: 'bi-pencil-square',
+            href: 'dtr.html?section=manual'
+        },
+
+        {
+            id: 'employees',
+            label: 'Employee Records',
+            icon: 'bi-people',
+            href: 'employee-records.html'
         },
 
         {
@@ -57,61 +125,18 @@
         },
 
         {
+            id: 'deductions',
+            label: 'Deduction Tables',
+            icon: 'bi-table',
+            href: 'maintenance.html#bir'
+        },
+
+        {
             id: 'reports',
             label: 'Reports',
             icon: 'bi-file-earmark-bar-graph',
             href: 'reports.html',
-            children: [
-                {
-                    id: 'payroll-report',
-                    label: 'Payroll Report',
-                    icon: 'bi-file-earmark-text',
-                    href: 'reports.html?report=payroll'
-                },
-                {
-                    id: 'payslip-report',
-                    label: 'Payslip',
-                    icon: 'bi-receipt',
-                    href: 'reports.html?report=payslip'
-                },
-                {
-                    id: 'thirteenth-report',
-                    label: '13th Month Pay',
-                    icon: 'bi-calendar-check',
-                    href: 'reports.html?report=13th-month'
-                },
-                {
-                    id: 'government-remittance',
-                    label: 'Government Contribution / Remittance',
-                    icon: 'bi-folder2-open',
-                    children: [
-                        {
-                            id: 'sss-report',
-                            label: 'SSS',
-                            icon: 'bi-file-earmark-text',
-                            href: 'reports.html?report=sss'
-                        },
-                        {
-                            id: 'philhealth-report',
-                            label: 'PhilHealth',
-                            icon: 'bi-file-earmark-text',
-                            href: 'reports.html?report=philhealth'
-                        },
-                        {
-                            id: 'pagibig-report',
-                            label: 'Pag-IBIG',
-                            icon: 'bi-file-earmark-text',
-                            href: 'reports.html?report=pagibig'
-                        },
-                        {
-                            id: 'bir-report',
-                            label: 'BIR',
-                            icon: 'bi-file-earmark-text',
-                            href: 'reports.html?report=bir'
-                        }
-                    ]
-                }
-            ]
+            submenu: REPORTS_SUBMENU
         },
 
         {
@@ -125,7 +150,7 @@
 
 
     // ============================================================
-    // SYSTEM ADMINISTRATOR NAVIGATION
+    // SYSTEM ADMINISTRATOR NAVIGATION (Utility module only)
     // ============================================================
 
     var SYSTEM_ADMIN_NAV_ITEMS = [
@@ -145,38 +170,10 @@
         },
 
         {
-            id: 'employees',
-            label: 'Employee Records',
-            icon: 'bi-people',
-            href: 'employee-records.html'
-        },
-
-        {
             id: 'biometric',
             label: 'Biometric Device',
-            icon: 'bi-fingerprint',
+            icon: 'bi-hdd-network',
             href: 'biometric-devices.html'
-        },
-
-        {
-            id: 'fingerprint',
-            label: 'Fingerprint Enrollment',
-            icon: 'bi-fingerprint',
-            href: 'fingerprint-registration.html'
-        },
-
-        {
-            id: 'maintenance',
-            label: 'System Maintenance',
-            icon: 'bi-sliders',
-            href: 'maintenance.html'
-        },
-
-        {
-            id: 'reports',
-            label: 'Reports',
-            icon: 'bi-file-earmark-bar-graph',
-            href: 'reports.html'
         }
 
     ];
@@ -196,82 +193,25 @@
         },
 
         {
-            id: 'employees',
-            label: 'Employee Records',
-            icon: 'bi-people',
-            href: 'employee-records.html'
+            id: 'fingerprint',
+            label: 'Fingerprint Registration',
+            icon: 'bi-fingerprint',
+            href: 'fingerprint-registration.html'
         },
 
         {
             id: 'dtr',
             label: 'Daily Time Record',
             icon: 'bi-clock-history',
-            href: 'dtr.html'
+            href: 'dtr.html',
+            submenu: DTR_SUBMENU
         },
 
         {
-            id: 'leave',
-            label: 'Leave Management',
-            icon: 'bi-calendar-check',
-            href: 'leave-application.html'
-        },
-
-        {
-            id: 'reports',
-            label: 'Attendance Reports',
-            icon: 'bi-file-earmark-bar-graph',
-            href: 'attendance-reports.html'
-        }
-
-    ];
-
-
-    // ============================================================
-    // STAFF NAVIGATION
-    // ============================================================
-
-    var STAFF_NAV_ITEMS = [
-
-        {
-            id: 'payslip',
-            label: 'My Payslip',
-            icon: 'bi-receipt',
-            href: 'payslip.html'
-        },
-
-        {
-            id: 'attendance',
-            label: 'My Attendance',
-            icon: 'bi-clock-history',
-            href: 'my-attendance.html'
-        },
-
-        {
-            id: 'leave',
-            label: 'My Leave',
-            icon: 'bi-calendar-check',
-            href: 'leave-application.html'
-        },
-
-        {
-            id: 'loans',
-            label: 'My Loans',
-            icon: 'bi-bank',
-            href: 'loan-application.html'
-        },
-
-        {
-            id: 'thirteenth',
-            label: '13th Month Pay',
-            icon: 'bi-gift',
-            href: 'payslip.html#thirteenth'
-        },
-
-        {
-            id: 'benefits',
-            label: 'Benefits',
-            icon: 'bi-heart-pulse',
-            href: 'payslip.html#benefits'
+            id: 'attendance-recording',
+            label: 'Attendance Recording',
+            icon: 'bi-pencil-square',
+            href: 'dtr.html?section=manual'
         }
 
     ];
@@ -315,11 +255,7 @@
 
     'Payroll Master': 'master',
 
-    'Payroll Staff': 'payrollStaff',
-
-    'Faculty Staff': 'staff',
-
-    'Administrative Staff': 'staff'
+    'Payroll Staff': 'payrollStaff'
 
 };
 
@@ -342,12 +278,6 @@
 
     }
 
-    if (navMode === 'staff') {
-
-        return STAFF_NAV_ITEMS;
-
-    }
-
     // Default = Payroll Master
 
     return NAV_ITEMS;
@@ -358,6 +288,41 @@
     // ============================================================
     // RENDER SIDEBAR
     // ============================================================
+
+    // A nav item's sub-menu, always rendered open on every page so it
+    // doesn't collapse when the user moves to another page. The page that
+    // owns it (dtr.js, reports.js) highlights the current entry.
+    function renderSubmenu(item) {
+
+        if (!item.submenu) {
+            return '';
+        }
+
+        var menu = item.submenu;
+
+        return (
+            '<div class="pp-sidebar-group ' + menu.groupClass + ' is-open">' +
+                menu.items.map(function (sub) {
+                    var href = sub.href || menu.hrefFor(sub.key);
+                    // Entries with their own page (e.g. Attendance Report) are
+                    // highlighted here; the rest by the page that owns the menu.
+                    var onOwnPage = sub.href && global.location.pathname.endsWith('/' + sub.href);
+                    return (
+                        '<a href="' + href + '"' +
+                        ' class="pp-sidebar-sublink ' + menu.linkClass + (onOwnPage ? ' active' : '') + '"' +
+                        ' data-' + menu.dataKey + '="' + sub.key + '"' +
+                        (sub.href ? ' data-external="1"' : '') +
+                        '>' +
+                            '<i class="bi ' + sub.icon + '"></i>' +
+                            '<span>' + sub.label + '</span>' +
+                        '</a>'
+                    );
+                }).join('') +
+            '</div>'
+        );
+
+    }
+
 
     function renderSidebar(activeNav, navMode, brandHref) {
 
@@ -392,7 +357,9 @@
                         item.label +
                     '</span>' +
 
-                '</a>'
+                '</a>' +
+
+                renderSubmenu(item)
 
             );
 
@@ -410,7 +377,7 @@
                 '<a href="' + brandHref + '" class="pp-sidebar-brand">' +
 
                     '<div class="pp-sidebar-logo" aria-hidden="true">' +
-                        '<i class="bi bi-building"></i>' +
+                        '<img src="sti_logo.png" alt="" class="pp-logo-img">' +
                     '</div>' +
 
                     '<div class="pp-sidebar-brand-text">' +
@@ -475,7 +442,7 @@
                     '<div class="pp-topbar-institution">' +
 
                         '<div class="pp-topbar-inst-logo" aria-hidden="true">' +
-                            '<i class="bi bi-mortarboard"></i>' +
+                            '<img src="sti_logo.png" alt="" class="pp-logo-img">' +
                         '</div>' +
 
                         '<span class="pp-topbar-inst-name">' +
@@ -779,7 +746,7 @@
                 'click',
                 function () {
 
-                    fetch('api/auth/logout.php', { method: 'POST' }).catch(function () {
+                    fetch('api/auth/logout', { method: 'POST' }).catch(function () {
                         // Best-effort — still clear local state and redirect even if
                         // the backend is unreachable.
                     });
@@ -857,6 +824,7 @@
         function updateAriaLabel() {
             var collapsed = document.body.classList.contains('pp-sidebar-collapsed');
             btn.setAttribute('aria-label', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
+            btn.title = (collapsed ? 'Expand sidebar' : 'Collapse sidebar') + ' (Ctrl+B)';
         }
 
         updateAriaLabel();
@@ -868,6 +836,40 @@
                 localStorage.setItem('ppSidebarCollapsed', String(collapsed));
             } catch (error) {
                 // ignore — collapse still works for this page view
+            }
+        });
+
+        bindSidebarShortcut(btn);
+    }
+
+
+    /**
+     * Ctrl+B (Cmd+B on a Mac) shows / hides the sidebar: on wide screens it
+     * collapses or expands it (same as the collapse button), on small
+     * screens it opens or closes the slide-in menu. Tab keeps its usual job
+     * of moving between fields and buttons. Ignored while a dialog is open.
+     */
+    function bindSidebarShortcut(collapseBtn) {
+
+        function dialogOpen() {
+            return !!document.querySelector('.modal.show, .offcanvas.show');
+        }
+
+        document.addEventListener('keydown', function (event) {
+            var isB = event.key === 'b' || event.key === 'B';
+            if (!isB || !(event.ctrlKey || event.metaKey) || event.shiftKey || event.altKey) {
+                return;
+            }
+            if (dialogOpen() || (event.target && event.target.isContentEditable)) {
+                return;
+            }
+            event.preventDefault();
+
+            var mobileToggle = document.getElementById('ppSidebarToggle');
+            if (window.innerWidth < 992 && mobileToggle) {
+                mobileToggle.click();
+            } else {
+                collapseBtn.click();
             }
         });
     }
@@ -1037,10 +1039,6 @@
                 }
             })();
 
-            var navModeExplicitlySet =
-                !!(options && options.navMode !== undefined);
-
-
             var config = {
 
                 activeNav: DEFAULTS.activeNav,
@@ -1133,8 +1131,10 @@
             }
 
 
+            // The logged-in user's role always decides the menu, even if
+            // the page passed its own navMode — so nobody is shown
+            // modules their role can't use.
             if (
-                !navModeExplicitlySet &&
                 storedUser &&
                 storedUser.role
             ) {
@@ -1173,11 +1173,6 @@
 
                 config.brandHref =
                     'payroll-staff.html';
-
-            } else if (config.navMode === 'staff') {
-
-                config.brandHref =
-                    'payslip.html';
 
             } else {
 
@@ -1266,10 +1261,7 @@
             SYSTEM_ADMIN_NAV_ITEMS,
 
         PAYROLL_STAFF_NAV_ITEMS:
-            PAYROLL_STAFF_NAV_ITEMS,
-
-        STAFF_NAV_ITEMS:
-            STAFF_NAV_ITEMS
+            PAYROLL_STAFF_NAV_ITEMS
 
     };
 

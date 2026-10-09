@@ -56,7 +56,7 @@
 
     function resetForm() {
         deviceForm.reset();
-        deviceForm.classList.remove('was-validated');
+        PPValidate.clear(deviceForm);
         deviceId.value = '';
         deviceModalTitle.textContent = 'Add Device';
         deviceStatusSelect.value = 'Active';
@@ -103,12 +103,27 @@
 
     deviceForm.addEventListener('submit', function (e) {
         e.preventDefault();
-        if (!deviceForm.checkValidity()) {
-            deviceForm.classList.add('was-validated');
+        if (!PPValidate.validateForm(deviceForm)) {
             return;
         }
 
         var editingId = deviceId.value ? parseInt(deviceId.value, 10) : null;
+
+        // Two devices can't share a name or an IP address.
+        var name = deviceName.value.trim().toLowerCase();
+        var ip = deviceIp.value.trim();
+        var clash = devices.find(function (d) {
+            return d.id !== editingId && (String(d.deviceName).toLowerCase() === name || d.ipAddress === ip);
+        });
+        if (clash) {
+            var sameIp = clash.ipAddress === ip;
+            var field = sameIp ? deviceIp : deviceName;
+            PPValidate.setError(field, sameIp
+                ? 'This IP address is already used by ' + clash.deviceName + '.'
+                : 'Another device already has this name.');
+            field.focus();
+            return;
+        }
         var payload = {
             id: editingId || DataStore.nextNumericId(devices),
             deviceName: deviceName.value.trim(),

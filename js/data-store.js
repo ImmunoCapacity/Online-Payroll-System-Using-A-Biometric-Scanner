@@ -1,7 +1,8 @@
 /**
  * PayrollPro Data Store
  * ---------------------------------------------------------------
- * Single source of truth for all demo/mock data in the frontend.
+ * Browser-side store for the modules not yet connected to the database
+ * (leave, loans, maintenance rates and categories, deduction tables, ...).
  * Everything is persisted to localStorage so that changes made on
  * one page (e.g. adding an employee) are reflected everywhere else
  * (DTR, payroll, fingerprint registration, maintenance, etc.)
@@ -45,44 +46,28 @@
     // survives reloads/navigation between pages.
     // ================================================================
 
+    // SSS contribution schedule (effective 2025): Monthly Salary Credit (MSC)
+    // from ₱5,000 to ₱35,000 in ₱500 steps; employee share is 5% of the MSC.
+    function buildSssBrackets(firstId) {
+        var rows = [{ id: firstId, min: 0, max: 5249.99, msc: 5000, rate: 5 }];
+        for (var msc = 5500; msc <= 34500; msc += 500) {
+            rows.push({ id: firstId + rows.length, min: msc - 250, max: msc + 249.99, msc: msc, rate: 5 });
+        }
+        rows.push({ id: firstId + rows.length, min: 34750, max: null, msc: 35000, rate: 5 });
+        return rows;
+    }
+
     var SEED = {
 
-        employees: [
-            { id: 'EMP-2021-014', employeeNumber: 'EMP-2021-014', displayName: 'Dr. Maria Santos', firstName: 'Maria', lastName: 'Santos', type: 'Faculty', department: 'Faculty', position: 'Instructor II', email: 'maria.santos@institution.edu', phone: '0917-111-2222', status: 'Active', dateHired: '2020-01-15', notes: 'Department head', scheduleStart: '07:30', scheduleEnd: '09:30', rateType: 'Per Unit', rate: 920, units: 18, fingerprintEnrolled: true, fingerprintEnrolledDate: '2024-08-12', fingerprintId: 'FP-EMP2021014' },
-            { id: 'EMP-2022-031', employeeNumber: 'EMP-2022-031', displayName: 'Prof. James Rivera', firstName: 'James', lastName: 'Rivera', type: 'Faculty', department: 'Faculty', position: 'Instructor I', email: 'james.rivera@institution.edu', phone: '0917-555-6666', status: 'On Leave', dateHired: '2019-09-01', notes: 'On sick leave', scheduleStart: '10:00', scheduleEnd: '12:00', rateType: 'Per Unit', rate: 820, units: 21, fingerprintEnrolled: true, fingerprintEnrolledDate: '2024-09-03', fingerprintId: 'FP-EMP2022031' },
-            { id: 'EMP-1002', employeeNumber: 'EMP-1002', displayName: 'Anna Cruz', firstName: 'Anna', lastName: 'Cruz', type: 'Admin', department: 'Admin', position: 'HR Officer', email: 'anna.cruz@institution.edu', phone: '0917-333-4444', status: 'Active', dateHired: '2021-06-10', notes: 'Handles HR records', scheduleStart: null, scheduleEnd: null, rateType: 'Per Hour', rate: 185, units: 88, fingerprintEnrolled: false, fingerprintEnrolledDate: null, fingerprintId: null },
-            { id: 'EMP-1004', employeeNumber: 'EMP-1004', displayName: 'Elena Villanueva', firstName: 'Elena', lastName: 'Villanueva', type: 'Admin', department: 'Admin', position: 'Registrar Staff', email: 'elena.villanueva@institution.edu', phone: '0917-777-8888', status: 'Inactive', dateHired: '2018-02-20', notes: 'Retired last quarter', scheduleStart: null, scheduleEnd: null, rateType: 'Per Hour', rate: 175, units: 92, fingerprintEnrolled: true, fingerprintEnrolledDate: '2024-07-22', fingerprintId: 'FP-EMP1004' },
-            { id: 'EMP-2020-052', employeeNumber: 'EMP-2020-052', displayName: 'Roberto Mendoza', firstName: 'Roberto', lastName: 'Mendoza', type: 'Faculty', department: 'Faculty', position: 'Instructor I', email: 'roberto.mendoza@institution.edu', phone: '0917-222-3333', status: 'Active', dateHired: '2023-08-01', notes: '', scheduleStart: '13:00', scheduleEnd: '15:00', rateType: 'Per Unit', rate: 780, units: 15, fingerprintEnrolled: false, fingerprintEnrolledDate: null, fingerprintId: null },
-            { id: 'EMP-2024-003', employeeNumber: 'EMP-2024-003', displayName: 'Michael Tan', firstName: 'Michael', lastName: 'Tan', type: 'Faculty', department: 'Faculty', position: 'Instructor I', email: 'michael.tan@institution.edu', phone: '0917-444-5555', status: 'Active', dateHired: '2024-01-10', notes: '', scheduleStart: '08:00', scheduleEnd: '10:00', rateType: 'Per Unit', rate: 780, units: 12, fingerprintEnrolled: false, fingerprintEnrolledDate: null, fingerprintId: null },
-            { id: 'EMP-2022-045', employeeNumber: 'EMP-2022-045', displayName: 'Grace Lim', firstName: 'Grace', lastName: 'Lim', type: 'Admin', department: 'Admin', position: 'Cashier', email: 'grace.lim@institution.edu', phone: '0917-666-7777', status: 'Active', dateHired: '2022-03-15', notes: '', scheduleStart: null, scheduleEnd: null, rateType: 'Per Hour', rate: 175, units: 90, fingerprintEnrolled: true, fingerprintEnrolledDate: '2025-01-15', fingerprintId: 'FP-EMP2022045' },
-            { id: 'EMP-2023-019', employeeNumber: 'EMP-2023-019', displayName: 'Dr. Patricia Go', firstName: 'Patricia', lastName: 'Go', type: 'Faculty', department: 'Faculty', position: 'Instructor II', email: 'patricia.go@institution.edu', phone: '0917-888-9999', status: 'Active', dateHired: '2021-11-08', notes: '', scheduleStart: '14:00', scheduleEnd: '16:00', rateType: 'Per Unit', rate: 850, units: 20, fingerprintEnrolled: true, fingerprintEnrolledDate: '2024-11-08', fingerprintId: 'FP-EMP2023019' },
-            { id: 'EMP-2023-007', employeeNumber: 'EMP-2023-007', displayName: 'Elena Villanueva (Admin)', firstName: 'Elena', lastName: 'V.', type: 'Admin', department: 'Admin', position: 'Records Officer', email: 'elenav.records@institution.edu', phone: '0917-999-0000', status: 'Active', dateHired: '2023-02-01', notes: '', scheduleStart: null, scheduleEnd: null, rateType: 'Per Hour', rate: 172, units: 80, fingerprintEnrolled: false, fingerprintEnrolledDate: null, fingerprintId: null }
-        ],
+        // No sample people: employees, attendance, leave, loans, rates and
+        // payslips start empty. Only reference tables are seeded.
+        employees: [],
 
-        devices: [
-            { id: 1, deviceName: 'Main Gate Scanner', location: 'Main Building Entrance', ipAddress: '192.168.1.50', status: 'Active', dateAdded: '2024-01-05T08:00:00' },
-            { id: 2, deviceName: 'Faculty Room Scanner', location: 'Faculty Room', ipAddress: '192.168.1.51', status: 'Active', dateAdded: '2024-01-05T08:05:00' },
-            { id: 3, deviceName: 'Admin Wing Scanner', location: 'Administration Wing', ipAddress: '192.168.1.52', status: 'Inactive', dateAdded: '2024-06-11T09:00:00' }
-        ],
+        devices: [],
 
-        dtr: [
-            { id: 1, employeeId: 'EMP-2021-014', deviceId: 1, date: 'TODAY', timeIn: '07:42', timeOut: '17:05', status: 'present', manual: false },
-            { id: 2, employeeId: 'EMP-2022-031', deviceId: 2, date: 'TODAY', timeIn: '10:22', timeOut: '18:00', status: 'late', manual: false },
-            { id: 3, employeeId: 'EMP-1002', deviceId: 3, date: 'TODAY', timeIn: '08:01', timeOut: '17:30', status: 'present', manual: false },
-            { id: 4, employeeId: 'EMP-2020-052', deviceId: null, date: 'TODAY', timeIn: null, timeOut: null, status: 'absent', manual: false },
-            { id: 5, employeeId: 'EMP-1004', deviceId: 3, date: 'TODAY', timeIn: '08:10', timeOut: '16:45', status: 'present', manual: false },
-            { id: 6, employeeId: 'EMP-2024-003', deviceId: null, date: 'TODAY', timeIn: null, timeOut: null, status: 'leave', manual: false },
-            { id: 7, employeeId: 'EMP-2022-045', deviceId: 3, date: 'TODAY', timeIn: '08:18', timeOut: '17:00', status: 'late', manual: false },
-            { id: 8, employeeId: 'EMP-2023-019', deviceId: 2, date: 'TODAY', timeIn: '13:55', timeOut: '17:20', status: 'present', manual: false }
-        ],
+        dtr: [],
 
-        teachingSchedule: [
-            { id: 1, employeeId: 'EMP-2021-014', days: ['Mon', 'Wed', 'Fri'], timeStart: '07:30', timeEnd: '09:30', subject: 'Data Structures' },
-            { id: 2, employeeId: 'EMP-2022-031', days: ['Tue', 'Thu'], timeStart: '10:00', timeEnd: '12:00', subject: 'Web Development' },
-            { id: 3, employeeId: 'EMP-2020-052', days: ['Mon', 'Wed'], timeStart: '13:00', timeEnd: '15:00', subject: 'Networking Fundamentals' },
-            { id: 4, employeeId: 'EMP-2024-003', days: ['Tue', 'Thu', 'Fri'], timeStart: '08:00', timeEnd: '10:00', subject: 'Systems Analysis' },
-            { id: 5, employeeId: 'EMP-2023-019', days: ['Mon', 'Thu'], timeStart: '14:00', timeEnd: '16:00', subject: 'Database Management' }
-        ],
+        teachingSchedule: [],
 
         leaveCategories: [
             { id: 1, name: 'Sick Leave', paid: true, maxDays: 12, active: true },
@@ -92,68 +77,11 @@
             { id: 5, name: 'Leave Without Pay', paid: false, maxDays: 30, active: true }
         ],
 
-        leaveRequests: [
-            { id: 101, employeeId: 'EMP-2021-014', employee: 'Dr. Maria Santos', category: 'Vacation', dateFrom: '2026-07-14', dateTo: '2026-07-16', filedDate: '2026-07-04', status: 'Pending', reason: 'Family vacation' },
-            { id: 102, employeeId: 'EMP-2022-031', employee: 'Prof. James Rivera', category: 'Sick', dateFrom: '2026-07-10', dateTo: '2026-07-11', filedDate: '2026-07-06', status: 'Pending', reason: 'Flu symptoms' },
-            { id: 103, employeeId: 'EMP-1004', employee: 'Elena Villanueva', category: 'Maternity', dateFrom: '2026-08-01', dateTo: '2026-11-13', filedDate: '2026-06-20', status: 'Approved', reason: 'Maternity leave' },
-            { id: 104, employeeId: 'EMP-2024-003', employee: 'Michael Tan', category: 'Paternity', dateFrom: '2026-07-20', dateTo: '2026-07-26', filedDate: '2026-07-01', status: 'Rejected', reason: 'Newborn care', remarks: 'Insufficient documentation submitted.' },
-            { id: 105, employeeId: 'EMP-2020-052', employee: 'Roberto Mendoza', category: 'Vacation', dateFrom: '2026-06-05', dateTo: '2026-06-07', filedDate: '2026-05-28', status: 'Approved', reason: 'Personal travel' }
-        ],
+        leaveRequests: [],
 
-        loans: [
-            {
-                id: 1,
-                employeeId: 'EMP-2021-014',
-                employeeName: 'Dr. Maria Santos',
-                employeeRole: 'Faculty Staff',
-                type: 'SSS Salary Loan',
-                reference: 'SSS-2026-00123',
-                amount: 20000,
-                deductionPerPayroll: 1000,
-                startPeriod: '2026-03-11_2026-03-25',
-                startPeriodLabel: 'March 11 – March 25, 2026',
-                remarks: '',
-                deductionHistory: [
-                    { period: 'March 11 – March 25, 2026', amount: 1000, remainingBalance: 19000, dateProcessed: '2026-03-25' },
-                    { period: 'March 26 – April 10, 2026', amount: 1000, remainingBalance: 18000, dateProcessed: '2026-04-10' },
-                    { period: 'April 11 – April 25, 2026', amount: 1000, remainingBalance: 17000, dateProcessed: '2026-04-25' },
-                    { period: 'April 26 – May 10, 2026', amount: 1000, remainingBalance: 16000, dateProcessed: '2026-05-10' },
-                    { period: 'May 11 – May 25, 2026', amount: 1000, remainingBalance: 15000, dateProcessed: '2026-05-25' },
-                    { period: 'May 26 – June 10, 2026', amount: 1000, remainingBalance: 14000, dateProcessed: '2026-06-10' },
-                    { period: 'June 11 – June 25, 2026', amount: 1000, remainingBalance: 13000, dateProcessed: '2026-06-25' },
-                    { period: 'June 26 – July 10, 2026', amount: 1000, remainingBalance: 12000, dateProcessed: '2026-07-10' },
-                    { period: 'July 11 – July 25, 2026', amount: 1000, remainingBalance: 11000, dateProcessed: '2026-07-25' },
-                    { period: 'July 26 – August 10, 2026', amount: 1000, remainingBalance: 10000, dateProcessed: '2026-08-10' },
-                    { period: 'August 11 – August 25, 2026', amount: 1000, remainingBalance: 9000, dateProcessed: '2026-08-25' },
-                    { period: 'August 26 – September 10, 2026', amount: 1000, remainingBalance: 8000, dateProcessed: '2026-09-10' }
-                ]
-            },
-            {
-                id: 2,
-                employeeId: 'EMP-1004',
-                employeeName: 'Elena Villanueva',
-                employeeRole: 'Administrative Staff',
-                type: 'Pag-IBIG MPL',
-                reference: 'HDMF-2025-0456',
-                amount: 15000,
-                deductionPerPayroll: 750,
-                startPeriod: '2025-11-11_2025-11-25',
-                startPeriodLabel: 'November 11 – November 25, 2025',
-                remarks: '',
-                deductionHistory: [
-                    { period: 'August 26 – September 10, 2026', amount: 750, remainingBalance: 750, dateProcessed: '2026-09-10' },
-                    { period: 'September 11 – September 25, 2026', amount: 750, remainingBalance: 0, dateProcessed: '2026-09-25' }
-                ]
-            }
-        ],
+        loans: [],
 
-        rates: [
-            { id: 1, empId: 'EMP-2021-014', rateType: 'Per Unit', amount: 850, effective: '2024-01-01', end: '2025-12-31', active: false },
-            { id: 2, empId: 'EMP-2021-014', rateType: 'Per Unit', amount: 920, effective: '2026-01-01', end: null, active: true },
-            { id: 3, empId: 'EMP-2022-031', rateType: 'Per Unit', amount: 820, effective: '2025-06-01', end: null, active: true },
-            { id: 4, empId: 'EMP-2023-019', rateType: 'Per Unit', amount: 850, effective: '2025-01-01', end: null, active: true },
-            { id: 5, empId: 'EMP-2020-052', rateType: 'Per Unit', amount: 780, effective: '2023-08-01', end: null, active: true }
-        ],
+        rates: [],
 
         taxBrackets: {
             bir: {
@@ -197,26 +125,18 @@
                     { id: 52, min: 1500.01, max: 10000, share: null, rate: 2.0 },
                     { id: 53, min: 10000.01, max: null, share: 200, rate: 2.0 }
                 ]
+            },
+            sss: {
+                2025: buildSssBrackets(101),
+                2026: buildSssBrackets(201)
             }
         },
 
-        payslips: {
-            'EMP-2021-014': {
-                '2026-07-01': { periodLabel: 'July 1 – July 15, 2026', payDate: 'July 16, 2026', rateType: 'per unit', rate: 920, units: 18, unitsLabel: 'Teaching units worked', gross: 16560, deductions: { bir: 3922, philhealth: 680, pagibig: 200, loan: 0 }, benefits: { 'Chalk Allowance': 500, 'Internet Allowance': 800 } },
-                '2026-06-16': { periodLabel: 'June 16 – June 30, 2026', payDate: 'July 1, 2026', rateType: 'per unit', rate: 920, units: 16, unitsLabel: 'Teaching units worked', gross: 14720, deductions: { bir: 3400, philhealth: 650, pagibig: 200, loan: 0 }, benefits: { 'Chalk Allowance': 500, 'Internet Allowance': 800 } },
-                '2026-06-01': { periodLabel: 'June 1 – June 15, 2026', payDate: 'June 16, 2026', rateType: 'per unit', rate: 920, units: 20, unitsLabel: 'Teaching units worked', gross: 18400, deductions: { bir: 4600, philhealth: 700, pagibig: 200, loan: 0 }, benefits: { 'Chalk Allowance': 500, 'Internet Allowance': 800 } }
-            }
-        },
+        payslips: {},
 
-        thirteenthMonth: [
-            { employeeId: 'EMP-2021-014', employee: 'Dr. Maria Santos', annualGross: 198720, amount: 16560, year: 2026 }
-        ],
+        thirteenthMonth: [],
 
-        users: [
-            { id: 1, firstName: 'System', lastName: 'Administrator', username: 'sysadmin', role: 'System Administrator', email: 'admin@institution.edu', contactNumber: '0917-000-0002', active: true },
-            { id: 2, firstName: 'Maria Elena', lastName: 'Reyes', username: 'mreyes.master', role: 'Payroll Master', email: 'payroll.master@institution.edu', contactNumber: '0917-000-0001', active: true },
-            { id: 3, firstName: 'Carlo', lastName: 'Santiago', username: 'csantiago.staff', role: 'Payroll Staff', email: 'payroll.staff@institution.edu', contactNumber: '0917-000-0003', active: true }
-        ],
+        users: [],
 
         auditLog: []
     };
@@ -238,13 +158,69 @@
         }
     }
 
+    // The sample people the first version of this file seeded (Dr. Maria
+    // Santos, Prof. James Rivera, ...). Browsers that ran that version still
+    // hold them in localStorage; removeDemoRecords() deletes them once,
+    // leaving anything the user entered.
+    var DEMO_EMPLOYEE_IDS = [
+        'EMP-2021-014', 'EMP-2022-031', 'EMP-1002', 'EMP-1004', 'EMP-2020-052',
+        'EMP-2024-003', 'EMP-2022-045', 'EMP-2023-019', 'EMP-2023-007'
+    ];
+    var DEMO_DEVICE_NAMES = ['Main Gate Scanner', 'Faculty Room Scanner', 'Admin Wing Scanner'];
+
+    function isDemoEmployee(id) {
+        return DEMO_EMPLOYEE_IDS.indexOf(id) !== -1;
+    }
+
+    function removeDemoRecords() {
+        if (read('demoRemoved', false)) return;
+
+        function keep(key, idField) {
+            var list = read(key, null);
+            if (Array.isArray(list)) {
+                write(key, list.filter(function (item) { return !isDemoEmployee(item[idField]); }));
+            }
+        }
+        keep('employees', 'id');
+        keep('dtr', 'employeeId');
+        keep('teachingSchedule', 'employeeId');
+        keep('leaveRequests', 'employeeId');
+        keep('loans', 'employeeId');
+        keep('rates', 'empId');
+        keep('thirteenthMonth', 'employeeId');
+
+        var payslips = read('payslips', null);
+        if (payslips && typeof payslips === 'object') {
+            DEMO_EMPLOYEE_IDS.forEach(function (id) { delete payslips[id]; });
+            write('payslips', payslips);
+        }
+
+        var devices = read('devices', null);
+        if (Array.isArray(devices)) {
+            write('devices', devices.filter(function (d) { return DEMO_DEVICE_NAMES.indexOf(d.deviceName) === -1; }));
+        }
+
+        var users = read('users', null);
+        if (Array.isArray(users)) {
+            write('users', users.filter(function (u) { return !/@institution\.edu$/i.test(u.email || ''); }));
+        }
+
+        write('demoRemoved', true);
+    }
+
     function ensureSeeded() {
         if (read('seeded', false)) {
+            removeDemoRecords();
             resolveTodayPlaceholders();
             // Backfill any collection added in a later update (existing
             // browsers won't have it since the full seed only runs once).
             if (read('teachingSchedule', null) === null) {
                 write('teachingSchedule', SEED.teachingSchedule);
+            }
+            var brackets = read('taxBrackets', null);
+            if (brackets && !brackets.sss) {
+                brackets.sss = SEED.taxBrackets.sss;
+                write('taxBrackets', brackets);
             }
             return;
         }
@@ -259,6 +235,7 @@
             write(key, value);
         });
         write('seeded', true);
+        write('demoRemoved', true);   // a fresh seed has no demo records
     }
 
     function nextNumericId(list, field) {
@@ -334,7 +311,7 @@
         saveRates: function (list) { return write('rates', list); },
 
         // ---- Tax brackets ----
-        getTaxBrackets: function () { return read('taxBrackets', { bir: {}, philhealth: {}, pagibig: {} }); },
+        getTaxBrackets: function () { return read('taxBrackets', { bir: {}, philhealth: {}, pagibig: {}, sss: {} }); },
         saveTaxBrackets: function (value) { return write('taxBrackets', value); },
 
         // ---- Payslips / 13th month ----
