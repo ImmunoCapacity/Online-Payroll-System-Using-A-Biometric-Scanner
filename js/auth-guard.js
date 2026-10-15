@@ -56,6 +56,7 @@
         'maintenance.html': [MASTER],
         'leave-application.html': [MASTER],      // Maintenance → Leave
         'leave-loan-approval.html': [MASTER],    // Deduction Tables → Loans
+        'benefits.html': [MASTER],               // Benefits Table (Benefit Maintenance)
 
         // Payroll
         'payroll-processing.html': [MASTER],

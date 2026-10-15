@@ -1,29 +1,32 @@
+/**
+ * Maintenance (Payroll Master): Employee Rates, Leave Categories and the
+ * Deduction Tables (BIR, PhilHealth, Pag-IBIG, SSS). Everything is stored
+ * in the database; every change is written to the audit trail by the
+ * server, and the latest change of each table is shown under it.
+ */
 (function () {
     PayrollProLayout.init({
         activeNav: 'maintenance',
-        user: { name: 'Maria Elena Reyes', role: 'Payroll Master', initials: 'MR' },
         institution: { name: 'STI Balayan', short: 'STI' },
         notifications: false
     });
 
-    // The logged-in user's name, for the change log.
-    var CURRENT_USER = (function () {
-        try {
-            return JSON.parse(localStorage.getItem('ppUser') || '{}').name || 'Payroll Master';
-        } catch (e) {
-            return 'Payroll Master';
-        }
-    })();
-
-    function logAudit(section, action, detail) {
-        return DataStore.logAudit(section, action, detail, CURRENT_USER);
+    function api(url, method, body) {
+        return fetch(url, {
+            method: method || 'GET',
+            headers: body ? { 'Content-Type': 'application/json' } : undefined,
+            body: body ? JSON.stringify(body) : undefined
+        }).then(function (r) {
+            return r.json().catch(function () {
+                return { success: false, message: 'Unexpected response from the server.' };
+            });
+        });
     }
 
-    function formatAudit(entry) {
-        if (!entry) return 'No changes recorded yet in this session.';
-        var d = new Date(entry.at);
-        var ts = d.toLocaleString('en-PH', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
-        return 'Last change: <strong>' + entry.action + '</strong> — ' + entry.detail + ' · by ' + entry.user + ' · ' + ts;
+    function escapeHtml(value) {
+        return String(value == null ? '' : value)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
     }
 
     function peso(n) {
@@ -37,10 +40,9 @@
         return d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
     }
 
-    function dayBefore(iso) {
-        var d = new Date(iso + 'T00:00:00');
-        d.setDate(d.getDate() - 1);
-        return d.toISOString().slice(0, 10);
+    function todayIso() {
+        var d = new Date();
+        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
     }
 
     function rowActions(canDeactivate) {
@@ -54,6 +56,45 @@
             '</span>'
         );
     }
+
+    // ================================================================
+    // AUDIT — the last change of each table, from the audit trail
+    // ================================================================
+
+    var AUDIT_MODULES = {
+        rates: 'Employee Rates',
+        leave: 'Leave Categories',
+        bir: 'BIR Table',
+        philhealth: 'PhilHealth Table',
+        pagibig: 'Pag-IBIG Table',
+        sss: 'SSS Table'
+    };
+    var AUDIT_TARGETS = {
+        rates: 'ratesAudit', leave: 'leaveAudit', bir: 'birAudit',
+        philhealth: 'phAudit', pagibig: 'pagAudit', sss: 'sssAudit'
+    };
+
+    function formatAudit(entry) {
+        if (!entry) return 'No changes recorded yet.';
+        var d = new Date(entry.at);
+        var ts = d.toLocaleString('en-PH', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+        return 'Last change: <strong>' + escapeHtml(entry.action) + '</strong> — ' + escapeHtml(entry.detail) +
+            ' · by ' + escapeHtml(entry.user) + ' · ' + ts;
+    }
+
+    function loadAudit() {
+        var names = Object.keys(AUDIT_MODULES).map(function (k) { return AUDIT_MODULES[k]; });
+        return api('api/audit/latest?modules=' + encodeURIComponent(names.join(','))).then(function (data) {
+            if (!data.success) return;
+            Object.keys(AUDIT_MODULES).forEach(function (key) {
+                document.getElementById(AUDIT_TARGETS[key]).innerHTML = formatAudit(data.latest[AUDIT_MODULES[key]]);
+            });
+        }).catch(function () { /* the tables still work without it */ });
+    }
+
+    // ================================================================
+    // SECTION NAV
+    // ================================================================
 
     var sectionMap = {
         rates: 'sectionRates',
@@ -76,68 +117,115 @@
         });
     });
 
-    var EMPLOYEES = DataStore.getEmployees().filter(function (e) { return e.status !== 'Inactive'; });
+    // ================================================================
+    // EMPLOYEE RATES (api/rates) — history per employee. A new rate
+    // closes the current one the day before; the employee record is
+    // updated, and payroll pays each period at the rate in effect then.
+    // ================================================================
 
-    var rates = DataStore.getRates();
-    var ratesAuditEntry = null;
+    var rates = [];
+    var rateEmployees = [];
 
-    function persistRates() {
-        DataStore.saveRates(rates);
-    }
-
-    function empName(empId) {
-        var e = EMPLOYEES.find(function (x) { return x.id === empId; });
-        return e ? e.displayName : empId;
+    function loadRates() {
+        return api('api/rates').then(function (data) {
+            if (!data.success) throw new Error(data.message);
+            rates = data.rates;
+            rateEmployees = data.employees;
+            renderRates();
+        }).catch(function () {
+            document.getElementById('ratesBody').innerHTML =
+                '<tr><td colspan="7" class="text-center text-muted py-4">Could not load employee rates from the server.</td></tr>';
+        });
     }
 
     function renderRates() {
-        var sorted = rates.slice().sort(function (a, b) {
-            var na = empName(a.empId);
-            var nb = empName(b.empId);
-            if (na !== nb) return na.localeCompare(nb);
-            return b.effective.localeCompare(a.effective);
-        });
-        document.getElementById('ratesBody').innerHTML = sorted.map(function (r) {
+        if (!rates.length) {
+            document.getElementById('ratesBody').innerHTML =
+                '<tr><td colspan="7" class="text-center text-muted py-4">No employees with a rate yet. Rates are set in Employee Records or here.</td></tr>';
+            return;
+        }
+        document.getElementById('ratesBody').innerHTML = rates.map(function (r) {
             return (
-                '<tr class="' + (r.active ? '' : 'inactive') + '">' +
-                    '<td><strong>' + empName(r.empId) + '</strong></td>' +
-                    '<td>' + r.rateType + '</td>' +
+                '<tr class="pp-row-clickable' + (r.active ? '' : ' inactive') + '" tabindex="0" role="button" ' +
+                    'data-employee="' + escapeHtml(r.employeeId) + '" data-kind="' + escapeHtml(r.kind) + '" ' +
+                    'aria-label="New rate for ' + escapeHtml(r.employeeName) + '">' +
+                    '<td><strong>' + escapeHtml(r.employeeName) + '</strong><br><span class="text-muted small">' + escapeHtml(r.employeeType) + '</span></td>' +
+                    '<td>' + escapeHtml(r.rateType) + '</td>' +
                     '<td class="col-money">' + peso(r.amount) + '</td>' +
                     '<td>' + formatDate(r.effective) + '</td>' +
                     '<td>' + (r.end ? formatDate(r.end) : '—') + '</td>' +
                     '<td>' + (r.active ? '<span class="pp-badge-active">Active</span>' : '<span class="pp-badge-inactive">Historical</span>') + '</td>' +
-                    '<td class="col-actions">' + (r.active ? rowActions() : '<span class="text-muted small">—</span>') + '</td>' +
+                    '<td>' + (r.recordedBy ? escapeHtml(r.recordedBy) : '<span class="text-muted small">—</span>') + '</td>' +
                 '</tr>'
             );
         }).join('');
-        document.getElementById('ratesAudit').innerHTML = formatAudit(ratesAuditEntry);
     }
 
-    function populateRateEmployees() {
-        document.getElementById('rateEmployee').innerHTML = EMPLOYEES.map(function (e) {
-            return '<option value="' + e.id + '">' + e.displayName + '</option>';
-        }).join('');
+    var rateEmployee = document.getElementById('rateEmployee');
+    var rateType = document.getElementById('rateType');
+
+    function populateRateTypes() {
+        var emp = rateEmployees.find(function (e) { return e.id === rateEmployee.value; });
+        rateType.innerHTML = emp
+            ? emp.kinds.map(function (k) { return '<option value="' + k.kind + '">' + escapeHtml(k.label) + '</option>'; }).join('')
+            : '<option value="" selected hidden data-hint>Select an employee first</option>';
     }
 
-    document.getElementById('btnAddRate').addEventListener('click', function () {
-        document.getElementById('rateModalTitle').textContent = 'Add New Rate';
-        document.getElementById('rateForm').reset();
-        PPValidate.clear(document.getElementById('rateForm'));
-        populateRateEmployees();
+    // Clicking a rate row opens a new rate for that employee and rate type.
+    function openRateForm(employeeId, kind) {
+        var emp = rateEmployees.find(function (e) { return e.id === employeeId; });
+        if (!emp) {
+            PPToast.error('Only active employees can be given a new rate.');
+            return;
+        }
+        var form = document.getElementById('rateForm');
+        form.reset();
+        PPValidate.clear(form);
+        rateEmployee.innerHTML = '<option value="' + escapeHtml(emp.id) + '">' +
+            escapeHtml(emp.name) + ' (' + escapeHtml(emp.employeeType) + ')</option>';
+        rateEmployee.value = emp.id;
+        rateEmployee.disabled = true;
+        populateRateTypes();
+        if (kind && emp.kinds.some(function (k) { return k.kind === kind; })) rateType.value = kind;
+        document.getElementById('rateModalTitle').textContent = 'New Rate — ' + emp.name;
+        document.getElementById('rateEffective').max = todayIso();
         bootstrap.Modal.getOrCreateInstance(document.getElementById('rateModal')).show();
+    }
+
+    var ratesBody = document.getElementById('ratesBody');
+    ratesBody.addEventListener('click', function (event) {
+        var row = event.target.closest('tr[data-employee]');
+        if (row) openRateForm(row.dataset.employee, row.dataset.kind);
+    });
+    ratesBody.addEventListener('keydown', function (event) {
+        if ((event.key === 'Enter' || event.key === ' ') && event.target.matches('tr[data-employee]')) {
+            event.preventDefault();
+            openRateForm(event.target.dataset.employee, event.target.dataset.kind);
+        }
     });
 
-    // A new rate ends the employee's current one the day before, so it must
-    // start after the current rate's effective date.
+    function currentRate() {
+        return rates.find(function (r) {
+            return r.employeeId === rateEmployee.value && r.kind === rateType.value && r.active;
+        });
+    }
+
+    // A new rate ends the current one the day before, so it must start after
+    // the current rate's effective date, and it can't start in the future.
     document.getElementById('rateEffective').ppValidator = function (value) {
-        var empId = document.getElementById('rateEmployee').value;
-        var current = rates.find(function (r) { return r.empId === empId && r.active; });
+        if (value > todayIso()) return 'The effective date can\'t be in the future.';
+        var current = currentRate();
         return current && value <= current.effective
             ? 'Must be after the current rate\'s effective date (' + formatDate(current.effective) + ').'
             : '';
     };
 
-    document.getElementById('rateEmployee').addEventListener('change', function () {
+    rateEmployee.addEventListener('change', function () {
+        populateRateTypes();
+        var effective = document.getElementById('rateEffective');
+        if (effective.value) PPValidate.validateField(effective);
+    });
+    rateType.addEventListener('change', function () {
         var effective = document.getElementById('rateEffective');
         if (effective.value) PPValidate.validateField(effective);
     });
@@ -148,89 +236,118 @@
         if (!PPValidate.validateForm(form)) {
             return;
         }
-        var empId = document.getElementById('rateEmployee').value;
-        var effective = document.getElementById('rateEffective').value;
-        var prevEnd = dayBefore(effective);
-
-        rates.forEach(function (r) {
-            if (r.empId === empId && r.active) {
-                r.active = false;
-                r.end = prevEnd;
-            }
-        });
-
-        rates.push({
-            id: DataStore.nextNumericId(rates),
-            empId: empId,
-            rateType: document.getElementById('rateType').value,
+        var name = rateEmployee.selectedOptions[0].textContent;
+        api('api/rates', 'POST', {
+            employeeId: rateEmployee.value,
+            kind: rateType.value,
             amount: parseFloat(document.getElementById('rateAmount').value),
-            effective: effective,
-            end: null,
-            active: true
+            effectiveDate: document.getElementById('rateEffective').value
+        }).then(function (result) {
+            if (!result.success) {
+                var fields = { employeeId: 'rateEmployee', kind: 'rateType', amount: 'rateAmount', effectiveDate: 'rateEffective' };
+                if (!PPValidate.showServerError(form, result, fields)) PPToast.error(result.message);
+                return;
+            }
+            rates = result.rates;
+            renderRates();
+            loadAudit();
+            bootstrap.Modal.getInstance(document.getElementById('rateModal')).hide();
+            PPToast.success('Rate added for ' + name + '.');
+        }).catch(function () {
+            PPToast.error('Could not reach the server.');
         });
-
-        persistRates();
-        ratesAuditEntry = logAudit('Employee Rates', 'Added rate', empName(empId) + ' · ' + peso(parseFloat(document.getElementById('rateAmount').value)) + ' effective ' + formatDate(effective));
-        bootstrap.Modal.getInstance(document.getElementById('rateModal')).hide();
-        renderRates();
-        PPToast.success('Rate added for ' + empName(empId) + '.');
     });
 
-    var leaveCategories = DataStore.getLeaveCategories();
-    var leaveEditId = null;
-    var leaveAuditEntry = null;
+    // ================================================================
+    // LEAVE CATEGORIES (api/leave/categories)
+    // ================================================================
 
-    function persistLeaveCategories() {
-        DataStore.saveLeaveCategories(leaveCategories);
+    var leaveCategories = [];
+    var leaveEditId = null;
+
+    function loadLeaveCategories() {
+        return api('api/leave/categories').then(function (data) {
+            if (!data.success) throw new Error(data.message);
+            leaveCategories = data.categories;
+            renderLeave();
+        }).catch(function () {
+            document.getElementById('leaveBody').innerHTML =
+                '<tr><td colspan="6" class="text-center text-muted py-4">Could not load leave categories from the server.</td></tr>';
+        });
+    }
+
+    /** Saves a category; returns the server's reply. */
+    function saveLeaveCategory(id, data) {
+        return api(id ? 'api/leave/categories/' + id : 'api/leave/categories', id ? 'PUT' : 'POST', data);
     }
 
     function renderLeave() {
         document.getElementById('leaveBody').innerHTML = leaveCategories.map(function (c) {
             return (
                 '<tr class="' + (c.active ? '' : 'inactive') + '" data-id="' + c.id + '">' +
-                    '<td><strong>' + c.name + '</strong></td>' +
+                    '<td><strong>' + escapeHtml(c.name) + '</strong></td>' +
                     '<td>' + (c.paid ? '<span class="pp-badge-leave-paid">Paid</span>' : '<span class="pp-badge-leave-unpaid">Unpaid</span>') + '</td>' +
-                    '<td class="col-num">' + c.maxDays + '</td>' +
+                    '<td class="col-num">' + (c.maxDays == null ? '—' : c.maxDays) + '</td>' +
+                    '<td>' + (c.usesCredits ? 'Uses credits' : '<span class="text-muted">—</span>') + '</td>' +
                     '<td>' + (c.active ? '<span class="pp-badge-active">Active</span>' : '<span class="pp-badge-inactive">Inactive</span>') + '</td>' +
-                    '<td class="col-actions">' + (c.active ? rowActions() : '<span class="text-muted small">—</span>') + '</td>' +
+                    '<td class="col-actions">' + (c.active ? rowActions()
+                        : '<button type="button" class="btn btn-sm btn-pp-outline" data-action="reactivate">Reactivate</button>') + '</td>' +
                 '</tr>'
             );
         }).join('');
-        document.getElementById('leaveAudit').innerHTML = formatAudit(leaveAuditEntry);
+
+        function categoryOf(btn) {
+            var row = btn.closest('tr');
+            return leaveCategories.find(function (c) { return c.id === parseInt(row.dataset.id, 10); });
+        }
 
         document.getElementById('leaveBody').querySelectorAll('[data-action="edit"]').forEach(function (btn) {
             btn.addEventListener('click', function () {
-                var row = btn.closest('tr');
-                var cat = leaveCategories.find(function (c) { return c.id === parseInt(row.dataset.id, 10); });
+                var cat = categoryOf(btn);
                 if (!cat) return;
                 leaveEditId = cat.id;
                 document.getElementById('leaveModalTitle').textContent = 'Edit Leave Category';
                 document.getElementById('leaveName').value = cat.name;
                 document.getElementById('leavePaid').value = cat.paid ? 'Paid' : 'Unpaid';
-                document.getElementById('leaveMaxDays').value = cat.maxDays;
+                document.getElementById('leaveMaxDays').value = cat.maxDays == null ? '' : cat.maxDays;
+                document.getElementById('leaveUsesCredits').value = cat.usesCredits ? 'Yes' : 'No';
                 PPValidate.clear(document.getElementById('leaveForm'));
                 bootstrap.Modal.getOrCreateInstance(document.getElementById('leaveModal')).show();
             });
         });
 
+        function setActive(cat, active) {
+            saveLeaveCategory(cat.id, {
+                name: cat.name, paid: cat.paid, maxDays: cat.maxDays, usesCredits: cat.usesCredits, active: active
+            }).then(function (data) {
+                if (!data.success) { PPToast.error(data.message); return; }
+                PPToast.success('"' + cat.name + '" ' + (active ? 'reactivated.' : 'deactivated.'));
+                loadLeaveCategories();
+                loadAudit();
+            }).catch(function () {
+                PPToast.error('Could not reach the server.');
+            });
+        }
+
         document.getElementById('leaveBody').querySelectorAll('[data-action="deactivate"]').forEach(function (btn) {
             btn.addEventListener('click', function () {
-                var row = btn.closest('tr');
-                var cat = leaveCategories.find(function (c) { return c.id === parseInt(row.dataset.id, 10); });
+                var cat = categoryOf(btn);
                 if (!cat) return;
                 ConfirmModal.show({
                     title: 'Deactivate Leave Category',
-                    message: 'Deactivate "' + cat.name + '"? Employees will no longer be able to file this leave type.',
+                    message: 'Deactivate "' + cat.name + '"? It can no longer be chosen for new leave requests. Existing requests are kept.',
                     confirmText: 'Deactivate',
                     tone: 'danger'
                 }).then(function (confirmed) {
-                    if (!confirmed) return;
-                    cat.active = false;
-                    persistLeaveCategories();
-                    leaveAuditEntry = logAudit('Leave Categories', 'Deactivated', cat.name);
-                    renderLeave();
-                    PPToast.success('"' + cat.name + '" deactivated.');
+                    if (confirmed) setActive(cat, false);
                 });
+            });
+        });
+
+        document.getElementById('leaveBody').querySelectorAll('[data-action="reactivate"]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var cat = categoryOf(btn);
+                if (cat) setActive(cat, true);
             });
         });
     }
@@ -239,6 +356,7 @@
         leaveEditId = null;
         document.getElementById('leaveModalTitle').textContent = 'Add Leave Category';
         document.getElementById('leaveForm').reset();
+        document.getElementById('leaveUsesCredits').value = 'No';
         PPValidate.clear(document.getElementById('leaveForm'));
         bootstrap.Modal.getOrCreateInstance(document.getElementById('leaveModal')).show();
     });
@@ -251,65 +369,51 @@
         return taken ? 'A leave category with this name already exists.' : '';
     };
 
+    // Only paid leave can draw on leave credits.
+    document.getElementById('leaveUsesCredits').ppValidator = function (value) {
+        return value === 'Yes' && document.getElementById('leavePaid').value !== 'Paid'
+            ? 'Only paid leave can use leave credits.' : '';
+    };
+
     document.getElementById('leaveForm').addEventListener('submit', function (e) {
         e.preventDefault();
         var form = e.target;
         if (!PPValidate.validateForm(form)) {
             return;
         }
+        var existing = leaveEditId && leaveCategories.find(function (c) { return c.id === leaveEditId; });
         var data = {
             name: document.getElementById('leaveName').value.trim(),
             paid: document.getElementById('leavePaid').value === 'Paid',
             maxDays: parseInt(document.getElementById('leaveMaxDays').value, 10),
-            active: true
+            usesCredits: document.getElementById('leaveUsesCredits').value === 'Yes',
+            active: existing ? existing.active : true
         };
-        if (leaveEditId) {
-            var cat = leaveCategories.find(function (c) { return c.id === leaveEditId; });
-            Object.assign(cat, data);
-            leaveAuditEntry = logAudit('Leave Categories', 'Updated', data.name);
-        } else {
-            leaveCategories.push(Object.assign({ id: DataStore.nextNumericId(leaveCategories) }, data));
-            leaveAuditEntry = logAudit('Leave Categories', 'Added', data.name);
-        }
-        persistLeaveCategories();
-        bootstrap.Modal.getInstance(document.getElementById('leaveModal')).hide();
-        renderLeave();
-        PPToast.success('Leave category saved.');
+        saveLeaveCategory(leaveEditId, data).then(function (result) {
+            if (!result.success) {
+                var fields = { name: 'leaveName', maxDays: 'leaveMaxDays', usesCredits: 'leaveUsesCredits' };
+                if (!PPValidate.showServerError(form, result, fields)) PPToast.error(result.message);
+                return;
+            }
+            bootstrap.Modal.getInstance(document.getElementById('leaveModal')).hide();
+            PPToast.success('Leave category saved.');
+            loadLeaveCategories();
+            loadAudit();
+        }).catch(function () {
+            PPToast.error('Could not reach the server.');
+        });
     });
 
-    var TAX_BRACKETS = DataStore.getTaxBrackets();
+    // ================================================================
+    // DEDUCTION TABLES (api/contribution-tables) — brackets per year
+    // ================================================================
 
-    function makeBracketStore(seed) {
-        var store = JSON.parse(JSON.stringify(seed || {}));
-        var audits = {};
-        Object.keys(store).forEach(function (y) { audits[y] = null; });
-        var maxId = 0;
-        Object.keys(store).forEach(function (y) {
-            store[y].forEach(function (b) { if (b.id > maxId) maxId = b.id; });
-        });
-        return { data: store, audits: audits, nextId: maxId + 1 };
-    }
-
-    function persistTaxBrackets() {
-        DataStore.saveTaxBrackets({
-            bir: birStore.data,
-            philhealth: phStore.data,
-            pagibig: pagStore.data,
-            sss: sssStore.data
-        });
-    }
-
-    var birStore = makeBracketStore(TAX_BRACKETS.bir);
-    var phStore = makeBracketStore(TAX_BRACKETS.philhealth);
-    var pagStore = makeBracketStore(TAX_BRACKETS.pagibig);
-    var sssStore = makeBracketStore(TAX_BRACKETS.sss || {});
+    var TABLES = { bir: {}, philhealth: {}, pagibig: {}, sss: {} };
 
     var bracketConfigs = {
         bir: {
-            store: birStore,
             yearSelect: 'birYear',
             body: 'birBody',
-            audit: 'birAudit',
             label: 'BIR Table',
             addBtn: 'btnAddBir',
             fields: [
@@ -324,7 +428,7 @@
                         '<td class="col-money">' + peso(b.min) + '</td>' +
                         '<td class="col-money">' + (b.max != null ? peso(b.max) : 'Above') + '</td>' +
                         '<td class="col-money">' + peso(b.base) + '</td>' +
-                        '<td class="col-num">' + b.rate + '%</td>' +
+                        '<td class="col-num">' + Number(b.rate) + '%</td>' +
                         '<td class="col-actions">' + rowActions(true) + '</td>' +
                     '</tr>'
                 );
@@ -334,10 +438,8 @@
             }
         },
         philhealth: {
-            store: phStore,
             yearSelect: 'phYear',
             body: 'phBody',
-            audit: 'phAudit',
             label: 'PhilHealth Table',
             addBtn: 'btnAddPh',
             fields: [
@@ -352,7 +454,7 @@
                         '<td class="col-money">' + peso(b.min) + '</td>' +
                         '<td class="col-money">' + (b.max != null ? peso(b.max) : 'Above') + '</td>' +
                         '<td class="col-money">' + (b.premium != null ? peso(b.premium) : '—') + '</td>' +
-                        '<td class="col-num">' + b.rate + '%</td>' +
+                        '<td class="col-num">' + Number(b.rate) + '%</td>' +
                         '<td class="col-actions">' + rowActions(true) + '</td>' +
                     '</tr>'
                 );
@@ -362,10 +464,8 @@
             }
         },
         pagibig: {
-            store: pagStore,
             yearSelect: 'pagYear',
             body: 'pagBody',
-            audit: 'pagAudit',
             label: 'Pag-IBIG Table',
             addBtn: 'btnAddPag',
             fields: [
@@ -380,7 +480,7 @@
                         '<td class="col-money">' + peso(b.min) + '</td>' +
                         '<td class="col-money">' + (b.max != null ? peso(b.max) : 'Above') + '</td>' +
                         '<td class="col-money">' + (b.share != null ? peso(b.share) : '—') + '</td>' +
-                        '<td class="col-num">' + b.rate + '%</td>' +
+                        '<td class="col-num">' + Number(b.rate) + '%</td>' +
                         '<td class="col-actions">' + rowActions(true) + '</td>' +
                     '</tr>'
                 );
@@ -390,10 +490,8 @@
             }
         },
         sss: {
-            store: sssStore,
             yearSelect: 'sssYear',
             body: 'sssBody',
-            audit: 'sssAudit',
             label: 'SSS Table',
             addBtn: 'btnAddSss',
             fields: [
@@ -408,7 +506,7 @@
                         '<td class="col-money">' + peso(b.min) + '</td>' +
                         '<td class="col-money">' + (b.max != null ? peso(b.max) : 'Above') + '</td>' +
                         '<td class="col-money">' + peso(b.msc) + '</td>' +
-                        '<td class="col-num">' + b.rate + '%</td>' +
+                        '<td class="col-num">' + Number(b.rate) + '%</td>' +
                         '<td class="col-actions">' + rowActions(true) + '</td>' +
                     '</tr>'
                 );
@@ -423,41 +521,38 @@
     var bracketModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('bracketModal'));
     var highStakesModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('highStakesModal'));
 
-    function populateYearSelect(selectId, store) {
-        var years = Object.keys(store.data).sort(function (a, b) { return b - a; });
-        document.getElementById(selectId).innerHTML = years.map(function (y) {
-            return '<option value="' + y + '">' + y + '</option>';
-        }).join('');
+    function populateYearSelect(configKey) {
+        var select = document.getElementById(bracketConfigs[configKey].yearSelect);
+        var previous = select.value;
+        var years = Object.keys(TABLES[configKey] || {}).sort(function (a, b) { return b - a; });
+        select.innerHTML = years.length
+            ? years.map(function (y) { return '<option value="' + y + '">' + y + '</option>'; }).join('')
+            : '<option value="' + new Date().getFullYear() + '">' + new Date().getFullYear() + '</option>';
+        if (previous && years.indexOf(previous) !== -1) select.value = previous;
     }
 
-    function getYearBrackets(config) {
-        var year = document.getElementById(config.yearSelect).value;
-        if (!config.store.data[year]) config.store.data[year] = [];
-        return config.store.data[year];
+    function getYearBrackets(configKey) {
+        var year = document.getElementById(bracketConfigs[configKey].yearSelect).value;
+        return (TABLES[configKey] || {})[year] || [];
     }
 
     function renderBracketTable(configKey) {
         var config = bracketConfigs[configKey];
-        var brackets = getYearBrackets(config).slice().sort(function (a, b) { return a.min - b.min; });
-        document.getElementById(config.body).innerHTML = brackets.map(function (b) {
-            return config.renderRow(b);
-        }).join('');
+        var body = document.getElementById(config.body);
+        var brackets = getYearBrackets(configKey).slice().sort(function (a, b) { return a.min - b.min; });
+        body.innerHTML = brackets.length
+            ? brackets.map(function (b) { return config.renderRow(b); }).join('')
+            : '<tr><td colspan="5" class="text-center text-muted py-4">No brackets for this year.</td></tr>';
 
-        var year = document.getElementById(config.yearSelect).value;
-        document.getElementById(config.audit).innerHTML = formatAudit(config.store.audits[year]);
-
-        document.getElementById(config.body).querySelectorAll('[data-action="edit"]').forEach(function (btn) {
+        body.querySelectorAll('[data-action="edit"]').forEach(function (btn) {
             btn.addEventListener('click', function () {
                 openBracketForm(configKey, parseInt(btn.closest('tr').dataset.id, 10), false);
             });
         });
 
-        document.getElementById(config.body).querySelectorAll('[data-action="deactivate"]').forEach(function (btn) {
+        body.querySelectorAll('[data-action="deactivate"]').forEach(function (btn) {
             btn.addEventListener('click', function () {
                 var id = parseInt(btn.closest('tr').dataset.id, 10);
-                var brackets = getYearBrackets(config);
-                var idx = brackets.findIndex(function (b) { return b.id === id; });
-                if (idx < 0) return;
                 ConfirmModal.show({
                     title: 'Remove Bracket Row',
                     message: 'Remove this bracket row? Ensure remaining brackets still cover all salary ranges.',
@@ -465,12 +560,16 @@
                     tone: 'danger'
                 }).then(function (confirmed) {
                     if (!confirmed) return;
-                    var removed = brackets.splice(idx, 1)[0];
-                    var year = document.getElementById(config.yearSelect).value;
-                    persistTaxBrackets();
-                    config.store.audits[year] = logAudit(config.label, 'Removed bracket', config.summary(removed) + ' (' + year + ')');
-                    renderBracketTable(configKey);
-                    PPToast.success('Bracket row removed.');
+                    api('api/contribution-tables/' + configKey + '/' + id, 'DELETE').then(function (data) {
+                        if (!data.success) { PPToast.error(data.message || 'Could not remove the row.'); return; }
+                        TABLES[configKey] = data.years;
+                        populateYearSelect(configKey);
+                        renderBracketTable(configKey);
+                        loadAudit();
+                        PPToast.success('Bracket row removed.');
+                    }).catch(function () {
+                        PPToast.error('Could not reach the server.');
+                    });
                 });
             });
         });
@@ -501,7 +600,7 @@
         var year = document.getElementById(config.yearSelect).value;
         var existing = null;
         if (!isNew) {
-            existing = getYearBrackets(config).find(function (b) { return b.id === id; });
+            existing = getYearBrackets(configKey).find(function (b) { return b.id === id; });
         }
         document.getElementById('bracketModalTitle').textContent = (isNew ? 'Add Bracket' : 'Edit Bracket') + ' — ' + year;
         document.getElementById('bracketFormFields').innerHTML = buildBracketFormFields(config, existing);
@@ -537,7 +636,7 @@
             return;
         }
         var newMax = record.max == null ? Infinity : record.max;
-        var overlap = getYearBrackets(config).find(function (b) {
+        var overlap = getYearBrackets(configKey).find(function (b) {
             if (!isNew && b.id === editingId) return false;
             var bMax = b.max == null ? Infinity : b.max;
             return record.min < bMax && newMax > b.min;
@@ -549,13 +648,7 @@
             return;
         }
 
-        pendingBracketSave = {
-            configKey: configKey,
-            year: year,
-            isNew: isNew,
-            id: form.dataset.id ? parseInt(form.dataset.id, 10) : null,
-            record: record
-        };
+        pendingBracketSave = { configKey: configKey, year: year, isNew: isNew, id: editingId, record: record };
 
         document.getElementById('highStakesSummary').innerHTML =
             '<strong>' + config.label + ' · Year ' + year + '</strong><br>' + config.summary(record);
@@ -566,47 +659,68 @@
 
     document.getElementById('btnHighStakesConfirm').addEventListener('click', function () {
         if (!pendingBracketSave) return;
-        var configKey = pendingBracketSave.configKey;
-        var config = bracketConfigs[configKey];
-        var brackets = config.store.data[pendingBracketSave.year];
-        var record = pendingBracketSave.record;
+        var save = pendingBracketSave;
+        var body = Object.assign({ year: parseInt(save.year, 10) }, save.record);
+        var url = 'api/contribution-tables/' + save.configKey + (save.isNew ? '' : '/' + save.id);
+        var button = this;
+        button.disabled = true;
 
-        if (pendingBracketSave.isNew) {
-            record.id = config.store.nextId++;
-            brackets.push(record);
-        } else {
-            var existing = brackets.find(function (b) { return b.id === pendingBracketSave.id; });
-            Object.assign(existing, record);
-        }
-
-        persistTaxBrackets();
-        config.store.audits[pendingBracketSave.year] = logAudit(
-            config.label,
-            pendingBracketSave.isNew ? 'Added bracket' : 'Updated bracket',
-            config.summary(record) + ' (' + pendingBracketSave.year + ')'
-        );
-
-        pendingBracketSave = null;
-        highStakesModal.hide();
-        renderBracketTable(configKey);
-        PPToast.success('Bracket table updated.');
+        api(url, save.isNew ? 'POST' : 'PUT', body).then(function (data) {
+            if (!data.success) {
+                highStakesModal.hide();
+                openBracketForm(save.configKey, save.id, save.isNew);
+                // Put the values back and show the server's message beside the field.
+                Object.keys(save.record).forEach(function (k) {
+                    var input = document.getElementById('bf_' + k);
+                    if (input) input.value = save.record[k] == null ? '' : save.record[k];
+                });
+                var fields = { min: 'bf_min', max: 'bf_max', base: 'bf_base', premium: 'bf_premium', share: 'bf_share', msc: 'bf_msc', rate: 'bf_rate' };
+                if (!PPValidate.showServerError(document.getElementById('bracketForm'), data, fields)) PPToast.error(data.message);
+                return;
+            }
+            pendingBracketSave = null;
+            TABLES[save.configKey] = data.years;
+            highStakesModal.hide();
+            renderBracketTable(save.configKey);
+            loadAudit();
+            PPToast.success('Bracket table updated.');
+        }).catch(function () {
+            PPToast.error('Could not reach the server.');
+        }).then(function () {
+            button.disabled = false;
+        });
     });
+
+    function loadTables() {
+        return api('api/contribution-tables').then(function (data) {
+            if (!data.success) throw new Error(data.message);
+            TABLES = data.tables;
+            Object.keys(bracketConfigs).forEach(function (key) {
+                populateYearSelect(key);
+                renderBracketTable(key);
+            });
+        }).catch(function () {
+            Object.keys(bracketConfigs).forEach(function (key) {
+                document.getElementById(bracketConfigs[key].body).innerHTML =
+                    '<tr><td colspan="5" class="text-center text-muted py-4">Could not load the table from the server.</td></tr>';
+            });
+        });
+    }
 
     Object.keys(bracketConfigs).forEach(function (key) {
         var config = bracketConfigs[key];
-        populateYearSelect(config.yearSelect, config.store);
         document.getElementById(config.yearSelect).addEventListener('change', function () {
             renderBracketTable(key);
         });
         document.getElementById(config.addBtn).addEventListener('click', function () {
             openBracketForm(key, null, true);
         });
-        renderBracketTable(key);
     });
 
-    populateRateEmployees();
-    renderRates();
-    renderLeave();
+    loadRates();
+    loadLeaveCategories();
+    loadTables();
+    loadAudit();
 
     if (location.hash === '#leave') {
         document.querySelector('[data-section="leave"]').click();

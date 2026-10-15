@@ -15,7 +15,7 @@
     //
     //   Payroll Master        Dashboard, Fingerprint Registration, DTR,
     //                         Attendance Recording, Maintenance,
-    //                         Deduction Tables, Payroll, Reports,
+    //                         Benefits Table, Payroll, Reports,
     //                         Employee Record Management
     //   Payroll Staff         Dashboard, Fingerprint Registration, DTR,
     //                         Attendance Recording
@@ -125,10 +125,10 @@
         },
 
         {
-            id: 'deductions',
-            label: 'Deduction Tables',
-            icon: 'bi-table',
-            href: 'maintenance.html#bir'
+            id: 'benefits',
+            label: 'Benefits Table',
+            icon: 'bi-gift',
+            href: 'benefits.html'
         },
 
         {
@@ -320,6 +320,53 @@
                 }).join('') +
             '</div>'
         );
+
+    }
+
+
+    // Every menu link loads a new page, which would put the sidebar back at
+    // the top. Its scroll position is remembered for this tab and restored,
+    // so e.g. clicking Attendance Report (low in the menu) keeps it in view.
+    function keepSidebarScroll() {
+
+        var nav = document.querySelector('.pp-sidebar-nav');
+
+        if (!nav) {
+            return;
+        }
+
+        var saved = null;
+
+        try {
+            saved = sessionStorage.getItem('ppSidebarScroll');
+        } catch (error) {
+            // storage blocked — fall back to showing the current item
+        }
+
+        // Opened directly (or in a new tab): no saved position, so scroll the
+        // current item into view instead.
+        var current = saved === null
+            && (nav.querySelector('.pp-sidebar-sublink.active') || nav.querySelector('.pp-sidebar-link.active'));
+
+        if (saved !== null) {
+            nav.scrollTop = Number(saved) || 0;
+        } else if (current) {
+            var top = current.getBoundingClientRect().top - nav.getBoundingClientRect().top + nav.scrollTop;
+            if (top < nav.scrollTop || top + current.offsetHeight > nav.scrollTop + nav.clientHeight) {
+                nav.scrollTop = top - nav.clientHeight / 2 + current.offsetHeight / 2;
+            }
+        }
+
+        function save() {
+            try {
+                sessionStorage.setItem('ppSidebarScroll', String(nav.scrollTop));
+            } catch (error) {
+                // ignore
+            }
+        }
+
+        nav.addEventListener('scroll', save, { passive: true });
+        global.addEventListener('pagehide', save);
 
     }
 
@@ -1200,6 +1247,8 @@
                         config.navMode,
                         config.brandHref
                     );
+
+                keepSidebarScroll();
 
             }
 

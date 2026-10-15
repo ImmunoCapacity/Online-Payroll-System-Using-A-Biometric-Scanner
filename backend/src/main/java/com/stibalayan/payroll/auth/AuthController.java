@@ -17,10 +17,35 @@ public class AuthController {
 
     private final AuthService authService;
     private final AuthInterceptor authInterceptor;
+    private final PasswordResetService passwordReset;
 
-    public AuthController(AuthService authService, AuthInterceptor authInterceptor) {
+    public AuthController(AuthService authService, AuthInterceptor authInterceptor, PasswordResetService passwordReset) {
         this.authService = authService;
         this.authInterceptor = authInterceptor;
+        this.passwordReset = passwordReset;
+    }
+
+    // ---- Forgot Password (no login needed) ----
+
+    /** Body: { email }. Emails a 6-digit code if the email belongs to an active account. */
+    @PostMapping("/forgot-password")
+    public Map<String, Object> forgotPassword(@RequestBody Map<String, String> body) {
+        passwordReset.requestCode(body.get("email"));
+        return Map.of("success", true, "message",
+                "If an account uses this email, a 6-digit code has been sent to it. It expires in 10 minutes.");
+    }
+
+    /** Body: { email, code }. Returns a resetToken for /reset-password. */
+    @PostMapping("/verify-otp")
+    public Map<String, Object> verifyOtp(@RequestBody Map<String, String> body) {
+        return Map.of("success", true, "resetToken", passwordReset.verifyCode(body.get("email"), body.get("code")));
+    }
+
+    /** Body: { email, resetToken, password, confirmPassword }. */
+    @PostMapping("/reset-password")
+    public Map<String, Object> resetPassword(@RequestBody Map<String, String> body) {
+        passwordReset.resetPassword(body.get("email"), body.get("resetToken"), body.get("password"), body.get("confirmPassword"));
+        return Map.of("success", true, "message", "Your password has been changed. You can now log in.");
     }
 
     /** Body: { "email": "...", "password": "..." } */

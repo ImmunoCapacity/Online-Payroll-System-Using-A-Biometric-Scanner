@@ -3,6 +3,7 @@ package com.stibalayan.payroll.user;
 import com.stibalayan.payroll.auth.Roles;
 import com.stibalayan.payroll.common.ApiException;
 import com.stibalayan.payroll.common.Validation;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.regex.Pattern;
 import org.springframework.http.HttpStatus;
@@ -17,7 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * Guard rails so the system can't be locked out:
  *   - you can't delete, deactivate or change the role of your own account;
- *   - the last active System Administrator can't be removed or demoted.
+ *   - System Administrator accounts can't be deleted (only deactivated);
+ *   - the last active System Administrator can't be deactivated or demoted.
  */
 @Service
 public class UserService {
@@ -51,6 +53,7 @@ public class UserService {
         User user = new User();
         apply(user, request);
         user.setPassword(passwordEncoder.encode(password));
+        user.setPasswordChangedAt(LocalDateTime.now());
         return UserResponse.of(users.save(user));
     }
 
@@ -77,6 +80,7 @@ public class UserService {
         apply(user, request);
         if (!password.isEmpty()) {
             user.setPassword(passwordEncoder.encode(password));
+            user.setPasswordChangedAt(LocalDateTime.now());
         }
         return UserResponse.of(user);
     }
@@ -87,9 +91,8 @@ public class UserService {
             throw unprocessable("You can't delete your own account.");
         }
         User user = users.findById(id).orElseThrow(UserService::notFound);
-        if (Roles.SYSTEM_ADMINISTRATOR.equals(user.getRole()) && user.isActive()
-                && users.countByRoleAndActiveTrue(Roles.SYSTEM_ADMINISTRATOR) <= 1) {
-            throw unprocessable("This is the last active System Administrator account. Create another one first.");
+        if (Roles.SYSTEM_ADMINISTRATOR.equals(user.getRole())) {
+            throw unprocessable("System Administrator accounts can't be deleted. Deactivate the account instead.");
         }
         users.delete(user);
     }
@@ -124,7 +127,7 @@ public class UserService {
     }
 
     /** At least 8 characters, at most 72 (BCrypt ignores anything longer), with a letter and a digit. */
-    private static void checkPassword(String password) {
+    public static void checkPassword(String password) {
         if (password.length() < MIN_PASSWORD_LENGTH || password.length() > MAX_PASSWORD_LENGTH
                 || !password.matches(".*\\p{L}.*") || !password.matches(".*\\d.*")) {
             throw Validation.invalid("password", "Password must be " + MIN_PASSWORD_LENGTH + "–" + MAX_PASSWORD_LENGTH

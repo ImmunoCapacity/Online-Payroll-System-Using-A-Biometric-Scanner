@@ -10,12 +10,15 @@
 --   * faculty_staff / admin_staff also carry employee_number and notes,
 --     used by Employee Records. Employees are records, not users: they have
 --     no username or password and cannot log in. Only the users table logs in.
+--   * faculty_staff / admin_staff have is_archived / archived_at: employees are
+--     archived, never deleted, so their payroll, DTR, leave and loan history
+--     stays. Archived employees are hidden from lists and pickers.
 --   * loan and employee_leave get employee foreign keys so a record can be
 --     traced to its employee. "leave" is a reserved word in MySQL, hence
 --     employee_leave.
 --   * lecture_hours / office_hours are DECIMAL(4,1); the paper's DECIMAL(2,1)
 --     can only hold up to 9.9 hours.
---   * Tables 11–22 at the end are not in the paper's data dictionary but are
+--   * Tables 11–24 at the end are not in the paper's data dictionary but are
 --     needed by modules the paper's Scope describes (Deduction Tables,
 --     Leave Category Maintenance, Benefit Maintenance, Employee Rank,
 --     Employee Schedule, Audit Trail, Faculty Schedule, Faculty Teaching
@@ -44,7 +47,8 @@ CREATE TABLE IF NOT EXISTS users (
                    CHECK (role IN ('Payroll Master', 'Payroll Staff', 'System Administrator')),
     email          VARCHAR(100) NOT NULL UNIQUE,
     contact_number VARCHAR(50),
-    is_active      TINYINT(1)   NOT NULL DEFAULT 1
+    is_active      TINYINT(1)   NOT NULL DEFAULT 1,
+    password_changed_at DATETIME                 -- last password change (by the System Administrator or Forgot Password)
 ) ENGINE=InnoDB;
 
 -- Table 1. Faculty Staff
@@ -74,7 +78,9 @@ CREATE TABLE IF NOT EXISTS faculty_staff (
     pagibig_id         VARCHAR(50),
     tin_id             VARCHAR(50),
     instructor_rank    VARCHAR(20),                 -- Instructor I | II | III
-    notes              TEXT
+    notes              TEXT,
+    is_archived        TINYINT(1)   NOT NULL DEFAULT 0,  -- archived records are kept, never deleted
+    archived_at        DATETIME
 ) ENGINE=InnoDB;
 
 -- Table 2. Admin Staff
@@ -111,7 +117,9 @@ CREATE TABLE IF NOT EXISTS admin_staff (
     philhealth_id      VARCHAR(50),
     pagibig_id         VARCHAR(50),
     tin_id             VARCHAR(50),
-    notes              TEXT
+    notes              TEXT,
+    is_archived        TINYINT(1)   NOT NULL DEFAULT 0,  -- archived records are kept, never deleted
+    archived_at        DATETIME
 ) ENGINE=InnoDB;
 
 -- Table 6. Device — biometric scanners
@@ -147,7 +155,32 @@ CREATE TABLE IF NOT EXISTS daily_time_record (
     CONSTRAINT fk_dtr_admin   FOREIGN KEY (adminstaff_id) REFERENCES admin_staff (adminstaff_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- Table 4. Payroll — one computed payslip per employee per pay period
+-- 18. Payroll Computation History: one row per pay period that was run.
+--     (Numbered with the extra tables below; defined here because payroll
+--     rows point to it.)
+CREATE TABLE IF NOT EXISTS payroll_run (
+    payroll_run_id   INT AUTO_INCREMENT PRIMARY KEY,
+    pay_period_start DATE        NOT NULL,
+    pay_period_end   DATE        NOT NULL,
+    period_label     VARCHAR(60),
+    status           VARCHAR(20) NOT NULL DEFAULT 'Processing',  -- Processing | Released
+    computed_by      INT,
+    computed_at      DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    released_by      INT,
+    released_at      DATETIME,
+    distributed_at   DATETIME,                                   -- payslips last emailed
+    emails_sent      INT,
+    emails_total     INT,
+    UNIQUE KEY uq_run_period (pay_period_start, pay_period_end),
+    CONSTRAINT fk_run_user     FOREIGN KEY (computed_by) REFERENCES users (user_id) ON DELETE SET NULL,
+    CONSTRAINT fk_run_releaser FOREIGN KEY (released_by) REFERENCES users (user_id) ON DELETE SET NULL
+) ENGINE=InnoDB;
+
+-- Table 4. Payroll — one computed payslip per employee per pay period.
+--   payroll_run_id .. email_message are additions: the run the row belongs
+--   to, the employee's number and staff type when paid, the review status,
+--   the itemised breakdown (earnings lines, benefits, loans) as JSON, and
+--   whether the payslip email was sent.
 CREATE TABLE IF NOT EXISTS payroll (
     payroll_id              INT AUTO_INCREMENT PRIMARY KEY,
     faculty_id              INT,
@@ -172,6 +205,14 @@ CREATE TABLE IF NOT EXISTS payroll (
     pay_period_start        DATE NOT NULL,
     pay_period_end          DATE NOT NULL,
     date_generated          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    payroll_run_id          INT,
+    employee_number         VARCHAR(20),
+    employee_type           VARCHAR(20),                  -- Faculty | Admin | Faculty/Admin
+    review_status           VARCHAR(20) NOT NULL DEFAULT 'Computed',  -- Computed | Reviewed | Released
+    breakdown               LONGTEXT,
+    email_status            VARCHAR(20),                  -- sent | failed | skipped
+    email_message           VARCHAR(255),
+    CONSTRAINT fk_payroll_run     FOREIGN KEY (payroll_run_id) REFERENCES payroll_run (payroll_run_id) ON DELETE CASCADE,
     CONSTRAINT fk_payroll_faculty FOREIGN KEY (faculty_id)    REFERENCES faculty_staff (faculty_id)  ON DELETE CASCADE,
     CONSTRAINT fk_payroll_admin   FOREIGN KEY (adminstaff_id) REFERENCES admin_staff (adminstaff_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
@@ -195,17 +236,21 @@ CREATE TABLE IF NOT EXISTS employee_leave (
     faculty_id         INT,
     adminstaff_id      INT,
     leave_category     VARCHAR(50) NOT NULL,        -- sick | vacation | maternity | paternity | ...
-    status             VARCHAR(50) NOT NULL DEFAULT 'Pending',
+    leave_category_id  INT,                         -- leave_category row (12)
+    is_paid            TINYINT(1)  NOT NULL DEFAULT 0, -- copied from the category when filed
+    reason             VARCHAR(255),                -- the employee's reason
+    status             VARCHAR(50) NOT NULL DEFAULT 'Pending',   -- Pending | Approved | Rejected | Cancelled
     date_requested     DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    date_approved      DATETIME,
-    approved_by        VARCHAR(50),
+    date_approved      DATETIME,                    -- when it was approved, rejected or cancelled
+    approved_by        VARCHAR(50),                 -- name of the user who did that
+    recorded_by        INT,                         -- user who recorded the request
     date_from          DATE        NOT NULL,
     date_to            DATE        NOT NULL,
-    remarks            VARCHAR(255),
-    total_days         INT,
-    total_leave_credit INT,
-    used_leave         INT,
-    remaining_leave    INT,
+    remarks            VARCHAR(255),                -- reviewer's remarks
+    total_days         INT,                         -- working days (Mon–Fri)
+    total_leave_credit INT,                         -- credits for the year, when it uses credits
+    used_leave         INT,                         -- credits used before this request
+    remaining_leave    INT,                         -- credits left after this request
     CONSTRAINT fk_leave_faculty FOREIGN KEY (faculty_id)    REFERENCES faculty_staff (faculty_id)  ON DELETE CASCADE,
     CONSTRAINT fk_leave_admin   FOREIGN KEY (adminstaff_id) REFERENCES admin_staff (adminstaff_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
@@ -218,10 +263,29 @@ CREATE TABLE IF NOT EXISTS loan (
     loan_type     VARCHAR(50)   NOT NULL,           -- SSS Loan | Pag-IBIG Loan | Personal Loan
     loan_amount   DECIMAL(10,2) NOT NULL,
     `current_date` DATE         NOT NULL,           -- date the loan was recorded/approved
-    date_from     DATE,
-    date_to       DATE,
+    date_from     DATE,                             -- first payroll period that deducts it
+    date_to       DATE,                             -- when it was fully paid
+    reference_no  VARCHAR(30)   UNIQUE,             -- lender's reference number
+    deduction_per_payroll DECIMAL(10,2) NOT NULL DEFAULT 0,
+    remarks       VARCHAR(255),
+    recorded_by   INT,
     CONSTRAINT fk_loan_faculty FOREIGN KEY (faculty_id)    REFERENCES faculty_staff (faculty_id)  ON DELETE CASCADE,
     CONSTRAINT fk_loan_admin   FOREIGN KEY (adminstaff_id) REFERENCES admin_staff (adminstaff_id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- Table 9a. Loan payments: one deduction per loan per released payroll period.
+CREATE TABLE IF NOT EXISTS loan_payment (
+    loan_payment_id   INT AUTO_INCREMENT PRIMARY KEY,
+    loan_id           INT           NOT NULL,
+    period_from       DATE          NOT NULL,
+    period_to         DATE          NOT NULL,
+    period_label      VARCHAR(60),
+    amount            DECIMAL(10,2) NOT NULL,
+    remaining_balance DECIMAL(10,2) NOT NULL,       -- balance after this deduction
+    date_processed    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    recorded_by       INT,
+    UNIQUE KEY uq_loan_payment_period (loan_id, period_from),
+    CONSTRAINT fk_loan_payment_loan FOREIGN KEY (loan_id) REFERENCES loan (loan_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 -- Table 10. 13th Month Pay
@@ -279,13 +343,71 @@ CREATE TABLE IF NOT EXISTS sss_table (
     employee_rate_percent DECIMAL(5,2)  NOT NULL  -- employee share of the MSC
 ) ENGINE=InnoDB;
 
+-- Default tables for 2025 and 2026, only when a table is still empty (so
+-- changes made in Maintenance are never overwritten by a re-import).
+--   BIR: TRAIN law withholding tax, monthly.
+--   PhilHealth: 5% premium, ₱10,000 floor and ₱100,000 ceiling, shared 50/50.
+--   Pag-IBIG: 1% up to ₱1,500, else 2%; compensation capped at ₱10,000.
+--   SSS: Monthly Salary Credit ₱5,000–₱35,000 in ₱500 steps; employee share 5%.
+INSERT INTO bir_table (effective_year, bracket_min, bracket_max, base_tax, rate_percent)
+SELECT y.yr, b.mn, b.mx, b.base, b.rate
+FROM (SELECT 2025 AS yr UNION ALL SELECT 2026) y
+CROSS JOIN (
+    SELECT 0 AS mn, 20833 AS mx, 0 AS base, 0 AS rate
+    UNION ALL SELECT 20833.01, 33333, 0, 15
+    UNION ALL SELECT 33333.01, 66667, 1875, 20
+    UNION ALL SELECT 66667.01, 166667, 8541.80, 25
+    UNION ALL SELECT 166667.01, 666667, 33541.80, 30
+    UNION ALL SELECT 666667.01, NULL, 183541.80, 35
+) b
+WHERE NOT EXISTS (SELECT 1 FROM bir_table);
+
+INSERT INTO philhealth_table (effective_year, salary_min, salary_max, monthly_premium, rate_percent)
+SELECT y.yr, b.mn, b.mx, b.premium, 5
+FROM (SELECT 2025 AS yr UNION ALL SELECT 2026) y
+CROSS JOIN (
+    SELECT 0 AS mn, 10000 AS mx, 500 AS premium
+    UNION ALL SELECT 10000.01, 99999.99, NULL
+    UNION ALL SELECT 100000, NULL, 5000
+) b
+WHERE NOT EXISTS (SELECT 1 FROM philhealth_table);
+
+INSERT INTO pagibig_table (effective_year, compensation_min, compensation_max, employee_share, rate_percent)
+SELECT y.yr, b.mn, b.mx, b.share, b.rate
+FROM (SELECT 2025 AS yr UNION ALL SELECT 2026) y
+CROSS JOIN (
+    SELECT 0 AS mn, 1500 AS mx, NULL AS share, 1 AS rate
+    UNION ALL SELECT 1500.01, 10000, NULL, 2
+    UNION ALL SELECT 10000.01, NULL, 200, 2
+) b
+WHERE NOT EXISTS (SELECT 1 FROM pagibig_table);
+
+INSERT INTO sss_table (effective_year, compensation_min, compensation_max, monthly_salary_credit, employee_rate_percent)
+SELECT y.yr, b.mn, b.mx, b.msc, 5
+FROM (SELECT 2025 AS yr UNION ALL SELECT 2026) y
+CROSS JOIN (
+    SELECT 0 AS mn, 5249.99 AS mx, 5000 AS msc
+    UNION ALL SELECT seq - 250, seq + 249.99, seq FROM seq_5500_to_34500_step_500
+    UNION ALL SELECT 34750, NULL, 35000
+) b
+WHERE NOT EXISTS (SELECT 1 FROM sss_table);
+
 -- 12. Leave Category Maintenance (5.3)
 CREATE TABLE IF NOT EXISTS leave_category (
     leave_category_id INT AUTO_INCREMENT PRIMARY KEY,
     category_name     VARCHAR(50) NOT NULL UNIQUE,  -- sick, vacation, maternity, paternity, ...
     is_paid           TINYINT(1)  NOT NULL DEFAULT 1,
-    is_active         TINYINT(1)  NOT NULL DEFAULT 1
+    is_active         TINYINT(1)  NOT NULL DEFAULT 1,
+    max_days          INT,                          -- most working days one request may cover
+    uses_credits      TINYINT(1)  NOT NULL DEFAULT 0 -- counts against the yearly leave credits
 ) ENGINE=InnoDB;
+
+INSERT IGNORE INTO leave_category (category_name, is_paid, is_active, max_days, uses_credits) VALUES
+    ('Sick Leave', 1, 1, 15, 1),
+    ('Vacation Leave', 1, 1, 15, 1),
+    ('Maternity Leave', 1, 1, 105, 0),
+    ('Paternity Leave', 1, 1, 7, 0),
+    ('Leave Without Pay', 0, 1, 30, 0);
 
 -- 13. Leave credits per employee (Employee Records Management: "manage the
 --     number of leave credits allocated per employee"; interview: 15 days).
@@ -295,6 +417,8 @@ CREATE TABLE IF NOT EXISTS leave_credit (
     adminstaff_id   INT,
     year_covered    YEAR NOT NULL,
     total_credits   INT  NOT NULL DEFAULT 15,
+    UNIQUE KEY uq_credit_faculty_year (faculty_id, year_covered),
+    UNIQUE KEY uq_credit_admin_year (adminstaff_id, year_covered),
     CONSTRAINT fk_credit_faculty FOREIGN KEY (faculty_id)    REFERENCES faculty_staff (faculty_id)  ON DELETE CASCADE,
     CONSTRAINT fk_credit_admin   FOREIGN KEY (adminstaff_id) REFERENCES admin_staff (adminstaff_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
@@ -313,6 +437,8 @@ CREATE TABLE IF NOT EXISTS employee_benefit (
     faculty_id    INT,
     adminstaff_id INT,
     amount        DECIMAL(10,2) NOT NULL,          -- per payroll period
+    UNIQUE KEY uq_eb_faculty (benefit_id, faculty_id),
+    UNIQUE KEY uq_eb_admin   (benefit_id, adminstaff_id),
     CONSTRAINT fk_eb_benefit FOREIGN KEY (benefit_id)    REFERENCES benefit (benefit_id)          ON DELETE CASCADE,
     CONSTRAINT fk_eb_faculty FOREIGN KEY (faculty_id)    REFERENCES faculty_staff (faculty_id)  ON DELETE CASCADE,
     CONSTRAINT fk_eb_admin   FOREIGN KEY (adminstaff_id) REFERENCES admin_staff (adminstaff_id) ON DELETE CASCADE
@@ -351,16 +477,7 @@ CREATE TABLE IF NOT EXISTS audit_trail (
     CONSTRAINT fk_audit_user FOREIGN KEY (user_id) REFERENCES users (user_id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
--- 18. Payroll Computation History: one row per payroll run
-CREATE TABLE IF NOT EXISTS payroll_run (
-    payroll_run_id   INT AUTO_INCREMENT PRIMARY KEY,
-    pay_period_start DATE        NOT NULL,
-    pay_period_end   DATE        NOT NULL,
-    status           VARCHAR(20) NOT NULL DEFAULT 'Computed',   -- Computed | Reviewed | Released
-    computed_by      INT,
-    computed_at      DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_run_user FOREIGN KEY (computed_by) REFERENCES users (user_id) ON DELETE SET NULL
-) ENGINE=InnoDB;
+-- 18. Payroll Computation History: payroll_run, defined above the payroll table.
 
 -- 19–22. Faculty Schedule (planned classes) and Faculty Teaching Hours
 --        (manual classroom checks, approval, audit).
@@ -449,4 +566,44 @@ CREATE TABLE IF NOT EXISTS faculty_attendance_audit (
     performed_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_faa_attendance FOREIGN KEY (attendance_id) REFERENCES faculty_teaching_attendance (attendance_id) ON DELETE CASCADE,
     CONSTRAINT fk_faa_user       FOREIGN KEY (performed_by)  REFERENCES users (user_id)                             ON DELETE SET NULL
+) ENGINE=InnoDB;
+
+-- 23. Employee Rates (Maintenance): every rate an employee has had, so a
+--     payroll for an earlier period uses the rate that applied then.
+--     rate_kind: Office = rate per hour for office work (Admin, Faculty/Admin);
+--     Teaching = rate per hour/unit for approved classes (Faculty, Faculty/Admin).
+--     The employee record's own rate columns always hold the current rate.
+CREATE TABLE IF NOT EXISTS employee_rate (
+    rate_id        INT AUTO_INCREMENT PRIMARY KEY,
+    faculty_id     INT,
+    adminstaff_id  INT,
+    rate_kind      VARCHAR(10)   NOT NULL,          -- Office | Teaching
+    amount         DECIMAL(10,2) NOT NULL,
+    effective_date DATE          NOT NULL,
+    end_date       DATE,                            -- NULL = current rate
+    recorded_by    INT,
+    created_at     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_rate_faculty (faculty_id, rate_kind, effective_date),
+    UNIQUE KEY uq_rate_admin   (adminstaff_id, rate_kind, effective_date),
+    CONSTRAINT fk_rate_faculty FOREIGN KEY (faculty_id)    REFERENCES faculty_staff (faculty_id)  ON DELETE CASCADE,
+    CONSTRAINT fk_rate_admin   FOREIGN KEY (adminstaff_id) REFERENCES admin_staff (adminstaff_id) ON DELETE CASCADE,
+    CONSTRAINT fk_rate_user    FOREIGN KEY (recorded_by)   REFERENCES users (user_id)             ON DELETE SET NULL
+) ENGINE=InnoDB;
+
+-- 24. Forgot Password: one-time codes (OTP) emailed to an account's address.
+--     Only hashes are stored. A code expires after 10 minutes and allows 5
+--     tries; once verified, a reset token (also hashed) lets the user set a
+--     new password within 10 minutes. Used rows are kept as a record.
+CREATE TABLE IF NOT EXISTS password_reset (
+    reset_id         INT AUTO_INCREMENT PRIMARY KEY,
+    user_id          INT          NOT NULL,
+    otp_hash         VARCHAR(100) NOT NULL,
+    expires_at       DATETIME     NOT NULL,
+    attempts         INT          NOT NULL DEFAULT 0,
+    verified_at      DATETIME,
+    token_hash       VARCHAR(100),
+    token_expires_at DATETIME,
+    used_at          DATETIME,
+    created_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_reset_user FOREIGN KEY (user_id) REFERENCES users (user_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;

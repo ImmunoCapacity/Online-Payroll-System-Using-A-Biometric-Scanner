@@ -50,7 +50,6 @@
         const statusMessage = document.getElementById('statusMessage');
         const togglePassword = document.getElementById('togglePassword');
         const toggleIcon = document.getElementById('toggleIcon');
-        const forgotPassword = document.getElementById('forgotPassword');
 
         let isLoading = false;
 
@@ -98,6 +97,7 @@
 
             if (statusMessage) {
                 statusMessage.classList.remove('show');
+                statusMessage.classList.remove('alert-success-note');
                 statusMessage.textContent = '';
             }
         }
@@ -153,12 +153,7 @@
         // FORGOT PASSWORD
         // ========================================================
 
-        if (forgotPassword) {
-            forgotPassword.addEventListener('click', function (e) {
-                e.preventDefault();
-                showStatus('Password reset requests are handled by your institution\'s IT or HR office.');
-            });
-        }
+        // The "Forgot password?" link opens the reset dialog (js/forgot-password.js).
 
         // ========================================================
         // LOGIN FORM

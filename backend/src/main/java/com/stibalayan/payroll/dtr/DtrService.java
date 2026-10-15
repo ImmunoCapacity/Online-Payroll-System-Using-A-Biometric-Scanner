@@ -135,7 +135,7 @@ public class DtrService {
         // Admin and Faculty/Admin staff only. Faculty teaching attendance is
         // recorded as classroom checks in Faculty Teaching Hours, not here.
         List<Map<String, String>> result = new ArrayList<>();
-        admins.findAll().stream().filter(a -> !"Inactive".equals(a.getEmploymentStatus()))
+        admins.findAll().stream().filter(a -> !a.isArchived() && !"Inactive".equals(a.getEmploymentStatus()))
                 .forEach(a -> result.add(choice(EmployeeId.admin(a.getId()), a)));
         result.sort(Comparator.comparing(m -> m.get("displayName"), String.CASE_INSENSITIVE_ORDER));
         return result;

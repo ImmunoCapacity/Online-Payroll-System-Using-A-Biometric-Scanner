@@ -357,6 +357,11 @@ select.pp-select-has-clear {
     color: var(--pp-info);
 }
 
+.pp-badge-archived {
+    background: #e5e7eb;
+    color: #4b5563;
+}
+
 .pp-employee-list {
     max-height: calc(100vh - 220px);
     overflow-y: auto;

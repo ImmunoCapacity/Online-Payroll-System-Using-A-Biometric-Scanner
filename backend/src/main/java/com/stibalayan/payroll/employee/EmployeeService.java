@@ -4,6 +4,7 @@ import com.stibalayan.payroll.common.ApiException;
 import com.stibalayan.payroll.common.Validation;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.Period;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
@@ -36,6 +37,8 @@ public class EmployeeService {
 
     // Paper, Tables 1 and 2: "active, inactive, resigned, terminated, on leave".
     private static final Set<String> STATUSES = Set.of("Active", "Inactive", "On Leave", "Resigned", "Terminated");
+    // Only employees who no longer work here can be archived.
+    private static final Set<String> ARCHIVABLE = Set.of("Inactive", "Resigned", "Terminated");
 
     // The choices offered by the form's select boxes.
     private static final Set<String> GENDERS = new LinkedHashSet<>(List.of("Male", "Female"));
@@ -62,11 +65,14 @@ public class EmployeeService {
         this.admins = admins;
     }
 
+    /** Every employee; archived ones only when asked for (Employee Records' Archived view). */
     @Transactional(readOnly = true)
-    public List<EmployeeResponse> listAll() {
+    public List<EmployeeResponse> listAll(boolean includeArchived) {
         List<EmployeeResponse> result = new ArrayList<>();
-        faculty.findAllByOrderByFirstnameAsc().forEach(f -> result.add(EmployeeResponse.of(f)));
-        admins.findAllByOrderByFirstnameAsc().forEach(a -> result.add(EmployeeResponse.of(a)));
+        faculty.findAllByOrderByFirstnameAsc().stream().filter(f -> includeArchived || !f.isArchived())
+                .forEach(f -> result.add(EmployeeResponse.of(f)));
+        admins.findAllByOrderByFirstnameAsc().stream().filter(a -> includeArchived || !a.isArchived())
+                .forEach(a -> result.add(EmployeeResponse.of(a)));
         return result;
     }
 
@@ -95,6 +101,7 @@ public class EmployeeService {
     @Transactional
     public void update(String id, EmployeeRequest request) {
         EmployeeId eid = EmployeeId.parse(id);
+        requireNotArchived(find(id));
         validate(request);
         checkUnique(request, eid);
 
@@ -109,13 +116,59 @@ public class EmployeeService {
         }
     }
 
+    /**
+     * Archives an employee. Employees are never deleted: their payroll, DTR,
+     * leave, loan and schedule history stays; they are only hidden from
+     * lists and pickers. Only employees who no longer work here (Inactive,
+     * Resigned or Terminated) can be archived. Returns the employee's name.
+     */
     @Transactional
-    public void delete(String id) {
+    public String archive(String id) {
+        StaffMember staff = find(id);
+        if (staff.isArchived()) {
+            throw unprocessable(staff.getFullName() + " is already archived.");
+        }
+        if (!ARCHIVABLE.contains(staff.getEmploymentStatus())) {
+            throw Validation.invalid("employmentStatus", "Only employees who are Inactive, Resigned or Terminated can be archived. "
+                    + "Change " + staff.getFullName() + "'s employment status first.");
+        }
+        staff.setArchived(true);
+        staff.setArchivedAt(LocalDateTime.now());
+        save(staff);
+        return staff.getFullName();
+    }
+
+    /** Brings an archived employee back to the lists. Returns the employee's name. */
+    @Transactional
+    public String restore(String id) {
+        StaffMember staff = find(id);
+        if (!staff.isArchived()) {
+            throw unprocessable(staff.getFullName() + " is not archived.");
+        }
+        staff.setArchived(false);
+        staff.setArchivedAt(null);
+        save(staff);
+        return staff.getFullName();
+    }
+
+    private StaffMember find(String id) {
         EmployeeId eid = EmployeeId.parse(id);
-        if (eid.isFaculty()) {
-            faculty.delete(faculty.findById(eid.number()).orElseThrow(EmployeeService::notFound));
+        return eid.isFaculty()
+                ? faculty.findById(eid.number()).orElseThrow(EmployeeService::notFound)
+                : admins.findById(eid.number()).orElseThrow(EmployeeService::notFound);
+    }
+
+    private void save(StaffMember staff) {
+        if (staff instanceof FacultyStaff f) {
+            faculty.saveAndFlush(f);
         } else {
-            admins.delete(admins.findById(eid.number()).orElseThrow(EmployeeService::notFound));
+            admins.saveAndFlush((AdminStaff) staff);
+        }
+    }
+
+    private static void requireNotArchived(StaffMember staff) {
+        if (staff.isArchived()) {
+            throw unprocessable(staff.getFullName() + " is archived. Restore the employee before editing.");
         }
     }
 

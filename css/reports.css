@@ -333,6 +333,22 @@
     transform: rotate(180deg);
 }
 
+/* Highlight the parent like any other current menu item while one of its
+   reports is open. */
+.pp-sidebar-link[href="reports.html"].active {
+    background: var(--pp-accent-light);
+    color: var(--pp-primary-dark);
+}
+
+.pp-sidebar-link[href="reports.html"].active > span,
+.pp-sidebar-link[href="reports.html"].active .pp-reports-chevron {
+    color: var(--pp-primary-dark) !important;
+}
+
+.pp-sidebar-link[href="reports.html"].active > i:first-child {
+    color: var(--pp-accent) !important;
+}
+
 @media (max-width: 768px) {
     .pp-reports-sidebar-group { padding-left: 1.9rem; }
     .pp-reports-sidebar-group::before { left: 1rem; }

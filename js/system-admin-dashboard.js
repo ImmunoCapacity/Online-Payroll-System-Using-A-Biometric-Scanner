@@ -59,15 +59,19 @@
     // STAT CARDS
     // ============================================================
 
-    (function updateDeviceCard() {
+    fetch('api/devices')
+        .then(function (response) { return response.json(); })
+        .then(function (data) {
+            if (!data.success) throw new Error(data.message);
+            var devices = data.devices;
+            var activeDevices = devices.filter(function (d) { return d.status === 'Active'; });
 
-        var devices = DataStore.getDevices();
-        var activeDevices = devices.filter(function (d) { return d.status === 'Active'; });
-
-        document.getElementById('statDeviceStatus').textContent = activeDevices.length ? 'Online' : 'Offline';
-        document.getElementById('statDeviceMeta').textContent = activeDevices.length + ' of ' + devices.length + ' device' + (devices.length !== 1 ? 's' : '') + ' active';
-
-    })();
+            document.getElementById('statDeviceStatus').textContent = activeDevices.length ? 'Active' : 'None active';
+            document.getElementById('statDeviceMeta').textContent = activeDevices.length + ' of ' + devices.length + ' device' + (devices.length !== 1 ? 's' : '') + ' active';
+        })
+        .catch(function () {
+            document.getElementById('statDeviceMeta').textContent = 'Could not load devices';
+        });
 
 
     // ============================================================
@@ -124,10 +128,20 @@
     // RECENT SYSTEM ACTIVITY (audit trail)
     // ============================================================
 
-    (function renderActivity() {
+    fetch('api/audit?limit=8')
+        .then(function (response) { return response.json(); })
+        .then(function (data) {
+            if (!data.success) throw new Error(data.message);
+            renderActivity(data.entries);
+        })
+        .catch(function () {
+            document.getElementById('activityList').innerHTML =
+                '<li class="pp-activity-item"><p class="pp-activity-text text-muted mb-0">Could not load system activity.</p></li>';
+        });
+
+    function renderActivity(entries) {
 
         var list = document.getElementById('activityList');
-        var entries = DataStore.getAuditLog().slice(0, 8);
 
         if (entries.length === 0) {
             list.innerHTML = '<li class="pp-activity-item"><p class="pp-activity-text text-muted mb-0">No system activity recorded yet.</p></li>';
@@ -156,6 +170,6 @@
             );
         }).join('');
 
-    })();
+    }
 
 })();

@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Log In — Payroll</title>
     <link rel="icon" type="image/png" href="sti_logo.png">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="vendor/bootstrap/bootstrap.min.css" rel="stylesheet">
+    <link href="vendor/bootstrap-icons/bootstrap-icons.min.css" rel="stylesheet">
     <link href="css/login.css" rel="stylesheet">
 </head>
 <body>
@@ -89,8 +89,67 @@
         </div>
     </main>
 
-    <!-- Demo controls to preview UI states (remove in production) -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Forgot Password: email → 6-digit code (OTP) → new password -->
+    <div class="modal fade" id="resetModal" tabindex="-1" aria-labelledby="resetTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content reset-modal">
+                <div class="modal-header">
+                    <h2 class="modal-title" id="resetTitle">Reset Password</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <ol class="reset-steps" aria-label="Steps">
+                        <li class="active" data-step="1">Email</li>
+                        <li data-step="2">Code</li>
+                        <li data-step="3">New password</li>
+                    </ol>
+
+                    <!-- Step 1 -->
+                    <form id="resetEmailForm" class="reset-step" data-step="1" novalidate>
+                        <p class="reset-help">Enter the email address of your account. We'll send you a 6-digit code.</p>
+                        <label for="resetEmail" class="form-label">Email address</label>
+                        <input type="email" class="form-control" id="resetEmail" placeholder="name@institution.edu" autocomplete="username" maxlength="100" required>
+                        <div class="invalid-feedback" id="resetEmailError"></div>
+                        <button type="submit" class="btn btn-login mt-3" id="resetSendBtn">Send Code</button>
+                    </form>
+
+                    <!-- Step 2 -->
+                    <form id="resetCodeForm" class="reset-step d-none" data-step="2" novalidate>
+                        <p class="reset-help" id="resetCodeHelp">Enter the 6-digit code sent to your email. It expires in 10 minutes.</p>
+                        <label for="resetCode" class="form-label">Code</label>
+                        <input type="text" class="form-control reset-code-input" id="resetCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" required>
+                        <div class="invalid-feedback" id="resetCodeError"></div>
+                        <button type="submit" class="btn btn-login mt-3" id="resetVerifyBtn">Verify Code</button>
+                        <div class="reset-links">
+                            <a href="#" class="forgot-link" id="resetChangeEmail">Use a different email</a>
+                            <a href="#" class="forgot-link" id="resetResend">Resend code</a>
+                        </div>
+                    </form>
+
+                    <!-- Step 3 -->
+                    <form id="resetPasswordForm" class="reset-step d-none" data-step="3" novalidate>
+                        <p class="reset-help">Code verified. Create your new password: 8–72 characters with at least one letter and one number.</p>
+                        <label for="resetNewPassword" class="form-label">New password</label>
+                        <input type="password" class="form-control" id="resetNewPassword" autocomplete="new-password" maxlength="72" required>
+                        <div class="invalid-feedback" id="resetNewPasswordError"></div>
+                        <label for="resetConfirmPassword" class="form-label mt-3">Confirm password</label>
+                        <input type="password" class="form-control" id="resetConfirmPassword" autocomplete="new-password" maxlength="72" required>
+                        <div class="invalid-feedback" id="resetConfirmPasswordError"></div>
+                        <div class="form-check mt-2">
+                            <input class="form-check-input" type="checkbox" id="resetShowPasswords">
+                            <label class="form-check-label" for="resetShowPasswords">Show passwords</label>
+                        </div>
+                        <button type="submit" class="btn btn-login mt-3" id="resetSaveBtn">Save New Password</button>
+                    </form>
+
+                    <div class="reset-message" id="resetMessage" role="alert" aria-live="polite"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="vendor/bootstrap/bootstrap.bundle.min.js"></script>
     <script src="js/login.js"></script>
+    <script src="js/forgot-password.js"></script>
 </body>
 </html>

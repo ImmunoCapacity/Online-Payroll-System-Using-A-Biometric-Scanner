@@ -162,6 +162,22 @@
     transform: rotate(180deg);
 }
 
+/* Highlight the parent like any other current menu item while one of its
+   sections (e.g. Biometric Records) is open. */
+.pp-sidebar-link[href="dtr.html"].active {
+    background: var(--pp-accent-light);
+    color: var(--pp-primary-dark);
+}
+
+.pp-sidebar-link[href="dtr.html"].active > span,
+.pp-sidebar-link[href="dtr.html"].active .pp-dtr-chevron {
+    color: var(--pp-primary-dark) !important;
+}
+
+.pp-sidebar-link[href="dtr.html"].active > i:first-child {
+    color: var(--pp-accent) !important;
+}
+
 /* Biometric filters */
 
 .pp-filter-bar {

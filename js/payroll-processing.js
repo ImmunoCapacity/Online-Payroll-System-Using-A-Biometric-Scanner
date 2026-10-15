@@ -9,10 +9,11 @@
  * 2. Review each employee's breakdown (Review and Recompute).
  * 3. Release Payslips once everyone is reviewed.
  * 4. Distribute Payslips: the server emails each employee their payslip
- *    at the address in their employee record (api/payroll/payslips/email).
+ *    at the address in their employee record (api/payroll/runs/{id}/email).
  *
- * Runs are kept in this browser (DataStore 'payrollRuns') until the
- * payroll tables are connected to the database.
+ * Runs are saved in the database (payroll_run / payroll via
+ * api/payroll/runs), so every computer sees the same payroll, and Reports
+ * read the released ones.
  * ---------------------------------------------------------------
  */
 (function () {
@@ -56,19 +57,22 @@
     }
 
     // ================================================================
-    // PAY PERIODS — semi-monthly cutoffs: 1–15 and 16–end of month.
-    // The current period and the three before it.
+    // PAY PERIODS — semi-monthly cutoffs: the 11th–25th and the
+    // 26th–10th of the next month. The current period and the five
+    // before it.
     // ================================================================
 
     function buildPeriods() {
         var periods = {};
         var today = new Date();
-        var start = new Date(today.getFullYear(), today.getMonth(), today.getDate() <= 15 ? 1 : 16);
+        var start = today.getDate() >= 26 ? new Date(today.getFullYear(), today.getMonth(), 26)
+            : today.getDate() >= 11 ? new Date(today.getFullYear(), today.getMonth(), 11)
+            : new Date(today.getFullYear(), today.getMonth() - 1, 26);
 
-        for (var i = 0; i < 4; i++) {
-            var end = start.getDate() === 1
-                ? new Date(start.getFullYear(), start.getMonth(), 15)
-                : new Date(start.getFullYear(), start.getMonth() + 1, 0);
+        for (var i = 0; i < 6; i++) {
+            var end = start.getDate() === 11
+                ? new Date(start.getFullYear(), start.getMonth(), 25)
+                : new Date(start.getFullYear(), start.getMonth() + 1, 10);
             var payDate = new Date(end.getFullYear(), end.getMonth(), end.getDate() + 1);
             var fmt = { month: 'short', day: 'numeric' };
 
@@ -76,14 +80,16 @@
                 key: iso(start),
                 from: iso(start),
                 to: iso(end),
-                label: start.toLocaleDateString('en-US', fmt) + ' – ' + end.toLocaleDateString('en-US', fmt) + ', ' + end.getFullYear(),
+                label: start.toLocaleDateString('en-US', fmt) +
+                    (start.getFullYear() === end.getFullYear() ? '' : ', ' + start.getFullYear()) +
+                    ' – ' + end.toLocaleDateString('en-US', fmt) + ', ' + end.getFullYear(),
                 payDate: iso(payDate)
             };
 
             // Step back one cutoff.
-            start = start.getDate() === 16
-                ? new Date(start.getFullYear(), start.getMonth(), 1)
-                : new Date(start.getFullYear(), start.getMonth() - 1, 16);
+            start = start.getDate() === 26
+                ? new Date(start.getFullYear(), start.getMonth(), 11)
+                : new Date(start.getFullYear(), start.getMonth() - 1, 26);
         }
         return periods;
     }
@@ -91,15 +97,41 @@
     var PERIODS = buildPeriods();
     var currentPeriod = Object.keys(PERIODS)[0];
 
-    // Saved runs: { periodKey: { status, employees, distributed } }
-    var runs = DataStore.get('payrollRuns', {});
-
-    function saveRuns() {
-        DataStore.set('payrollRuns', runs);
-    }
+    // The saved run of the selected period (api/payroll/runs), or null
+    // when payroll hasn't been run for it yet.
+    var run = null;
+    var loading = false;
 
     function currentRun() {
-        return runs[currentPeriod] || { status: 'open', employees: [] };
+        return run || { status: 'open', employees: [] };
+    }
+
+    function jsonPost(url, body, method) {
+        return api(url, {
+            method: method || 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body || {})
+        });
+    }
+
+    function loadRun() {
+        var period = PERIODS[currentPeriod];
+        var key = currentPeriod;
+        loading = true;
+        run = null;
+        render();
+        return api('api/payroll/runs?from=' + period.from + '&to=' + period.to).then(function (data) {
+            if (key !== currentPeriod) return;
+            if (!data.success) throw new Error(data.message || 'Could not load the payroll.');
+            run = data.run;
+        }).catch(function (error) {
+            if (key !== currentPeriod) return;
+            PPToast.error(error.message || 'Could not reach the server.');
+        }).then(function () {
+            if (key !== currentPeriod) return;
+            loading = false;
+            render();
+        });
     }
 
     function getEmployees() {
@@ -114,7 +146,8 @@
     // per period.
     // ================================================================
 
-    var TABLES = DataStore.getTaxBrackets();
+    // Loaded from the database (Maintenance → Deduction Tables) on each Run Payroll.
+    var TABLES = {};
     var PERIODS_PER_MONTH = 2;
 
     // The table for the given year, or the latest year before it.
@@ -131,10 +164,20 @@
         }) || null;
     }
 
-    function computeDeductions(employeeNumber, gross, year) {
+    /**
+     * loanItems: this employee's loan deductions for the period from
+     * api/payroll/loan-deductions ([{ loanId, amount, ... }]).
+     */
+    function computeDeductions(loanItems, gross, year) {
+        // Active loans (Loan Management): the scheduled amount per payroll,
+        // never more than the balance — worked out by the server.
+        var loan = (loanItems || []).reduce(function (sum, l) { return sum + Number(l.amount || 0); }, 0);
+
         if (gross <= 0) {
             return { sss: 0, philhealth: 0, pagibig: 0, bir: 0, loan: 0 };
         }
+        // A loan deduction can't take pay below zero.
+        loan = Math.min(loan, gross);
 
         var monthly = gross * PERIODS_PER_MONTH;
 
@@ -154,14 +197,6 @@
         var birRow = bracketFor(tableFor('bir', year), taxable);
         var threshold = birRow && birRow.min > 0 ? birRow.min - 0.01 : 0;
         var taxMonthly = birRow ? birRow.base + Math.max(0, taxable - threshold) * birRow.rate / 100 : 0;
-
-        // Active loans (Loan Management), matched by employee number:
-        // the scheduled amount per payroll, never more than what's left.
-        var loan = DataStore.getLoans()
-            .filter(function (l) { return l.employeeId === employeeNumber && DataStore.getLoanStatus(l) === 'Active'; })
-            .reduce(function (sum, l) {
-                return sum + Math.min(Number(l.deductionPerPayroll || 0), DataStore.getLoanRemainingBalance(l));
-            }, 0);
 
         return {
             sss: round2(sssMonthly / PERIODS_PER_MONTH),
@@ -200,6 +235,12 @@
         }
         if (e.department === 'Admin' || e.department === 'Faculty/Admin') {
             add('Office hours (biometric DTR)', h.officeHours, e.rate);
+            // Approved paid leave (Leave Management): a normal office day per leave day.
+            var leaveDays = Number(h.paidLeaveDays) || 0;
+            if (leaveDays > 0) {
+                var hoursPerDay = Number(e.officeHours) || 8;
+                add('Paid leave (' + leaveDays + ' day' + (leaveDays === 1 ? '' : 's') + ')', leaveDays * hoursPerDay, e.rate);
+            }
         }
         if (e.department === 'Faculty') {
             add('Approved teaching hours', h.teachingHours, e.rate);
@@ -233,12 +274,38 @@
     function computePayroll(period) {
         return Promise.all([
             api('api/employees'),
-            api('api/payroll/hours?from=' + period.from + '&to=' + period.to)
+            api('api/payroll/hours?from=' + period.from + '&to=' + period.to),
+            api('api/payroll/loan-deductions?from=' + period.from + '&to=' + period.to),
+            api('api/payroll/benefits'),
+            api('api/payroll/contribution-tables'),
+            api('api/payroll/rates?date=' + period.to)
         ]).then(function (results) {
             var employeesData = results[0];
             var hoursData = results[1];
+            var loanData = results[2];
             if (!employeesData.success) throw new Error(employeesData.message || 'Could not load employees.');
             if (!hoursData.success) throw new Error(hoursData.message || 'Could not load hours worked.');
+            if (!loanData.success) throw new Error(loanData.message || 'Could not load loan deductions.');
+            var loansById = loanData.deductions || {};
+            var benefitData = results[3];
+            if (!benefitData.success) throw new Error(benefitData.message || 'Could not load benefits.');
+            var benefitsById = benefitData.benefits || {};
+            if (!results[4].success) throw new Error(results[4].message || 'Could not load the deduction tables.');
+            TABLES = results[4].tables;
+            if (!results[5].success) throw new Error(results[5].message || 'Could not load employee rates.');
+            // Rates in effect at the end of the period (Maintenance → Employee Rates),
+            // so an earlier period is paid at the rate that applied then.
+            var ratesById = results[5].rates || {};
+            employeesData.employees.forEach(function (e) {
+                var r = ratesById[e.id];
+                if (!r) return;
+                if (e.department === 'Faculty') {
+                    if (r.teaching != null) e.rate = r.teaching;
+                } else {
+                    if (r.office != null) e.rate = r.office;
+                    if (e.department === 'Faculty/Admin' && r.teaching != null) e.teachingRate = r.teaching;
+                }
+            });
 
             var hoursById = {};
             hoursData.hours.forEach(function (h) { hoursById[h.employeeId] = h; });
@@ -252,7 +319,7 @@
                 })
                 .map(function (e) {
                     var worked = hoursById[e.id] || {
-                        officeHours: 0, teachingHours: 0, daysWorked: 0, overlapHours: 0, unapprovedClasses: 0
+                        officeHours: 0, teachingHours: 0, daysWorked: 0, overlapHours: 0, unapprovedClasses: 0, paidLeaveDays: 0
                     };
                     var earnings = buildEarnings(e, worked);
                     var emp = {
@@ -266,10 +333,22 @@
                         unapprovedClasses: worked.unapprovedClasses || 0,
                         rate: Number(e.rate) || 0,
                         earnings: earnings,
-                        benefits: [],   // Benefit Maintenance isn't built yet
+                        // Benefits Table: paid every payroll period.
+                        benefits: (benefitsById[e.id] || []).map(function (b) {
+                            return { name: b.name, amount: round2(Number(b.amount) || 0) };
+                        }),
                         status: 'computed'
                     };
-                    emp.deductions = computeDeductions(e.employeeNumber, calcGross(emp), year);
+                    var loanItems = loansById[e.id] || [];
+                    emp.deductions = computeDeductions(loanItems, calcGross(emp), year);
+                    // What is actually deducted per loan (less when pay can't cover it all);
+                    // recorded against each loan when the period is released.
+                    var left = emp.deductions.loan;
+                    emp.loanItems = loanItems.map(function (l) {
+                        var amount = round2(Math.min(Number(l.amount) || 0, left));
+                        left = round2(left - amount);
+                        return { loanId: l.loanId, type: l.type, reference: l.reference, amount: amount };
+                    });
                     return emp;
                 });
         });
@@ -281,16 +360,22 @@
 
     btnRun.addEventListener('click', function () {
         var period = PERIODS[currentPeriod];
-        var run = currentRun();
-        if (run.status === 'released') return;
+        if (loading || currentRun().status === 'released') return;
 
         btnRun.disabled = true;
         btnRun.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Computing…';
 
-        computePayroll(period).then(function (employees) {
-            runs[currentPeriod] = { status: 'processing', employees: employees, distributed: null };
-            saveRuns();
+        var key = currentPeriod;
+        computePayroll(period).then(function (computed) {
+            return jsonPost('api/payroll/runs', {
+                from: period.from, to: period.to, label: period.label, employees: computed
+            }, 'PUT');
+        }).then(function (data) {
+            if (!data.success) throw new Error(data.message || 'Could not save the payroll.');
+            if (key !== currentPeriod) return;
+            run = data.run;
             render();
+            var employees = run.employees;
 
             var noHours = employees.filter(function (e) { return e.hours === 0; }).length;
             var noRate = employees.filter(function (e) {
@@ -356,14 +441,14 @@
     }
 
     function updateButtons() {
-        var run = currentRun();
-        btnRun.disabled = run.status === 'released';
-        btnRun.innerHTML = run.status === 'processing'
+        var state = currentRun();
+        btnRun.disabled = loading || state.status === 'released';
+        btnRun.innerHTML = state.status === 'processing'
             ? '<i class="bi bi-arrow-repeat me-1"></i> Recompute Payroll'
             : '<i class="bi bi-play-fill me-1"></i> Run Payroll';
-        btnRelease.disabled = run.status !== 'processing' || !allReviewed();
-        btnDistribute.disabled = run.status !== 'released';
-        btnDistribute.innerHTML = run.distributed
+        btnRelease.disabled = loading || state.status !== 'processing' || !allReviewed();
+        btnDistribute.disabled = loading || state.status !== 'released';
+        btnDistribute.innerHTML = state.distributed
             ? '<i class="bi bi-envelope-paper me-1"></i> Resend Payslips'
             : '<i class="bi bi-envelope-paper me-1"></i> Distribute Payslips';
     }
@@ -402,6 +487,9 @@
 
         if (employees.length === 0) {
             tbody.innerHTML = '';
+            empty.innerHTML = loading
+                ? 'Loading payroll…'
+                : 'No payroll data for this period. Click <strong>Run Payroll</strong> to compute.';
             empty.classList.remove('d-none');
         } else {
             empty.classList.add('d-none');
@@ -463,7 +551,9 @@
                 line('PhilHealth', ded.philhealth) +
                 line('Pag-IBIG', ded.pagibig) +
                 line('BIR Withholding Tax', ded.bir) +
-                line('Loan Repayment', ded.loan) +
+                ((emp.loanItems && emp.loanItems.length)
+                    ? emp.loanItems.map(function (l) { return line('Loan: ' + escapeHtml(l.type) + ' (' + escapeHtml(l.reference) + ')', l.amount); }).join('')
+                    : line('Loan Repayment', ded.loan)) +
                 '<div class="pp-breakdown-line total"><span>Total Deductions</span><span class="amount">' + peso(calcDeductionsTotal(ded)) + '</span></div></div>' +
             '<div class="pp-breakdown-section"><div class="pp-breakdown-line total"><span>Net Pay</span><span class="amount" style="color:var(--pp-accent);font-size:1.125rem;">' + peso(calcNet(emp)) + '</span></div></div>' +
             (emp.status === 'computed'
@@ -471,71 +561,64 @@
                 : '');
 
         if (emp.status === 'computed') {
-            document.getElementById('btnMarkReviewed').addEventListener('click', function () {
-                emp.status = 'reviewed';
-                saveRuns();
-                render();
-                bootstrap.Offcanvas.getInstance(document.getElementById('breakdownPanel')).hide();
+            document.getElementById('btnMarkReviewed').addEventListener('click', function (event) {
+                var button = event.currentTarget;
+                button.disabled = true;
+                jsonPost('api/payroll/runs/' + run.id + '/review', { employeeId: emp.id }).then(function (data) {
+                    if (!data.success) throw new Error(data.message || 'Could not mark as reviewed.');
+                    run = data.run;
+                    render();
+                    bootstrap.Offcanvas.getInstance(document.getElementById('breakdownPanel')).hide();
+                }).catch(function (error) {
+                    button.disabled = false;
+                    PPToast.error(error.message || 'Could not reach the server.');
+                });
             });
         }
 
         new bootstrap.Offcanvas(document.getElementById('breakdownPanel')).show();
     }
 
+
     // ================================================================
     // RELEASE
+    // The server records each loan deduction against its loan (Loan
+    // Management) and the itemised deductions, then locks the period —
+    // all or nothing. Reports read the released payroll.
     // ================================================================
 
-    // Itemised like the paper's Payroll table (Table 4) so the Reports
-    // module (SSS / PhilHealth / Pag-IBIG / BIR remittance) has data.
-    function persistReleasedPayroll(period) {
-        var records = DataStore.get('payroll', []).filter(function (r) {
-            return r.periodLabel !== period.label; // replace an earlier release of the same period
-        });
-        getEmployees().forEach(function (emp) {
-            records.push({
-                id: DataStore.nextNumericId(records),
-                employeeId: emp.employeeNumber,
-                employee: emp.name,
-                employeeType: emp.type,
-                periodLabel: period.label,
-                payDate: period.payDate,
-                hours: emp.hours,
-                employeeRate: emp.rate,
-                gross: calcGross(emp),
-                benefits: calcBenefitsTotal(emp.benefits),
-                sss: emp.deductions.sss,
-                philhealth: emp.deductions.philhealth,
-                pagibig: emp.deductions.pagibig,
-                tax: emp.deductions.bir,
-                loan: emp.deductions.loan,
-                deductions: calcDeductionsTotal(emp.deductions),
-                net: calcNet(emp),
-                dateGenerated: new Date().toISOString()
+    btnRelease.addEventListener('click', function () {
+        if (!run || !allReviewed()) return;
+        var period = PERIODS[currentPeriod];
+
+        ConfirmModal.show({
+            title: 'Release Payroll',
+            message: 'Release the ' + period.label + ' payroll? Loan deductions are recorded and the period can no longer be recomputed.',
+            confirmText: 'Release'
+        }).then(function (confirmed) {
+            if (!confirmed) return;
+            btnRelease.disabled = true;
+            jsonPost('api/payroll/runs/' + run.id + '/release').then(function (data) {
+                if (!data.success) {
+                    PPToast.error((data.message || 'Could not release the payroll.') + ' Payroll was not released.');
+                    return;
+                }
+                run = data.run;
+                PPToast.success('Payroll released for ' + period.label + '. Click Distribute Payslips to email them.');
+            }).catch(function () {
+                PPToast.error('Could not reach the server. Payroll was not released.');
+            }).then(function () {
+                render();
             });
         });
-        DataStore.set('payroll', records);
-    }
-
-    btnRelease.addEventListener('click', function () {
-        if (!allReviewed()) return;
-        var period = PERIODS[currentPeriod];
-        var run = currentRun();
-        run.employees.forEach(function (e) { e.status = 'released'; });
-        run.status = 'released';
-        saveRuns();
-        persistReleasedPayroll(period);
-        render();
-        PPToast.success('Payroll released for ' + period.label + '. Click Distribute Payslips to email them.');
     });
 
     // ================================================================
-    // DISTRIBUTE PAYSLIPS (email)
+    // DISTRIBUTE PAYSLIPS (email) — sent from the payroll saved in the database
     // ================================================================
 
     btnDistribute.addEventListener('click', function () {
-        var run = currentRun();
-        if (run.status !== 'released') return;
+        if (!run || run.status !== 'released') return;
         var period = PERIODS[currentPeriod];
         var employees = getEmployees();
 
@@ -550,40 +633,12 @@
             btnDistribute.disabled = true;
             btnDistribute.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Sending…';
 
-            api('api/payroll/payslips/email', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    periodLabel: period.label,
-                    payDate: period.payDate,
-                    payslips: employees.map(function (emp) {
-                        return {
-                            employeeId: emp.id,
-                            hours: emp.hours,
-                            rate: emp.rate,
-                            gross: calcGross(emp),
-                            earnings: emp.earnings || null,
-                            benefits: emp.benefits,
-                            deductions: emp.deductions
-                        };
-                    })
-                })
-            }).then(function (data) {
+            jsonPost('api/payroll/runs/' + run.id + '/email').then(function (data) {
                 if (!data.success) {
                     PPToast.error(data.message || 'Could not send the payslips.');
                     return;
                 }
-
-                data.results.forEach(function (r) {
-                    var emp = employees.find(function (e) { return e.id === r.employeeId; });
-                    if (emp) {
-                        emp.emailStatus = r.status;
-                        emp.emailMessage = r.message || null;
-                    }
-                });
-                run.distributed = { sent: data.sent, total: data.total, at: new Date().toISOString() };
-                saveRuns();
-
+                run = data.run;
                 if (data.sent === data.total) {
                     PPToast.success('Payslips emailed to all ' + data.total + ' employee' + (data.total === 1 ? '' : 's') + '.');
                 } else {
@@ -608,42 +663,8 @@
     periodSelect.value = currentPeriod;
     periodSelect.addEventListener('change', function () {
         currentPeriod = periodSelect.value;
-        render();
+        loadRun();
     });
 
-    /**
-     * Saved runs keep a copy of each employee's name. Refresh names and
-     * employee numbers from Employee Records for runs not yet released, so
-     * an edited name shows here. Released runs stay exactly as they were
-     * paid. (Hours, rates and amounts change only on Run Payroll/Recompute.)
-     */
-    function refreshEmployeeDetails() {
-        api('api/employees').then(function (data) {
-            if (!data.success) return;
-            var byId = {};
-            data.employees.forEach(function (e) { byId[e.id] = e; });
-            var changed = false;
-            Object.keys(runs).forEach(function (key) {
-                var run = runs[key];
-                if (!run || run.status === 'released' || !run.employees) return;
-                run.employees.forEach(function (emp) {
-                    var e = byId[emp.id];
-                    if (e && (emp.name !== e.displayName || emp.employeeNumber !== e.employeeNumber)) {
-                        emp.name = e.displayName;
-                        emp.employeeNumber = e.employeeNumber;
-                        changed = true;
-                    }
-                });
-            });
-            if (changed) {
-                saveRuns();
-                render();
-            }
-        }).catch(function () {
-            // Offline: keep showing the saved names.
-        });
-    }
-
-    render();
-    refreshEmployeeDetails();
+    loadRun();
 })();

@@ -118,9 +118,50 @@
     function typeOf(r) { return getValue(r, KEYS.type, '—'); }
 
 
-    /* Records */
+    /* Records: released payroll from the database (api/payroll/released) */
+    var payrollRecords = [];
+
     function getPayrollRecords() {
-        return typeof DataStore === 'undefined' ? [] : DataStore.get('payroll', []);
+        return payrollRecords;
+    }
+
+    /**
+     * 13th month pay (PD 851): one twelfth of the basic salary earned in a
+     * calendar year — here the gross pay of every released period of that
+     * year (benefits excluded). A selected period picks its year; "All
+     * periods" shows each employee once per year.
+     */
+    function thirteenthMonthRecords() {
+        var selectedPeriod = payrollPeriod.value;
+        var year = null;
+        if (selectedPeriod !== 'all') {
+            var match = payrollRecords.find(function (r) { return r.periodLabel === selectedPeriod; });
+            year = match ? match.periodEnd.slice(0, 4) : null;
+        }
+        var groups = {};
+        var order = [];
+        filterPayrollRecords(true).forEach(function (r) {
+            var y = r.periodEnd.slice(0, 4);
+            if (year && y !== year) return;
+            var key = r.employeeKey + '|' + y;
+            if (!groups[key]) {
+                groups[key] = {
+                    employeeId: r.employeeId,
+                    employee: r.employee + (year ? '' : ' (' + y + ')'),
+                    employeeType: r.employeeType,
+                    gross: 0,
+                    benefits: 0
+                };
+                order.push(key);
+            }
+            groups[key].gross += number(r.gross);
+        });
+        return order.map(function (key) {
+            var row = groups[key];
+            row.gross = Math.round(row.gross * 100) / 100;
+            row.thirteenthMonth = Math.round(row.gross / 12 * 100) / 100;
+            return row;
+        });
     }
 
     function buildPayrollPeriods() {
@@ -139,7 +180,8 @@
         });
     }
 
-    function filterPayrollRecords() {
+    // ignorePeriod: every period (used by the 13th month report).
+    function filterPayrollRecords(ignorePeriod) {
         var selectedPeriod = payrollPeriod.value;
         var selectedType = employeeType.value;
         var search = reportSearch.value.trim().toLowerCase();
@@ -149,7 +191,7 @@
             var empName = String(getValue(record, KEYS.name, '')).toLowerCase();
             var empId = String(getValue(record, KEYS.id, '')).toLowerCase();
 
-            var periodMatch = selectedPeriod === 'all' ||
+            var periodMatch = ignorePeriod || selectedPeriod === 'all' ||
                 getValue(record, KEYS.period, '') === selectedPeriod;
 
             var typeMatch = true;
@@ -330,40 +372,50 @@
     }
 
 
-    /* Loan Report (paper, 8.5): balances and deduction history */
+    /* Loan Report (paper, 8.5): balances and deduction history, from the database via api/loans */
     function renderLoanReport() {
-        var search = reportSearch.value.trim().toLowerCase();
-        var loans = (typeof DataStore === 'undefined' ? [] : DataStore.getLoans()).filter(function (l) {
-            return !search ||
-                String(l.employeeName || '').toLowerCase().includes(search) ||
-                String(l.employeeId || '').toLowerCase().includes(search);
-        });
-
         var columns = ['EMP. ID', 'EMPLOYEE', 'LOAN TYPE', 'REFERENCE', 'LOAN AMOUNT',
             'PER PAYROLL', 'TOTAL DEDUCTED', 'BALANCE', 'STATUS'];
-        var totals = { amount: 0, deducted: 0, balance: 0 };
-
-        var rows = loans.map(function (l) {
-            var deducted = DataStore.getLoanTotalDeducted(l);
-            var balance = DataStore.getLoanRemainingBalance(l);
-            totals.amount += number(l.amount);
-            totals.deducted += deducted;
-            totals.balance += balance;
-            return [
-                escapeHtml(l.employeeId), '<strong>' + escapeHtml(l.employeeName) + '</strong>',
-                escapeHtml(l.type), escapeHtml(l.reference || '—'),
-                peso(l.amount), peso(l.deductionPerPayroll), peso(deducted), peso(balance),
-                escapeHtml(DataStore.getLoanStatus(l))
-            ];
-        });
-
         tableHead.innerHTML = headRow(columns);
-        tableBody.innerHTML = bodyRows(rows, columns.length);
-        tableFooter.innerHTML = rows.length
-            ? '<tr><th colspan="4">Total</th><th>' + peso(totals.amount) + '</th><th></th><th>' +
-              peso(totals.deducted) + '</th><th>' + peso(totals.balance) + '</th><th></th></tr>'
-            : '';
-        setText('reportRecordLabel', rows.length + (rows.length === 1 ? ' record' : ' records'));
+        tableBody.innerHTML = '<tr><td colspan="' + columns.length + '" class="report-empty">Loading loans…</td></tr>';
+        tableFooter.innerHTML = '';
+
+        fetch('api/loans')
+            .then(function (response) { return response.json(); })
+            .then(function (data) {
+                if (currentReport !== 'loans') return;
+                if (!data.success) throw new Error(data.message);
+
+                var search = reportSearch.value.trim().toLowerCase();
+                var loans = data.loans.filter(function (l) {
+                    return !search ||
+                        String(l.employeeName || '').toLowerCase().includes(search) ||
+                        String(l.employeeId || '').toLowerCase().includes(search);
+                });
+                var totals = { amount: 0, deducted: 0, balance: 0 };
+                var rows = loans.map(function (l) {
+                    totals.amount += number(l.amount);
+                    totals.deducted += number(l.totalDeducted);
+                    totals.balance += number(l.remainingBalance);
+                    return [
+                        escapeHtml(l.employeeId), '<strong>' + escapeHtml(l.employeeName) + '</strong>',
+                        escapeHtml(l.type), escapeHtml(l.reference || '—'),
+                        peso(l.amount), peso(l.deductionPerPayroll), peso(l.totalDeducted), peso(l.remainingBalance),
+                        escapeHtml(l.status)
+                    ];
+                });
+
+                tableBody.innerHTML = bodyRows(rows, columns.length);
+                tableFooter.innerHTML = rows.length
+                    ? '<tr><th colspan="4">Total</th><th>' + peso(totals.amount) + '</th><th></th><th>' +
+                      peso(totals.deducted) + '</th><th>' + peso(totals.balance) + '</th><th></th></tr>'
+                    : '';
+                setText('reportRecordLabel', rows.length + (rows.length === 1 ? ' record' : ' records'));
+            })
+            .catch(function () {
+                if (currentReport !== 'loans') return;
+                tableBody.innerHTML = '<tr><td colspan="' + columns.length + '" class="report-empty">Could not load loans from the server.</td></tr>';
+            });
     }
 
     /* Employee List Report (paper, 8.6): from the database via api/employees */
@@ -430,6 +482,8 @@
 
             if (reportKey === 'payroll') {
                 renderPayrollReport(records);
+            } else if (reportKey === 'thirteenth') {
+                renderSimpleReport(reportKey, thirteenthMonthRecords());
             } else {
                 renderSimpleReport(reportKey, records);
             }
@@ -520,7 +574,19 @@
     /* Init */
     var startKey = new URLSearchParams(location.search).get('report');
 
-    buildPayrollPeriods();
-    selectReport(reportDefinitions[startKey] ? startKey : 'payroll');
+    fetch('api/payroll/released')
+        .then(function (response) { return response.json(); })
+        .then(function (data) {
+            if (!data.success) throw new Error(data.message);
+            payrollRecords = data.records;
+        })
+        .catch(function (error) {
+            console.error('[Reports] Released payroll failed:', error);
+            if (window.PPToast) PPToast.error('Could not load released payroll from the server.');
+        })
+        .then(function () {
+            buildPayrollPeriods();
+            selectReport(reportDefinitions[startKey] ? startKey : 'payroll');
+        });
 
 })();

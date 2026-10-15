@@ -9,10 +9,12 @@ public record UserResponse(
         String role,
         String email,
         String contactNumber,
-        boolean active) {
+        boolean active,
+        String passwordChangedAt) {
 
     static UserResponse of(User u) {
         return new UserResponse(u.getId(), u.getFirstName(), u.getLastName(), u.getUsername(), u.getRole(),
-                u.getEmail(), u.getContactNumber(), u.isActive());
+                u.getEmail(), u.getContactNumber(), u.isActive(),
+                u.getPasswordChangedAt() == null ? null : u.getPasswordChangedAt().toString());
     }
 }

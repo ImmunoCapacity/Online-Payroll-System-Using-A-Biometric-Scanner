@@ -9,6 +9,7 @@ import java.time.LocalDate;
  * department here is the staff type ("Faculty", "Admin" or "Faculty/Admin");
  * an admin employee's office is officeDepartment. For Faculty/Admin, rate is
  * the office rate per hour and teachingRate the rate per hour/unit for teaching.
+ * archived employees are kept with all their history but hidden from lists.
  */
 public record EmployeeResponse(
         String id,
@@ -43,7 +44,9 @@ public record EmployeeResponse(
         String officeDepartment,
         String position,
         BigDecimal officeHours,
-        BigDecimal teachingRate) {
+        BigDecimal teachingRate,
+        boolean archived,
+        String archivedAt) {
 
     static EmployeeResponse of(FacultyStaff f) {
         return build("F", f, f.getRatePerHourUnit(), f.getInstructorRank(), f.getLoadUnits(),
@@ -97,7 +100,9 @@ public record EmployeeResponse(
                 officeDepartment,
                 position,
                 officeHours,
-                teachingRate);
+                teachingRate,
+                s.isArchived(),
+                s.getArchivedAt() == null ? null : s.getArchivedAt().toString());
     }
 
     private static String text(LocalDate date) {

@@ -18,15 +18,24 @@ import org.springframework.web.bind.annotation.RestController;
  * GET  /api/dtr/hours?from=&to=   hours worked per employee in a pay period (Payroll)
  * GET  /api/dtr/employees         employees that can be picked for a manual entry
  * POST /api/dtr/manual            save a manual entry (Attendance Recording)
+ * GET  /api/dtr/summary?from=&to= present / late / absent / on-leave days per employee (Attendance Report)
  */
 @RestController
 @RequestMapping("/api/dtr")
 public class DtrController {
 
     private final DtrService dtrService;
+    private final AttendanceSummaryService summaries;
 
-    public DtrController(DtrService dtrService) {
+    public DtrController(DtrService dtrService, AttendanceSummaryService summaries) {
         this.dtrService = dtrService;
+        this.summaries = summaries;
+    }
+
+    @GetMapping("/summary")
+    @RequireModule(SystemModule.DAILY_TIME_RECORD)
+    public Map<String, Object> summary(@RequestParam String from, @RequestParam String to) {
+        return Map.of("success", true, "employees", summaries.summary(from, to));
     }
 
     @GetMapping

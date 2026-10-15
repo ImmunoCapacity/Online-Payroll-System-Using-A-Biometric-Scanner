@@ -6,6 +6,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.time.LocalDateTime;
 
 /**
  * System accounts: System Administrator, Payroll Master, Payroll Staff
@@ -42,6 +43,9 @@ public class User {
     @Column(name = "is_active")
     private boolean active = true;
 
+    @Column(name = "password_changed_at")
+    private LocalDateTime passwordChangedAt;
+
     public Integer getId() { return id; }
     public String getFirstName() { return firstName; }
     public void setFirstName(String firstName) { this.firstName = firstName; }
@@ -59,4 +63,6 @@ public class User {
     public void setRole(String role) { this.role = role; }
     public boolean isActive() { return active; }
     public void setActive(boolean active) { this.active = active; }
+    public LocalDateTime getPasswordChangedAt() { return passwordChangedAt; }
+    public void setPasswordChangedAt(LocalDateTime passwordChangedAt) { this.passwordChangedAt = passwordChangedAt; }
 }

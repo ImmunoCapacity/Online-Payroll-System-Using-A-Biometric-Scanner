@@ -59,12 +59,15 @@ public class FacultyScheduleService {
     @Transactional(readOnly = true)
     public List<Map<String, String>> teacherChoices() {
         List<Map<String, String>> result = new ArrayList<>();
-        teachers.all().forEach((id, s) -> result.add(Map.of(
+        teachers.all().forEach((id, s) -> {
+            if (s.isArchived()) return;   // archived employees are not listed
+            result.add(Map.of(
                 "id", id,
                 "employeeNumber", s.getEmployeeNumber(),
                 "displayName", s.getFullName(),
                 "type", s.staffType(),
-                "status", s.getEmploymentStatus() == null ? "" : s.getEmploymentStatus())));
+                "status", s.getEmploymentStatus() == null ? "" : s.getEmploymentStatus()));
+        });
         return result;
     }
 

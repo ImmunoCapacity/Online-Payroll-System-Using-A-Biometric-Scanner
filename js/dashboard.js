@@ -350,11 +350,16 @@
         var nameEl = document.getElementById('biometricDeviceName');
         var statusEl = document.getElementById('biometricStatus');
 
-        if (!nameEl || !statusEl || typeof DataStore === 'undefined') {
+        if (!nameEl || !statusEl) {
             return;
         }
 
-        var devices = DataStore.getDevices();
+        fetch('api/devices/status')
+            .then(function (response) { return response.json(); })
+            .then(function (data) { show(data.success ? data.devices : []); })
+            .catch(function () { show([]); });
+
+        function show(devices) {
         var device = devices.find(function (d) { return d.status === 'Active'; }) || devices[0];
 
         if (!device) {
@@ -373,7 +378,8 @@
         var isOnline = device.status === 'Active';
         statusEl.classList.toggle('pp-device-status-connected', isOnline);
         statusEl.classList.toggle('pp-device-status-disconnected', !isOnline);
-        statusEl.innerHTML = '<span class="pp-device-dot"></span>' + (isOnline ? 'Connected' : 'Disconnected');
+        statusEl.innerHTML = '<span class="pp-device-dot"></span>' + (isOnline ? 'Active' : 'Inactive');
+        }
     })();
 
 })();

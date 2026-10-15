@@ -1,22 +1,30 @@
 package com.stibalayan.payroll.employee;
 
+import com.stibalayan.payroll.audit.AuditService;
+import com.stibalayan.payroll.auth.AuthInterceptor;
 import com.stibalayan.payroll.auth.RequireModule;
 import com.stibalayan.payroll.auth.SystemModule;
+import com.stibalayan.payroll.rate.RateService;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
  * GET    /api/employees        list faculty + admin staff
  * POST   /api/employees        create
  * PUT    /api/employees/{id}   update ("F3" / "A5")
- * DELETE /api/employees/{id}   delete
+ * POST   /api/employees/{id}/archive   archive (employees are never deleted)
+ * POST   /api/employees/{id}/restore   bring an archived employee back
+ * GET    /api/employees?archived=true    include archived employees
+ *
+ * A new or changed rate is also written to the rate history (Employee Rates).
  */
 @RestController
 @RequestMapping("/api/employees")
@@ -24,30 +32,45 @@ import org.springframework.web.bind.annotation.RestController;
 public class EmployeeController {
 
     private final EmployeeService employees;
+    private final RateService rates;
+    private final AuditService audit;
 
-    public EmployeeController(EmployeeService employees) {
+    public EmployeeController(EmployeeService employees, RateService rates, AuditService audit) {
         this.employees = employees;
+        this.rates = rates;
+        this.audit = audit;
     }
 
     @GetMapping
-    public Map<String, Object> list() {
-        return Map.of("success", true, "employees", employees.listAll());
+    public Map<String, Object> list(@RequestParam(defaultValue = "false") boolean archived) {
+        return Map.of("success", true, "employees", employees.listAll(archived));
     }
 
     @PostMapping
-    public Map<String, Object> create(@RequestBody EmployeeRequest request) {
-        return Map.of("success", true, "id", employees.create(request));
+    public Map<String, Object> create(@RequestBody EmployeeRequest request, HttpServletRequest http) {
+        String id = employees.create(request);
+        rates.syncEmployee(id, AuthInterceptor.currentUser(http).id());
+        return Map.of("success", true, "id", id);
     }
 
     @PutMapping("/{id}")
-    public Map<String, Object> update(@PathVariable String id, @RequestBody EmployeeRequest request) {
+    public Map<String, Object> update(@PathVariable String id, @RequestBody EmployeeRequest request, HttpServletRequest http) {
         employees.update(id, request);
+        rates.syncEmployee(id, AuthInterceptor.currentUser(http).id());
         return Map.of("success", true);
     }
 
-    @DeleteMapping("/{id}")
-    public Map<String, Object> delete(@PathVariable String id) {
-        employees.delete(id);
+    @PostMapping("/{id}/archive")
+    public Map<String, Object> archive(@PathVariable String id, HttpServletRequest http) {
+        String name = employees.archive(id);
+        audit.log(AuthInterceptor.currentUser(http).id(), "Employee Records", "Archived employee", name);
+        return Map.of("success", true);
+    }
+
+    @PostMapping("/{id}/restore")
+    public Map<String, Object> restore(@PathVariable String id, HttpServletRequest http) {
+        String name = employees.restore(id);
+        audit.log(AuthInterceptor.currentUser(http).id(), "Employee Records", "Restored employee", name);
         return Map.of("success", true);
     }
 }

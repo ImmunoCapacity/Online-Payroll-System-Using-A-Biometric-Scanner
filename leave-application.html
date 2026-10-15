@@ -1,303 +1,171 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
     <script src="js/auth-guard.js"></script>
-
-    <!-- Meta -->
     <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Leave Management — PayrollPro</title>
     <link rel="icon" type="image/png" href="sti_logo.png">
-
-    <!-- Bootstrap -->
-    <link
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-        rel="stylesheet"
-    >
-
-    <link
-        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
-        rel="stylesheet"
-    >
-
-    <!-- PayrollPro styles -->
-    <link
-        href="css/payrollpro.css"
-        rel="stylesheet"
-    >
-
-    <link
-        href="css/leave-application.css"
-        rel="stylesheet"
-    >
-
+    <link href="vendor/bootstrap/bootstrap.min.css" rel="stylesheet">
+    <link href="vendor/bootstrap-icons/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="css/payrollpro.css" rel="stylesheet">
+    <link href="css/leave-application.css" rel="stylesheet">
 </head>
-
-
 <body class="pp-app pp-app-shell">
 
-    <!-- Sidebar -->
     <div id="pp-sidebar-mount"></div>
 
     <div class="pp-shell-main">
-
-        <!-- Topbar -->
         <div id="pp-topbar-mount"></div>
 
-        <!-- Main content -->
         <main class="pp-content">
-
-            <!-- Page header -->
-            <header class="leave-page-header">
-
-                <h1 class="pp-content-title">
-                    Leave Management
-                </h1>
-
-                <p class="pp-content-subtitle">
-                    View and manage employee leave requests.
-                </p>
-
+            <header class="pp-content-header leave-page-header">
+                <div>
+                    <h1 class="pp-content-title">Leave Management</h1>
+                    <p class="pp-content-subtitle">Record employee leave requests, then approve or reject them. Approved paid leave is included in payroll.</p>
+                </div>
+                <button type="button" class="btn btn-pp-primary" id="recordLeaveBtn">
+                    <i class="bi bi-plus-lg me-1"></i> Record Leave
+                </button>
             </header>
-
 
             <!-- Filters -->
             <section class="leave-filter-bar">
-
                 <div class="leave-filter leave-search-filter">
-
-                    <label for="leaveSearch">
-                        Search
-                    </label>
-
+                    <label for="leaveSearch">Search</label>
                     <div class="leave-search">
-
                         <i class="bi bi-search"></i>
-
-                        <input
-                            type="text"
-                            id="leaveSearch" maxlength="100"
-                            class="form-control pp-form-control"
-                            placeholder="Search employee or employee ID"
-                        >
-
+                        <input type="text" id="leaveSearch" maxlength="100" class="form-control pp-form-control" placeholder="Search employee or employee ID">
                     </div>
-
                 </div>
-
-
                 <div class="leave-filter">
-
-                    <label for="leaveTypeFilter">
-                        Leave Type
-                    </label>
-
-                    <select data-clearable
-                        id="leaveTypeFilter"
-                        class="form-select pp-form-select"
-                    >
-
-                        <option value="All" hidden data-hint>
-                            All leave types
-                        </option>
-
-                        <option value="Sick">
-                            Sick Leave
-                        </option>
-
-                        <option value="Vacation">
-                            Vacation Leave
-                        </option>
-
-                        <option value="Maternity">
-                            Maternity Leave
-                        </option>
-
-                        <option value="Paternity">
-                            Paternity Leave
-                        </option>
-
-                        <option value="Emergency">
-                            Emergency Leave
-                        </option>
-
-                        <option value="Personal">
-                            Personal Leave
-                        </option>
-
+                    <label for="leaveTypeFilter">Leave Type</label>
+                    <select data-clearable id="leaveTypeFilter" class="form-select pp-form-select">
+                        <option value="All" hidden data-hint>All leave types</option>
                     </select>
-
                 </div>
-
-
                 <div class="leave-filter">
-
-                    <label for="leaveStatusFilter">
-                        Status
-                    </label>
-
-                    <select data-clearable
-                        id="leaveStatusFilter"
-                        class="form-select pp-form-select"
-                    >
-
-                        <option value="All" hidden data-hint>
-                            All statuses
-                        </option>
-
-                        <option value="Pending">
-                            Pending
-                        </option>
-
-                        <option value="Approved">
-                            Approved
-                        </option>
-
-                        <option value="Rejected">
-                            Rejected
-                        </option>
-
-                        <option value="Cancelled">
-                            Cancelled
-                        </option>
-
+                    <label for="leaveStatusFilter">Status</label>
+                    <select data-clearable id="leaveStatusFilter" class="form-select pp-form-select">
+                        <option value="All" hidden data-hint>All statuses</option>
+                        <option value="Pending">Pending</option>
+                        <option value="Approved">Approved</option>
+                        <option value="Rejected">Rejected</option>
+                        <option value="Cancelled">Cancelled</option>
                     </select>
-
                 </div>
-
-
                 <div class="leave-filter">
-
-                    <label for="leaveDateFilter">
-                        Leave Date
-                    </label>
-
-                    <input
-                        type="date"
-                        id="leaveDateFilter"
-                        class="form-control pp-form-control"
-                    >
-
+                    <label for="leaveDateFilter">Leave Date</label>
+                    <input type="date" id="leaveDateFilter" class="form-control pp-form-control">
                 </div>
-
             </section>
-
 
             <!-- Leave request list -->
             <section class="leave-request-card">
-
                 <div class="leave-request-header">
-
                     <div>
-
-                        <h2>
-                            Leave Requests
-                        </h2>
-
-                        <span id="leaveListCount">
-                            0 records
-                        </span>
-
+                        <h2>Leave Requests</h2>
+                        <span id="leaveListCount">0 records</span>
                     </div>
-
                 </div>
-
-
-                <!-- Table -->
+                <p class="pp-table-hint px-3 pt-2 mb-0">
+                    <i class="bi bi-hand-index" aria-hidden="true"></i>
+                    <span>Click a request to review, approve or reject it.</span>
+                </p>
                 <div class="leave-table-container">
-
                     <table class="leave-table">
-
                         <thead>
-
                             <tr>
-
-                                <th class="employee-column">
-                                    Employee
-                                </th>
-
-                                <th class="type-column">
-                                    Leave Type
-                                </th>
-
-                                <th class="date-column">
-                                    Date From
-                                </th>
-
-                                <th class="date-column">
-                                    Date To
-                                </th>
-
-                                <th class="days-column">
-                                    Days
-                                </th>
-
-                                <th class="pay-column">
-                                    Pay
-                                </th>
-
-                                <th class="filed-column">
-                                    Date Filed
-                                </th>
-
-                                <th class="status-column">
-                                    Status
-                                </th>
-
-                                <th class="remarks-column">
-                                    Remarks
-                                </th>
-
+                                <th class="employee-column">Employee</th>
+                                <th class="type-column">Leave Type</th>
+                                <th class="date-column">Dates</th>
+                                <th class="days-column">Days</th>
+                                <th class="pay-column">Pay</th>
+                                <th class="filed-column">Date Filed</th>
+                                <th class="status-column">Status</th>
+                                <th class="remarks-column">Reason</th>
                             </tr>
-
                         </thead>
-
-
                         <tbody id="leaveTableBody"></tbody>
-
                     </table>
-
-
-                    <!-- Empty state -->
-                    <div
-                        id="leaveEmptyState"
-                        class="leave-empty-state d-none"
-                    >
-
+                    <div id="leaveEmptyState" class="leave-empty-state d-none">
                         <i class="bi bi-calendar-x"></i>
-
-                        <span>
-                            No leave requests found.
-                        </span>
-
+                        <span>No leave requests found.</span>
                     </div>
-
                 </div>
-
             </section>
-
         </main>
-
     </div>
 
+    <!-- Record / edit leave -->
+    <div class="modal fade pp-modal" id="leaveModal" tabindex="-1" aria-labelledby="leaveModalTitle" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title" id="leaveModalTitle">Record Leave</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="leaveForm" class="d-flex flex-column flex-grow-1" style="min-height: 0;" novalidate>
+                    <div class="modal-body">
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label for="leaveEmployee" class="pp-form-label">Employee</label>
+                                <select class="form-select pp-form-select" id="leaveEmployee" required>
+                                    <option value="" selected hidden data-hint>Select employee</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="leaveCategory" class="pp-form-label">Leave Type</label>
+                                <select class="form-select pp-form-select" id="leaveCategory" data-label="Leave type" required>
+                                    <option value="" selected hidden data-hint>Select leave type</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label for="leaveFrom" class="pp-form-label">Date From</label>
+                                <input type="date" class="form-control pp-form-control" id="leaveFrom" data-validate="date" data-label="Start date" min="2000-01-01" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="leaveTo" class="pp-form-label">Date To</label>
+                                <input type="date" class="form-control pp-form-control" id="leaveTo" data-validate="date" data-label="End date" data-after="leaveFrom" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="leaveReason" class="pp-form-label">Reason</label>
+                            <input type="text" class="form-control pp-form-control" id="leaveReason" maxlength="255" data-validate="text" placeholder="e.g. Flu, family event, medical procedure" required>
+                        </div>
+                        <div class="leave-summary" id="leaveSummary">Choose an employee, leave type and dates.</div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-pp-outline" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-pp-primary" id="saveLeaveBtn">Save Request</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
-    <!-- Scripts -->
+    <!-- Request details and review -->
+    <div class="modal fade pp-modal" id="detailModal" tabindex="-1" aria-labelledby="detailTitle" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title" id="detailTitle">Leave Request</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="detailBody"></div>
+                <div class="modal-footer" id="detailFooter"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="vendor/bootstrap/bootstrap.bundle.min.js"></script>
     <script src="js/data-store.js"></script>
-
     <script src="js/toast.js"></script>
-
     <script src="js/payrollpro-layout.js"></script>
     <script src="js/select-hint.js"></script>
-
+    <script src="js/form-validation.js"></script>
     <script src="js/leave-application.js"></script>
-
 </body>
-
 </html>

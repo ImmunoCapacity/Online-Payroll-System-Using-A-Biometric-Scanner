@@ -67,6 +67,14 @@
             });
     }
 
+    // When the password was last changed — by the System Administrator here,
+    // or by the user through Forgot Password.
+    function passwordChanged(at) {
+        if (!at) return '<span class="text-muted">—</span>';
+        var d = new Date(at);
+        return isNaN(d) ? '—' : d.toLocaleString('en-PH', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+    }
+
     function renderTable() {
         if (!users.length) {
             userBody.innerHTML = '';
@@ -84,9 +92,13 @@
                     '<td>' + escapeHtml(u.role) + '</td>' +
                     '<td>' + escapeHtml(u.email) + '</td>' +
                     '<td><span class="pp-badge ' + (u.active ? 'pp-badge-present' : 'pp-badge-absent') + '">' + (u.active ? 'Active' : 'Inactive') + '</span></td>' +
+                    '<td>' + passwordChanged(u.passwordChangedAt) + '</td>' +
                     '<td class="col-actions text-center">' +
                         '<button type="button" class="btn btn-sm btn-pp-outline me-2" data-action="edit" data-id="' + u.id + '" aria-label="Edit ' + fullName + '"><i class="bi bi-pencil"></i></button>' +
-                        '<button type="button" class="btn btn-sm btn-pp-outline" data-action="delete" data-id="' + u.id + '" aria-label="Delete ' + fullName + '"><i class="bi bi-trash"></i></button>' +
+                        // System Administrator accounts can't be deleted (only deactivated).
+                        (u.role === 'System Administrator'
+                            ? '<button type="button" class="btn btn-sm btn-pp-outline" disabled title="System Administrator accounts can\x27t be deleted" aria-label="' + fullName + ' can\x27t be deleted"><i class="bi bi-shield-lock"></i></button>'
+                            : '<button type="button" class="btn btn-sm btn-pp-outline" data-action="delete" data-id="' + u.id + '" aria-label="Delete ' + fullName + '"><i class="bi bi-trash"></i></button>') +
                     '</td>' +
                 '</tr>'
             );

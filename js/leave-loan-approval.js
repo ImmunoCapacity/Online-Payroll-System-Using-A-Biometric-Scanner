@@ -16,17 +16,59 @@
     });
 
 
-    var employees = DataStore.getEmployees()
-        .filter(function (e) { return e.status !== 'Inactive'; })
-        .map(function (e) {
-            return { id: e.id, name: e.displayName, role: e.type === 'Faculty' ? 'Faculty Staff' : e.type === 'Faculty/Admin' ? 'Administrative and Faculty Staff' : 'Administrative Staff' };
+    // Employees and loans come from the database (api/employees, api/loans).
+    // Employee ids look like "F3" / "A5"; loan.employeeId is the employee number.
+    var employees = [];
+    var loans = [];
+
+    function api(url, options) {
+        return fetch(url, options).then(function (r) { return r.json(); });
+    }
+
+    function loadData() {
+        return Promise.all([api('api/employees'), api('api/loans')]).then(function (results) {
+            if (!results[0].success) throw new Error(results[0].message || 'Could not load employees.');
+            if (!results[1].success) throw new Error(results[1].message || 'Could not load loans.');
+            employees = results[0].employees
+                .filter(function (e) { return ['Inactive', 'Resigned', 'Terminated'].indexOf(e.status) === -1; })
+                .map(function (e) {
+                    return { id: e.id, number: e.employeeNumber, name: e.displayName };
+                });
+            loans = results[1].loans;
+            populateEmployeeSelect();
+            renderLoans();
+        }).catch(function (error) {
+            if (window.PPToast) PPToast.error(error.message || 'Could not reach the server.');
         });
+    }
 
-
-    var loans = DataStore.getLoans();
-
-    function persistLoans() {
-        DataStore.saveLoans(loans);
+    /** Payroll periods to start deductions: the current one and the next five (11th–25th, 26th–10th). */
+    function populateStartPeriods() {
+        var select = document.getElementById('loanStartPeriod');
+        if (!select) return;
+        var months = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
+            'August', 'September', 'October', 'November', 'December'];
+        function iso(d) {
+            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        }
+        var today = new Date();
+        var start = today.getDate() >= 26 ? new Date(today.getFullYear(), today.getMonth(), 26)
+            : today.getDate() >= 11 ? new Date(today.getFullYear(), today.getMonth(), 11)
+            : new Date(today.getFullYear(), today.getMonth() - 1, 26);
+        var options = '<option value="" selected hidden data-hint>Select payroll period</option>';
+        for (var i = 0; i < 6; i++) {
+            var end = start.getDate() === 11
+                ? new Date(start.getFullYear(), start.getMonth(), 25)
+                : new Date(start.getFullYear(), start.getMonth() + 1, 10);
+            var label = months[start.getMonth()] + ' ' + start.getDate() +
+                (start.getFullYear() === end.getFullYear() ? '' : ', ' + start.getFullYear()) +
+                ' – ' + months[end.getMonth()] + ' ' + end.getDate() + ', ' + end.getFullYear();
+            options += '<option value="' + iso(start) + '">' + label + '</option>';
+            start = start.getDate() === 11
+                ? new Date(start.getFullYear(), start.getMonth(), 26)
+                : new Date(start.getFullYear(), start.getMonth() + 1, 11);
+        }
+        select.innerHTML = options;
     }
 
 
@@ -66,17 +108,17 @@
 
 
     function getTotalDeducted(loan) {
-        return DataStore.getLoanTotalDeducted(loan);
+        return Number(loan.totalDeducted) || 0;
     }
 
 
     function getRemainingBalance(loan) {
-        return DataStore.getLoanRemainingBalance(loan);
+        return Number(loan.remainingBalance) || 0;
     }
 
 
     function getLoanStatus(loan) {
-        return DataStore.getLoanStatus(loan);
+        return loan.status;
     }
 
 
@@ -126,7 +168,7 @@
                     '">' +
                     escapeHtml(employee.name) +
                     ' — ' +
-                    escapeHtml(employee.id) +
+                    escapeHtml(employee.number) +
                     '</option>'
                 );
             }).join('');
@@ -649,50 +691,52 @@
                 }
 
 
-                loans.push({
-                    id: DataStore.nextNumericId(loans),
-                    employeeId: employee.id,
-                    employeeName: employee.name,
-                    employeeRole: employee.role,
-                    type: type,
-                    reference: reference,
-                    amount: amount,
-                    deductionPerPayroll: deduction,
-                    startPeriod: startPeriod,
-                    startPeriodLabel: startPeriodLabel,
-                    remarks: remarks,
-                    deductionHistory: []
+                var submitButton = form.querySelector('button[type="submit"]');
+                if (submitButton) submitButton.disabled = true;
+
+                api('api/loans', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        employeeId: employee.id,
+                        type: type,
+                        reference: reference,
+                        amount: amount,
+                        deductionPerPayroll: deduction,
+                        startDate: startPeriod,
+                        remarks: remarks
+                    })
+                }).then(function (data) {
+                    if (submitButton) submitButton.disabled = false;
+                    if (!data.success) {
+                        var fields = {
+                            employeeId: 'loanEmployee', type: 'loanType', reference: 'loanReference',
+                            amount: 'loanAmount', deductionPerPayroll: 'loanDeduction',
+                            startDate: 'loanStartPeriod', remarks: 'loanRemarks'
+                        };
+                        if (!PPValidate.showServerError(form, data, fields) && window.PPToast) {
+                            PPToast.error(data.message || 'Could not record the loan.');
+                        }
+                        return;
+                    }
+
+                    loans.unshift(data.loan);
+                    form.reset();
+                    PPValidate.clear(form);
+
+                    var modal = bootstrap.Modal.getInstance(document.getElementById('recordLoanModal'));
+                    if (modal) {
+                        modal.hide();
+                    }
+
+                    renderLoans();
+                    if (window.PPToast) {
+                        PPToast.success('Loan recorded for ' + employee.name + '.');
+                    }
+                }).catch(function () {
+                    if (submitButton) submitButton.disabled = false;
+                    if (window.PPToast) PPToast.error('Could not reach the server.');
                 });
-                persistLoans();
-
-
-                form.reset();
-
-                PPValidate.clear(form);
-
-
-                var modalElement =
-                    document.getElementById(
-                        'recordLoanModal'
-                    );
-
-
-                var modal =
-                    bootstrap.Modal.getInstance(
-                        modalElement
-                    );
-
-
-                if (modal) {
-                    modal.hide();
-                }
-
-
-                renderLoans();
-
-                if (window.PPToast) {
-                    PPToast.success('Loan recorded for ' + employee.name + '.');
-                }
             }
         );
     }
@@ -722,8 +766,8 @@
     }
 
 
-    populateEmployeeSelect();
-    renderLoans();
+    populateStartPeriods();
     showLoanManagement();
+    loadData();
 
 })();

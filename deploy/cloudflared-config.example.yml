@@ -1,0 +1,16 @@
+# Cloudflare Tunnel settings for PayrollPro (see DEPLOYMENT.md, Part C).
+#
+# Copy this file to  C:\Users\<you>\.cloudflared\config.yml  and replace:
+#   <TUNNEL-ID>        the ID printed by "cloudflared tunnel create payroll"
+#   <WINDOWS-USER>     your Windows user name (the folder under C:\Users)
+#   payroll.example.com  the address you routed with "cloudflared tunnel route dns"
+
+tunnel: <TUNNEL-ID>
+credentials-file: C:\Users\<WINDOWS-USER>\.cloudflared\<TUNNEL-ID>.json
+
+ingress:
+  # Your domain -> the payroll system running on this laptop.
+  - hostname: payroll.example.com
+    service: http://localhost:8080
+  # Anything else is refused.
+  - service: http_status:404

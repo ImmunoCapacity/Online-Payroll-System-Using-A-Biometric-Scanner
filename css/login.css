@@ -236,3 +236,101 @@ body::before {
     line-height: 1.5;
 }
 
+
+/* ---------------------------------------------------------------
+   Forgot Password dialog (email → code → new password)
+   --------------------------------------------------------------- */
+.reset-modal {
+    border-radius: 14px;
+    border: 1px solid var(--pp-border);
+}
+
+.reset-modal .modal-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--pp-primary-dark);
+}
+
+.reset-steps {
+    display: flex;
+    gap: 0.5rem;
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1.25rem;
+    counter-reset: step;
+}
+
+.reset-steps li {
+    flex: 1;
+    font-size: 0.75rem;
+    color: var(--pp-text-muted);
+    border-top: 3px solid var(--pp-border);
+    padding-top: 0.4rem;
+    counter-increment: step;
+}
+
+.reset-steps li::before {
+    content: counter(step) ". ";
+}
+
+.reset-steps li.active,
+.reset-steps li.done {
+    color: var(--pp-primary);
+    border-top-color: var(--pp-primary);
+    font-weight: 600;
+}
+
+.reset-help {
+    font-size: 0.875rem;
+    color: var(--pp-text-muted);
+    margin-bottom: 1rem;
+}
+
+.reset-code-input {
+    font-size: 1.5rem;
+    letter-spacing: 0.5rem;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+
+.reset-links {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.875rem;
+}
+
+.reset-links .disabled {
+    color: var(--pp-text-muted);
+    pointer-events: none;
+}
+
+.reset-message {
+    display: none;
+    margin-top: 1rem;
+    font-size: 0.875rem;
+    border-radius: var(--pp-radius);
+    padding: 0.75rem 1rem;
+}
+
+.reset-message.show {
+    display: block;
+}
+
+.reset-message.error {
+    background: var(--pp-error-bg);
+    color: var(--pp-error);
+    border: 1px solid #fecaca;
+}
+
+.reset-message.info {
+    background: var(--pp-accent-light);
+    color: var(--pp-accent);
+    border: 1px solid #b7dfcd;
+}
+
+/* Success notice on the login card after a password reset. */
+.alert-locked.alert-success-note {
+    background: var(--pp-accent-light);
+    border-color: #b7dfcd;
+    color: var(--pp-accent);
+}

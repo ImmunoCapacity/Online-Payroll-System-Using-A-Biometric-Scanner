@@ -40,8 +40,9 @@ public class FingerprintService {
     @Transactional(readOnly = true)
     public List<FingerprintEmployee> listAll() {
         List<FingerprintEmployee> result = new ArrayList<>();
-        faculty.findAll().forEach(f -> result.add(row(EmployeeId.faculty(f.getId()), f)));
-        admins.findAll().forEach(a -> result.add(row(EmployeeId.admin(a.getId()), a)));
+        // Archived employees are left out.
+        faculty.findAll().stream().filter(f -> !f.isArchived()).forEach(f -> result.add(row(EmployeeId.faculty(f.getId()), f)));
+        admins.findAll().stream().filter(a -> !a.isArchived()).forEach(a -> result.add(row(EmployeeId.admin(a.getId()), a)));
         result.sort(Comparator.comparing(FingerprintEmployee::displayName, String.CASE_INSENSITIVE_ORDER));
         return result;
     }

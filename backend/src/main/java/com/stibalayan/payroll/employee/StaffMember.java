@@ -3,6 +3,7 @@ package com.stibalayan.payroll.employee;
 import jakarta.persistence.Column;
 import jakarta.persistence.MappedSuperclass;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 /**
  * Columns shared by faculty_staff and admin_staff (paper, Data Dictionary
@@ -72,6 +73,13 @@ public abstract class StaffMember {
 
     private String notes;
 
+    /** Archived employees are kept (with all their history) but hidden from lists and pickers. */
+    @Column(name = "is_archived")
+    private boolean archived;
+
+    @Column(name = "archived_at")
+    private LocalDateTime archivedAt;
+
     public abstract Integer getId();
 
     /** "Faculty", "Admin" or "Faculty/Admin" — what the screens show as the staff type. */
@@ -119,6 +127,10 @@ public abstract class StaffMember {
     public void setTinId(String tinId) { this.tinId = tinId; }
     public String getNotes() { return notes; }
     public void setNotes(String notes) { this.notes = notes; }
+    public boolean isArchived() { return archived; }
+    public void setArchived(boolean archived) { this.archived = archived; }
+    public LocalDateTime getArchivedAt() { return archivedAt; }
+    public void setArchivedAt(LocalDateTime archivedAt) { this.archivedAt = archivedAt; }
 
     public String getFullName() {
         return ((firstname == null ? "" : firstname) + " " + (lastname == null ? "" : lastname)).trim();

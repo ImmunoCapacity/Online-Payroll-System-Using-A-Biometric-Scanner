@@ -14,9 +14,17 @@
 -- approval or incomplete, and a few flagged, rejected or not checked.
 -- All classes on Fri Sep 25 are cancelled (typhoon class suspension).
 --
+-- Leave: every Admin weekday absence is an approved sick leave (paid in
+-- payroll), plus pending, rejected, cancelled and unpaid requests.
+-- Loans: four loans starting Sep 11 – Oct 11, with no deductions yet; they
+-- are recorded when a payroll period is released.
+-- Benefits: Rice (all), Transportation (Admin, Faculty/Admin) and Internet
+-- (Faculty, Faculty/Admin) allowances, paid every payroll period.
+--
 -- Safe to run again: the 10 sample employees (employee numbers
 -- 02001000101–02001000110) are deleted first, together with everything
--- linked to them. Other employees are not touched.
+-- linked to them, and the payroll runs of the three sample periods are
+-- cleared so they can be run again. Other employees are not touched.
 -- Emails use example.com so payslip emails never reach real people.
 -- Needs one Payroll Master account (it is recorded as the user who
 -- entered, checked and approved the records).
@@ -28,8 +36,13 @@ SET @master := (SELECT user_id FROM users
                 WHERE role = 'Payroll Master' AND is_active = 1
                 ORDER BY user_id LIMIT 1);
 
--- 0. Remove an earlier copy of the sample (classes, checks, audit, history
---    and DTR rows go with the employees through ON DELETE CASCADE).
+-- 0. Remove an earlier copy of the sample (classes, checks, audit, history,
+--    DTR, loans, rates and payroll rows go with the employees through
+--    ON DELETE CASCADE). Payroll runs of the three sample periods are
+--    removed too — for every employee — so they can be run again.
+DELETE FROM payroll_run
+WHERE (pay_period_start, pay_period_end) IN
+      (('2026-09-11', '2026-09-25'), ('2026-09-26', '2026-10-10'), ('2026-10-11', '2026-10-25'));
 DELETE FROM faculty_staff WHERE employee_number BETWEEN '02001000101' AND '02001000110';
 DELETE FROM admin_staff   WHERE employee_number BETWEEN '02001000101' AND '02001000110';
 
@@ -339,6 +352,88 @@ WHERE x.absences = 0;
 
 
 -- ---------------------------------------------------------------
+-- 5. Leave Management
+-- ---------------------------------------------------------------
+
+SET @masterName := (SELECT CONCAT(first_name, ' ', last_name) FROM users WHERE user_id = @master);
+SET @sick := (SELECT leave_category_id FROM leave_category WHERE category_name = 'Sick Leave');
+SET @vacation := (SELECT leave_category_id FROM leave_category WHERE category_name = 'Vacation Leave');
+SET @paternity := (SELECT leave_category_id FROM leave_category WHERE category_name = 'Paternity Leave');
+SET @lwop := (SELECT leave_category_id FROM leave_category WHERE category_name = 'Leave Without Pay');
+
+-- Every weekday an Admin employee has no DTR record (Sep 11 – Oct 8) was an
+-- approved sick leave — so those days are paid as leave in payroll.
+INSERT INTO employee_leave (adminstaff_id, leave_category, leave_category_id, is_paid, reason, status,
+    date_requested, date_approved, approved_by, recorded_by, date_from, date_to, remarks, total_days, total_leave_credit)
+SELECT e.adminstaff_id, 'Sick Leave', @sick, 1, 'Fever; medical certificate submitted.', 'Approved',
+       TIMESTAMP(t.d, '07:30:00'), TIMESTAMP(t.d + INTERVAL 1 DAY, '09:00:00'), @masterName, @master,
+       t.d, t.d, 'Medical certificate on file.', 1, 15
+FROM tmp_days t
+JOIN tmp_emp e ON e.kind = 'Admin'
+WHERE WEEKDAY(t.d) < 5 AND t.d <= '2026-10-08'
+  AND NOT EXISTS (SELECT 1 FROM daily_time_record r WHERE r.adminstaff_id = e.adminstaff_id AND r.record_date = t.d);
+
+-- A mix of other requests.
+INSERT INTO employee_leave (faculty_id, adminstaff_id, leave_category, leave_category_id, is_paid, reason, status,
+    date_requested, date_approved, approved_by, recorded_by, date_from, date_to, remarks, total_days, total_leave_credit)
+VALUES
+    -- pending: family trip next week
+    (NULL, @a2, 'Vacation Leave', @vacation, 1, 'Family trip to Bicol.', 'Pending',
+     '2026-10-07 10:15:00', NULL, NULL, @master, '2026-10-19', '2026-10-21', NULL, 3, NULL),
+    -- rejected: peak enrollment week
+    (NULL, @a3, 'Vacation Leave', @vacation, 1, 'Personal errands.', 'Rejected',
+     '2026-10-05 14:00:00', '2026-10-06 09:30:00', @masterName, @master, '2026-10-12', '2026-10-16',
+     'Peak enrollment week; please refile for after Oct 23.', 5, NULL),
+    -- approved, unpaid
+    (NULL, @a4, 'Leave Without Pay', @lwop, 0, 'Accompanying a family member to a hospital in Manila.', 'Approved',
+     '2026-10-06 08:45:00', '2026-10-06 16:00:00', @masterName, @master, '2026-10-22', '2026-10-23', NULL, 2, NULL),
+    -- pending, faculty
+    (@f1, NULL, 'Paternity Leave', @paternity, 1, 'Birth of second child (expected Oct 27).', 'Pending',
+     '2026-10-08 11:20:00', NULL, NULL, @master, '2026-10-27', '2026-11-04', NULL, 7, NULL),
+    -- cancelled
+    (NULL, @a5, 'Sick Leave', @sick, 1, 'Migraine.', 'Cancelled',
+     '2026-09-30 07:10:00', '2026-10-01 08:05:00', @masterName, @master, '2026-10-01', '2026-10-01',
+     'Reported for work after all.', 1, NULL);
+
+
+-- ---------------------------------------------------------------
+-- 6. Loan Management (no deductions yet: payroll hasn't been released;
+--    releasing a period records the deductions against these loans)
+-- ---------------------------------------------------------------
+
+INSERT INTO loan (faculty_id, adminstaff_id, loan_type, loan_amount, `current_date`, date_from, date_to,
+    reference_no, deduction_per_payroll, remarks, recorded_by)
+VALUES
+    (NULL, @a1, 'SSS Salary Loan', 20000.00, '2026-09-08', '2026-09-11', NULL, 'SSS-2026-104501', 1000.00, 'Approved by SSS on Sep 4.', @master),
+    (NULL, @a2, 'Pag-IBIG MPL', 15000.00, '2026-09-22', '2026-09-26', NULL, 'HDMF-MPL-2026-0206', 750.00, NULL, @master),
+    (@f1, NULL, 'Pag-IBIG Calamity Loan', 10000.00, '2026-10-06', '2026-10-11', NULL, 'HDMF-CAL-2026-0031', 500.00, 'Typhoon damage to house.', @master),
+    (NULL, @a6, 'Other Loan', 3000.00, '2026-09-09', '2026-09-11', NULL, 'ADV-2026-007', 1500.00, 'Salary advance.', @master);
+
+
+-- ---------------------------------------------------------------
+-- 7. Benefits Table: allowances paid every payroll period
+-- ---------------------------------------------------------------
+
+INSERT IGNORE INTO benefit (benefit_name, default_amount, is_active) VALUES
+    ('Rice Allowance', 500.00, 1),
+    ('Transportation Allowance', 300.00, 1),
+    ('Internet Allowance', 250.00, 1);
+
+SET @rice := (SELECT benefit_id FROM benefit WHERE benefit_name = 'Rice Allowance');
+SET @transport := (SELECT benefit_id FROM benefit WHERE benefit_name = 'Transportation Allowance');
+SET @internet := (SELECT benefit_id FROM benefit WHERE benefit_name = 'Internet Allowance');
+
+INSERT INTO employee_benefit (benefit_id, faculty_id, adminstaff_id, amount)
+SELECT @rice, e.faculty_id, e.adminstaff_id, 500.00 FROM tmp_emp e;
+
+INSERT INTO employee_benefit (benefit_id, faculty_id, adminstaff_id, amount)
+SELECT @transport, e.faculty_id, e.adminstaff_id, 300.00 FROM tmp_emp e WHERE e.kind IN ('Admin', 'Faculty/Admin');
+
+INSERT INTO employee_benefit (benefit_id, faculty_id, adminstaff_id, amount)
+SELECT @internet, e.faculty_id, e.adminstaff_id, 250.00 FROM tmp_emp e WHERE e.kind IN ('Faculty', 'Faculty/Admin');
+
+
+-- ---------------------------------------------------------------
 -- Clean up and show what was added
 -- ---------------------------------------------------------------
 
@@ -366,4 +461,18 @@ UNION ALL
 SELECT 'DTR records (Sep 11 – Oct 8)', COUNT(*) FROM daily_time_record r
     LEFT JOIN faculty_staff f ON f.faculty_id = r.faculty_id
     LEFT JOIN admin_staff a ON a.adminstaff_id = r.adminstaff_id
-    WHERE COALESCE(f.employee_number, a.employee_number) BETWEEN '02001000101' AND '02001000110';
+    WHERE COALESCE(f.employee_number, a.employee_number) BETWEEN '02001000101' AND '02001000110'
+UNION ALL
+SELECT CONCAT('Leave requests: ', l.status), COUNT(*) FROM employee_leave l
+    LEFT JOIN faculty_staff f ON f.faculty_id = l.faculty_id
+    LEFT JOIN admin_staff a ON a.adminstaff_id = l.adminstaff_id
+    WHERE COALESCE(f.employee_number, a.employee_number) BETWEEN '02001000101' AND '02001000110'
+    GROUP BY l.status
+UNION ALL
+SELECT 'Loans', COUNT(*) FROM loan WHERE reference_no IN ('SSS-2026-104501', 'HDMF-MPL-2026-0206', 'HDMF-CAL-2026-0031', 'ADV-2026-007')
+UNION ALL
+SELECT CONCAT('Benefit: ', b.benefit_name), COUNT(*) FROM employee_benefit eb JOIN benefit b USING (benefit_id)
+    LEFT JOIN faculty_staff f ON f.faculty_id = eb.faculty_id
+    LEFT JOIN admin_staff a ON a.adminstaff_id = eb.adminstaff_id
+    WHERE COALESCE(f.employee_number, a.employee_number) BETWEEN '02001000101' AND '02001000110'
+    GROUP BY b.benefit_name;

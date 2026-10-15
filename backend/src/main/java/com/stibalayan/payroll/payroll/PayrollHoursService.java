@@ -6,6 +6,7 @@ import com.stibalayan.payroll.dtr.DailyTimeRecordRepository;
 import com.stibalayan.payroll.employee.AdminStaff;
 import com.stibalayan.payroll.employee.AdminStaffRepository;
 import com.stibalayan.payroll.employee.EmployeeId;
+import com.stibalayan.payroll.leave.LeaveService;
 import com.stibalayan.payroll.teaching.TeachingHoursService;
 import com.stibalayan.payroll.teaching.TeachingHoursService.ApprovedHours;
 import com.stibalayan.payroll.teaching.TeachingHoursService.ClassPeriod;
@@ -29,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
  * The hours payroll pays for, per employee, in one pay period:
  *
  *   officeHours   — from the biometric Daily Time Record (administrative work)
+ *   paidLeaveDays — approved paid leave days not also worked (Leave Management)
  *   teachingHours — APPROVED payable hours from Faculty Teaching Hours, never
  *                   straight from the Faculty Schedule
  *
@@ -43,13 +45,16 @@ public class PayrollHoursService {
     private final DailyTimeRecordRepository dtr;
     private final AdminStaffRepository admins;
     private final TeachingHoursService teaching;
+    private final LeaveService leave;
     private final boolean excludeOverlap;
 
     public PayrollHoursService(DailyTimeRecordRepository dtr, AdminStaffRepository admins, TeachingHoursService teaching,
+                               LeaveService leave,
                                @Value("${payroll.exclude-teaching-from-office-hours:true}") boolean excludeOverlap) {
         this.dtr = dtr;
         this.admins = admins;
         this.teaching = teaching;
+        this.leave = leave;
         this.excludeOverlap = excludeOverlap;
     }
 
@@ -67,6 +72,7 @@ public class PayrollHoursService {
 
         // Biometric minutes per employee, less any overlap with approved classes (Faculty/Admin only).
         Map<String, long[]> office = new HashMap<>();   // employeeId -> {minutes, days, overlapMinutes}
+        Map<String, Set<LocalDate>> workedDates = new HashMap<>();
         for (DailyTimeRecord r : dtr.findByRecordDateBetween(from, to)) {
             String employeeId = r.getFacultyId() != null ? EmployeeId.faculty(r.getFacultyId())
                     : r.getAdminstaffId() != null ? EmployeeId.admin(r.getAdminstaffId()) : null;
@@ -76,6 +82,7 @@ public class PayrollHoursService {
             long[] t = office.computeIfAbsent(employeeId, k -> new long[3]);
             t[0] += Duration.between(r.getTimeIn(), r.getTimeOut()).toMinutes();
             t[1]++;
+            workedDates.computeIfAbsent(employeeId, k -> new HashSet<>()).add(r.getRecordDate());
             boolean facultyAdmin = r.getAdminstaffId() != null && facultyAdmins.contains(r.getAdminstaffId());
             if (excludeOverlap && facultyAdmin && taught.containsKey(employeeId)) {
                 for (ClassPeriod p : taught.get(employeeId).periods) {
@@ -86,13 +93,24 @@ public class PayrollHoursService {
             }
         }
 
+        // Approved paid leave, but not on days the employee also worked (no double pay).
+        Map<String, Set<LocalDate>> leaveDates = leave.paidLeaveDates(from, to);
+        Map<String, Integer> paidLeaveDays = new HashMap<>();
+        leaveDates.forEach((id, dates) -> {
+            Set<LocalDate> worked = workedDates.getOrDefault(id, Set.of());
+            int days = (int) dates.stream().filter(d -> !worked.contains(d)).count();
+            if (days > 0) paidLeaveDays.put(id, days);
+        });
+
         Set<String> ids = new LinkedHashSet<>(office.keySet());
         ids.addAll(taught.keySet());
+        ids.addAll(paidLeaveDays.keySet());
         List<Map<String, Object>> result = new ArrayList<>();
         for (String id : ids) {
             long[] t = office.getOrDefault(id, new long[3]);
             ApprovedHours h = taught.get(id);
             Map<String, Object> row = new HashMap<>();
+            row.put("paidLeaveDays", paidLeaveDays.getOrDefault(id, 0));
             row.put("employeeId", id);
             row.put("biometricHours", hours(t[0]));
             row.put("daysWorked", t[1]);

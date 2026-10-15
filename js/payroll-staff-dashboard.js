@@ -140,16 +140,35 @@
     // DASHBOARD DATA
     // ============================================================
 
+    // Today's attendance from the Daily Time Record (api/dtr/summary).
     function loadDashboardData() {
 
-        var employees = DataStore.getEmployees().filter(function (e) { return e.status === 'Active'; });
-        var today = new Date().toISOString().slice(0, 10);
-        var todaysDtr = DataStore.getDTR().filter(function (r) { return r.date === today; });
+        var now = new Date();
+        var today = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
 
-        var present = todaysDtr.filter(function (r) { return r.status === 'present'; }).length;
-        var late = todaysDtr.filter(function (r) { return r.status === 'late'; }).length;
-        var absent = todaysDtr.filter(function (r) { return r.status === 'absent'; }).length;
-        var onLeave = todaysDtr.filter(function (r) { return r.status === 'leave'; }).length;
+        fetch('api/dtr/summary?from=' + today + '&to=' + today)
+            .then(function (response) { return response.json(); })
+            .then(function (data) {
+                if (!data.success) throw new Error(data.message);
+                showAttendance(data.employees);
+            })
+            .catch(function (error) {
+                console.error('[Payroll Staff Dashboard] Could not load attendance:', error);
+                setText('presentPercentage', 'Could not load attendance');
+            });
+
+    }
+
+    function showAttendance(employees) {
+
+        function count(key) {
+            return employees.reduce(function (sum, e) { return sum + (e[key] || 0); }, 0);
+        }
+
+        var present = count('present');
+        var late = count('late');
+        var absent = count('absent');
+        var onLeave = count('onLeave');
 
         var total = employees.length;
 

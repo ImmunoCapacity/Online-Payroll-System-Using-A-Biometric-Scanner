@@ -156,7 +156,7 @@
 
 .leave-table {
     width: 100%;
-    min-width: 1300px;
+    min-width: 900px;
     border-collapse: collapse;
     table-layout: fixed;
 }
@@ -196,11 +196,11 @@
 }
 
 .leave-table .type-column {
-    width: 14%;
+    width: 13%;
 }
 
 .leave-table .date-column {
-    width: 11%;
+    width: 16%;
 }
 
 .leave-table .days-column {
@@ -208,19 +208,19 @@
 }
 
 .leave-table .pay-column {
-    width: 9%;
+    width: 8%;
 }
 
 .leave-table .filed-column {
-    width: 10%;
-}
-
-.leave-table .status-column {
     width: 11%;
 }
 
+.leave-table .status-column {
+    width: 10%;
+}
+
 .leave-table .remarks-column {
-    width: 15%;
+    width: 17%;
 }
 
 
@@ -387,4 +387,92 @@
         padding: 14px;
     }
 
+}
+/* ---------------------------------------------------------------
+   Leave Management (database-backed): badges, rows, summary
+   --------------------------------------------------------------- */
+.leave-page-header > .btn {
+    margin-top: 0.875rem;
+}
+
+.leave-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.leave-badge.pending { background: var(--pp-warning-bg); color: var(--pp-warning); }
+.leave-badge.approved { background: var(--pp-success-bg); color: var(--pp-success); }
+.leave-badge.rejected { background: var(--pp-error-bg); color: var(--pp-error); }
+.leave-badge.cancelled { background: #f1f5f9; color: #64748b; }
+.leave-badge.paid { background: var(--pp-info-bg); color: var(--pp-info); }
+.leave-badge.unpaid { background: #f1f5f9; color: #475569; }
+
+.leave-table tbody tr.pp-row-clickable { cursor: pointer; }
+.leave-table tbody tr.pp-row-clickable:hover { background: var(--pp-bg); }
+.leave-table tbody tr.pp-row-clickable:focus-visible { outline: 2px solid var(--pp-primary); outline-offset: -2px; }
+
+.leave-sub {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--pp-text-muted);
+}
+
+.leave-reason-cell {
+    max-width: 18rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Days and credits preview in the Record Leave form */
+.leave-summary {
+    padding: 0.75rem 1rem;
+    border-radius: var(--pp-radius-sm);
+    background: var(--pp-bg);
+    font-size: 0.8125rem;
+    color: var(--pp-text);
+}
+
+.leave-summary.is-warning {
+    background: var(--pp-warning-bg);
+    color: var(--pp-warning);
+}
+
+.leave-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.75rem 1rem;
+    padding: 0.875rem 1rem;
+    border: 1px solid var(--pp-border);
+    border-radius: var(--pp-radius-sm);
+    background: var(--pp-bg);
+    margin-bottom: 1rem;
+}
+
+.leave-detail-label {
+    display: block;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--pp-text-muted);
+}
+
+.leave-detail-value {
+    font-weight: 600;
+    color: var(--pp-text);
+}
+
+.leave-section-title {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--pp-text-muted);
+    margin: 1.25rem 0 0.5rem;
 }

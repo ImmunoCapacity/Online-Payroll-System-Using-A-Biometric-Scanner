@@ -4,8 +4,8 @@ import java.math.BigDecimal;
 import java.util.List;
 
 /**
- * Body of POST /api/payroll/payslips/email: the released payroll of one pay
- * period, as computed on the Payroll Processing page.
+ * The payslips of one released pay period, built from the stored payroll
+ * (PayrollRunService.payslips) and emailed by POST /api/payroll/runs/{id}/email.
  */
 public record PayslipRequest(String periodLabel, String payDate, List<Payslip> payslips) {
 
