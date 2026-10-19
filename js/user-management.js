@@ -91,7 +91,6 @@
                     '<td>' + escapeHtml(u.username || '—') + '</td>' +
                     '<td>' + escapeHtml(u.role) + '</td>' +
                     '<td>' + escapeHtml(u.email) + '</td>' +
-                    '<td><span class="pp-badge ' + (u.active ? 'pp-badge-present' : 'pp-badge-absent') + '">' + (u.active ? 'Active' : 'Inactive') + '</span></td>' +
                     '<td>' + passwordChanged(u.passwordChangedAt) + '</td>' +
                     '<td class="col-actions text-center">' +
                         '<button type="button" class="btn btn-sm btn-pp-outline me-2" data-action="edit" data-id="' + u.id + '" aria-label="Edit ' + fullName + '"><i class="bi bi-pencil"></i></button>' +

@@ -132,7 +132,6 @@
                     'aria-label="Benefits of ' + escapeHtml(e.displayName) + '">' +
                 '<td><strong>' + escapeHtml(e.displayName) + '</strong><span class="bn-sub">' + escapeHtml(e.employeeNumber) + '</span></td>' +
                 '<td>' + typeBadge(e.department) + '</td>' +
-                '<td>' + statusBadge(e.status) + '</td>' +
                 '<td class="text-end">' + list.length + '</td>' +
                 '<td class="text-end">' + peso(totalOf(list)) + '</td>' +
             '</tr>';
@@ -180,11 +179,9 @@
                     'aria-label="Change ' + escapeHtml(b.name) + '">' +
                 '<td><strong>' + escapeHtml(b.name) + '</strong></td>' +
                 '<td class="text-end">' + peso(b.amount) + '</td>' +
-                '<td>' + (b.active ? '<span class="fm-status approved">Active</span>'
-                    : '<span class="fm-status cancelled" title="Inactive benefits are not paid">Inactive</span>') + '</td>' +
             '</tr>';
         }).join('');
-        el('benefitFoot').innerHTML = '<tr><th>Total paid per period</th><th class="text-end bn-total">' + peso(totalOf(list)) + '</th><th></th></tr>';
+        el('benefitFoot').innerHTML = '<tr><th>Total paid per period</th><th class="text-end bn-total">' + peso(totalOf(list)) + '</th></tr>';
     }
 
     // ---------------------------------------------------------------
@@ -305,9 +302,8 @@
                 '<td><strong>' + escapeHtml(t.name) + '</strong></td>' +
                 '<td class="text-end">' + peso(t.defaultAmount) + '</td>' +
                 '<td class="text-end">' + t.employees.length + '</td>' +
-                '<td>' + (t.active ? '<span class="fm-status approved">Active</span>' : '<span class="fm-status cancelled">Inactive</span>') + '</td>' +
             '</tr>';
-        }).join('') : '<tr><td colspan="4" class="text-center text-muted py-3">No benefits yet.</td></tr>';
+        }).join('') : '<tr><td colspan="3" class="text-center text-muted py-3">No benefits yet.</td></tr>';
     }
 
     function resetTypeForm() {
@@ -408,7 +404,7 @@
     el('employeeSearch').addEventListener('input', renderList);
     el('addBenefitBtn').addEventListener('click', function () { openAssign(null); });
 
-    el('employeeBody').innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">Loading employees…</td></tr>';
+    el('employeeBody').innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4">Loading employees…</td></tr>';
     load().then(function () {
         renderTypes();
         route();

@@ -60,6 +60,7 @@
 
         // Payroll
         'payroll-processing.html': [MASTER],
+        'payroll-adjustment.html': [MASTER],
 
         // Reports
         'reports.html': [MASTER],

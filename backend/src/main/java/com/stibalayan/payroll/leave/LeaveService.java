@@ -22,15 +22,15 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * Rules:
  *   - Leave days are working days, Monday to Friday.
- *   - A request may not exceed its category's maximum days, nor overlap the
- *     employee's other pending or approved leave.
- *   - Categories that use credits draw on the employee's yearly leave
- *     credits (15 by default). A request that needs more than the remaining
- *     credits can't be filed or approved.
- *   - Only pending requests can be edited. Approving, rejecting and
- *     cancelling record who did it and when; rejecting needs remarks.
- *   - Approved PAID leave is paid in payroll as office hours (Admin and
- *     Faculty/Admin staff) — see paidLeaveDays().
+ *   - Leave is approved outside the system; the Payroll Master only records
+ *     approved leave (employee, type, dates, paid or unpaid, reason). It is
+ *     stored as Approved with who recorded it and when, and can be corrected.
+ *   - Leave may not exceed its category's maximum days, nor overlap the
+ *     employee's other recorded leave.
+ *   - Paid leave of a type that uses credits draws on the employee's yearly
+ *     leave credits (15 by default); it can't exceed the remaining credits.
+ *   - PAID leave is paid in payroll as office hours (Admin and Faculty/Admin
+ *     staff) — see paidLeaveDates().
  */
 @Service
 public class LeaveService {
@@ -106,7 +106,9 @@ public class LeaveService {
     // Requests
     // ---------------------------------------------------------------
 
-    public record LeaveRequest(String employeeId, Integer categoryId, String dateFrom, String dateTo, String reason) {
+    /** paid: whether this leave is paid; null = the leave type's default. */
+    public record LeaveRequest(String employeeId, Integer categoryId, String dateFrom, String dateTo, String reason,
+                               Boolean paid) {
     }
 
     @Transactional(readOnly = true)
@@ -114,12 +116,17 @@ public class LeaveService {
         Map<String, StaffMember> people = employees.all();
         Map<Integer, LeaveCategory> cats = categoryMap();
         List<Map<String, Object>> result = new ArrayList<>();
-        leaves.findAllByOrderByDateFromDescIdDesc().forEach(l -> result.add(view(l, people, cats)));
+        // Only recorded (approved) leave; old pending/rejected/cancelled requests from the
+        // earlier approval workflow stay in the table but are not shown or paid.
+        leaves.findAllByOrderByDateFromDescIdDesc().stream()
+                .filter(l -> EmployeeLeave.APPROVED.equals(l.getStatus()))
+                .forEach(l -> result.add(view(l, people, cats)));
         return result;
     }
 
+    /** Records leave that was already approved (outside the system); it counts in payroll right away. */
     @Transactional
-    public Map<String, Object> create(LeaveRequest r, int userId) {
+    public Map<String, Object> create(LeaveRequest r, int userId, String recordedBy) {
         StaffMember staff = employees.require(r.employeeId());
         if (INACTIVE.contains(staff.getEmploymentStatus())) {
             throw Validation.invalid("employeeId", staff.getFullName() + " is " + staff.getEmploymentStatus().toLowerCase() + ".");
@@ -133,20 +140,20 @@ public class LeaveService {
         }
         l.setRecordedBy(userId);
         apply(l, r, staff);
+        markApproved(l, recordedBy);
         return view(leaves.saveAndFlush(l), employees.all(), categoryMap());
     }
 
+    /** Corrects a recorded leave (type, dates, paid or reason); the employee can't change. */
     @Transactional
-    public Map<String, Object> update(int id, LeaveRequest r) {
+    public Map<String, Object> update(int id, LeaveRequest r, String recordedBy) {
         EmployeeLeave l = find(id);
-        if (!l.isPending()) {
-            throw conflict("Only pending leave requests can be edited (this one is " + l.getStatus().toLowerCase() + ").");
-        }
         String employeeId = EmployeeDirectory.idOf(l.getFacultyId(), l.getAdminstaffId());
         if (r.employeeId() != null && !r.employeeId().isBlank() && !r.employeeId().equals(employeeId)) {
-            throw Validation.invalid("employeeId", "A request can't be moved to another employee. Cancel it and record a new one.");
+            throw Validation.invalid("employeeId", "Recorded leave can't be moved to another employee.");
         }
         apply(l, r, employees.require(employeeId));
+        markApproved(l, recordedBy);
         return view(leaves.saveAndFlush(l), employees.all(), categoryMap());
     }
 
@@ -179,86 +186,54 @@ public class LeaveService {
             throw Validation.invalid("dateTo", c.getName() + " allows at most " + c.getMaxDays() + " working days per request (this is " + days + ").");
         }
         String reason = Validation.requiredText(r.reason(), "reason", "Reason", 255);
+        boolean paid = r.paid() == null ? c.isPaid() : r.paid();
 
         String employeeId = EmployeeDirectory.idOf(l.getFacultyId(), l.getAdminstaffId());
         for (EmployeeLeave other : leavesOf(employeeId)) {
             if (!other.getId().equals(l.getId())
-                    && (other.isPending() || EmployeeLeave.APPROVED.equals(other.getStatus()))
+                    && EmployeeLeave.APPROVED.equals(other.getStatus())
                     && !other.getDateFrom().isAfter(to) && !other.getDateTo().isBefore(from)) {
-                throw Validation.invalid("dateFrom", "These dates overlap another " + other.getStatus().toLowerCase()
-                        + " leave (" + other.getCategoryName() + ", " + other.getDateFrom() + " to " + other.getDateTo() + ").");
+                throw Validation.invalid("dateFrom", "These dates overlap leave already recorded for this employee ("
+                        + other.getCategoryName() + ", " + other.getDateFrom() + " to " + other.getDateTo() + ").");
             }
         }
-        if (c.isUsesCredits()) {
+        // Only paid leave of a credit-based type uses up leave credits.
+        Integer creditTotal = null;
+        Integer creditUsed = null;
+        if (c.isUsesCredits() && paid) {
             Map<String, Object> b = balance(employeeId, from.getYear(), l.getId());
+            creditTotal = (Integer) b.get("total");
+            creditUsed = (Integer) b.get("used");
             int remaining = (Integer) b.get("remaining");
             if (days > remaining) {
                 throw Validation.invalid("dateTo", "Only " + remaining + " leave credit" + (remaining == 1 ? "" : "s")
-                        + " left for " + from.getYear() + "; this request needs " + days + ".");
+                        + " left for " + from.getYear() + "; this leave needs " + days
+                        + ". Record it as unpaid, or raise the employee's credits.");
             }
         }
 
+        l.setTotalLeaveCredit(creditTotal);
+        l.setUsedLeave(creditUsed);
+        l.setRemainingLeave(creditTotal == null ? null : creditTotal - creditUsed - days);
         l.setCategoryId(c.getId());
         l.setCategoryName(c.getName());
-        l.setPaid(c.isPaid());
+        l.setPaid(paid);
         l.setDateFrom(from);
         l.setDateTo(to);
         l.setTotalDays(days);
         l.setReason(reason);
     }
 
-    @Transactional
-    public Map<String, Object> approve(int id, String remarksText, String reviewer) {
-        EmployeeLeave l = find(id);
-        if (!l.isPending()) {
-            throw conflict("Only pending requests can be approved (this one is " + l.getStatus().toLowerCase() + ").");
-        }
-        String remarks = Validation.optionalText(remarksText, "remarks", "Remarks", 255);
-        LeaveCategory c = l.getCategoryId() == null ? null : categories.findById(l.getCategoryId()).orElse(null);
-        if (c != null && c.isUsesCredits()) {
-            String employeeId = EmployeeDirectory.idOf(l.getFacultyId(), l.getAdminstaffId());
-            Map<String, Object> b = balance(employeeId, l.getDateFrom().getYear(), l.getId());
-            int total = (Integer) b.get("total");
-            int used = (Integer) b.get("used");
-            if (l.getTotalDays() > total - used) {
-                throw conflict("Not enough leave credits: " + (total - used) + " left for " + l.getDateFrom().getYear()
-                        + ", this request needs " + l.getTotalDays() + ".");
-            }
-            l.setTotalLeaveCredit(total);
-            l.setUsedLeave(used);
-            l.setRemainingLeave(total - used - l.getTotalDays());
-        }
-        return review(l, EmployeeLeave.APPROVED, remarks, reviewer);
-    }
-
-    @Transactional
-    public Map<String, Object> reject(int id, String remarksText, String reviewer) {
-        EmployeeLeave l = find(id);
-        if (!l.isPending()) {
-            throw conflict("Only pending requests can be rejected (this one is " + l.getStatus().toLowerCase() + ").");
-        }
-        String remarks = Validation.requiredText(remarksText, "remarks", "Reason for rejecting", 255);
-        return review(l, EmployeeLeave.REJECTED, remarks, reviewer);
-    }
-
-    /** Withdraws a pending or approved request; approved days go back to the employee's credits. */
-    @Transactional
-    public Map<String, Object> cancel(int id, String remarksText, String reviewer) {
-        EmployeeLeave l = find(id);
-        if (!l.isPending() && !EmployeeLeave.APPROVED.equals(l.getStatus())) {
-            throw conflict("Only pending or approved requests can be cancelled.");
-        }
-        String remarks = Validation.requiredText(remarksText, "remarks", "Reason for cancelling", 255);
-        l.setRemainingLeave(null);
-        return review(l, EmployeeLeave.CANCELLED, remarks, reviewer);
-    }
-
-    private Map<String, Object> review(EmployeeLeave l, String status, String remarks, String reviewer) {
-        l.setStatus(status);
-        l.setRemarks(remarks);
+    /**
+     * Leave is approved outside the system (by the employee's head / HR); the
+     * Payroll Master only records it, so it is stored as Approved, stamped with
+     * who recorded it and when.
+     */
+    private static void markApproved(EmployeeLeave l, String recordedBy) {
+        l.setStatus(EmployeeLeave.APPROVED);
+        l.setRemarks(null);
         l.setDateApproved(LocalDateTime.now());
-        l.setApprovedBy(reviewer == null ? null : reviewer.length() > 50 ? reviewer.substring(0, 50) : reviewer);
-        return view(leaves.saveAndFlush(l), employees.all(), categoryMap());
+        l.setApprovedBy(recordedBy == null ? null : recordedBy.length() > 50 ? recordedBy.substring(0, 50) : recordedBy);
     }
 
     // ---------------------------------------------------------------
@@ -279,7 +254,7 @@ public class LeaveService {
         for (EmployeeLeave l : leavesOf(employeeId)) {
             if (l.getId().equals(excludeLeaveId) || l.getDateFrom().getYear() != year) continue;
             LeaveCategory c = cats.get(l.getCategoryId());
-            if (c == null || !c.isUsesCredits() || l.getTotalDays() == null) continue;
+            if (c == null || !c.isUsesCredits() || !l.isPaid() || l.getTotalDays() == null) continue;
             if (EmployeeLeave.APPROVED.equals(l.getStatus())) used += l.getTotalDays();
             if (l.isPending()) pending += l.getTotalDays();
         }

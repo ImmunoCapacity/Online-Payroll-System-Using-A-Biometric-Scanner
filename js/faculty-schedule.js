@@ -160,7 +160,6 @@
                     'aria-label="Open the schedule of ' + escapeHtml(t.displayName) + '">' +
                 '<td><strong>' + escapeHtml(t.displayName) + '</strong></td>' +
                 '<td>' + escapeHtml(t.employeeNumber) + '</td>' +
-                '<td>' + employeeStatusBadge(t.status) + '</td>' +
                 '<td class="text-end">' + (weekCounts[t.id] || 0) + '</td>' +
             '</tr>';
         }).join('');
@@ -231,7 +230,7 @@
         el('rangeLabel').textContent = view === 'day'
             ? prettyDate(r.from)
             : 'Week of ' + prettyDate(r.from) + ' – ' + prettyDate(r.to);
-        classBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4">Loading classes…</td></tr>';
+        classBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-4">Loading classes…</td></tr>';
         emptyState.classList.add('d-none');
 
         return api('api/faculty-schedule/classes?from=' + r.from + '&to=' + r.to + '&employeeId=' + encodeURIComponent(teacher.id))
@@ -274,7 +273,7 @@
         shown.forEach(function (c) {
             if (c.classDate !== lastDate) {
                 lastDate = c.classDate;
-                html += '<tr class="fm-day-row"><td colspan="4">' + escapeHtml(prettyDate(c.classDate)) + '</td></tr>';
+                html += '<tr class="fm-day-row"><td colspan="3">' + escapeHtml(prettyDate(c.classDate)) + '</td></tr>';
             }
             html +=
                 '<tr class="pp-row-clickable' + (c.scheduleStatus === 'Cancelled' ? ' fm-cancelled' : '') + '" tabindex="0" role="button" ' +
@@ -282,7 +281,6 @@
                     '<td>' + time12(c.scheduledStart) + ' – ' + time12(c.scheduledEnd) + '</td>' +
                     '<td><span class="fm-subject">' + escapeHtml(c.subject) + '</span><span class="fm-sub">' + escapeHtml(c.classSection) + '</span></td>' +
                     '<td>' + (c.room ? escapeHtml(c.room) : '<span class="text-muted">—</span>') + '</td>' +
-                    '<td>' + statusCell(c) + '</td>' +
                 '</tr>';
         });
         classBody.innerHTML = html;
@@ -611,7 +609,7 @@
 
     anchorDate.value = new URLSearchParams(window.location.search).get('date') || iso(new Date());
 
-    el('facultyBody').innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4">Loading faculty…</td></tr>';
+    el('facultyBody').innerHTML = '<tr><td colspan="3" class="text-center text-muted py-4">Loading faculty…</td></tr>';
     loadTeachers()
         .catch(function (error) {
             PPToast.error(error.message || 'Could not load faculty.');

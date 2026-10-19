@@ -57,7 +57,8 @@ public class BiometricSyncService {
         this.graceMinutes = graceMinutes;
     }
 
-    public Map<String, Object> sync() {
+    /** Synchronized: the scheduled auto-sync and the Sync Device button never talk to the K40 at once. */
+    public synchronized Map<String, Object> sync() {
         Device device = devices.findFirstByIpAddress(deviceProperties.ip())
                 .orElseThrow(() -> new ApiException(HttpStatus.UNPROCESSABLE_ENTITY,
                         "No row in the device table has ip_address = " + deviceProperties.ip()

@@ -28,25 +28,6 @@
                 </button>
             </header>
 
-            <div class="pp-summary-row cols-4" aria-label="Employee overview">
-                <div class="pp-summary-card present">
-                    <div class="pp-summary-label">Active Employees</div>
-                    <div class="pp-summary-value" id="summaryActive">0</div>
-                </div>
-                <div class="pp-summary-card late">
-                    <div class="pp-summary-label">Faculty</div>
-                    <div class="pp-summary-value" id="summaryFaculty">0</div>
-                </div>
-                <div class="pp-summary-card absent">
-                    <div class="pp-summary-label">Admin</div>
-                    <div class="pp-summary-value" id="summaryAdmin">0</div>
-                </div>
-                <div class="pp-summary-card mixed">
-                    <div class="pp-summary-label">Faculty/Admin</div>
-                    <div class="pp-summary-value" id="summaryFacultyAdmin">0</div>
-                </div>
-            </div>
-
             <section class="pp-widget" aria-labelledby="employeeListTitle">
                 <div class="pp-widget-header">
                     <h2 class="pp-widget-title" id="employeeListTitle">Employee Directory</h2>
@@ -99,7 +80,6 @@
                                     <th>Department</th>
                                     <th>Email</th>
                                     <th>Phone</th>
-                                    <th>Status</th>
                                 </tr>
                             </thead>
                             <tbody id="employeeBody"></tbody>
@@ -124,6 +104,14 @@
                     <div class="modal-body">
                         <input type="hidden" id="employeeId">
 
+                        <!-- Assigned by the server: STIBLN-####-M / -F (number + gender letter). -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-5">
+                                <label for="employeeNumber" class="pp-form-label">Employee ID</label>
+                                <input type="text" class="form-control pp-form-control pp-employee-id" id="employeeNumber" readonly tabindex="-1">
+                            </div>
+                        </div>
+
                         <h3 class="pp-form-label text-uppercase small text-muted mb-2">Personal Information</h3>
                         <div class="row g-3 mb-3">
                             <div class="col-md-4">
@@ -142,8 +130,8 @@
                         <div class="row g-3 mb-3">
                             <div class="col-md-3">
                                 <label for="employeeGender" class="pp-form-label">Gender</label>
-                                <select class="form-select pp-form-select" id="employeeGender">
-                                    <option value="">—</option>
+                                <select class="form-select pp-form-select" id="employeeGender" data-label="Gender" required>
+                                    <option value="" hidden data-hint>Select gender</option>
                                     <option value="Male">Male</option>
                                     <option value="Female">Female</option>
                                 </select>
@@ -185,12 +173,7 @@
 
                         <h3 class="pp-form-label text-uppercase small text-muted mb-2">Employment</h3>
                         <div class="row g-3 mb-3">
-                            <div class="col-md-4">
-                                <label for="employeeNumber" class="pp-form-label">Employee ID</label>
-                                <input type="text" class="form-control pp-form-control" id="employeeNumber" placeholder="e.g. 02000839239" maxlength="11" data-validate="employee-number" inputmode="numeric" required>
-                                <div id="employeeNumberError" class="invalid-feedback"></div>
-                            </div>
-                            <div class="col-md-4">
+                            <div class="col-md-6">
                                 <label for="employeeDepartmentSelect" class="pp-form-label">Staff Type</label>
                                 <select class="form-select pp-form-select" id="employeeDepartmentSelect" required>
                                     <option value="" hidden data-hint>Select staff type</option>
@@ -199,13 +182,13 @@
                                     <option value="Faculty/Admin">Faculty/Admin (admin staff who also teach)</option>
                                 </select>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-6">
                                 <label for="employeeJoined" class="pp-form-label">Date Hired</label>
                                 <input type="date" class="form-control pp-form-control" id="employeeJoined" data-validate="date" data-not-future min="1950-01-01" data-after="employeeBirthdate" data-after-years="15" required>
                             </div>
                         </div>
                         <div class="row g-3 mb-3">
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <label for="employeeStatusSelect" class="pp-form-label">Employment Status</label>
                                 <select class="form-select pp-form-select" id="employeeStatusSelect" required>
                                     <option value="Active">Active</option>
@@ -215,7 +198,7 @@
                                     <option value="Terminated">Terminated</option>
                                 </select>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <label for="employeeType" class="pp-form-label">Employee Type</label>
                                 <select class="form-select pp-form-select" id="employeeType">
                                     <option value="">—</option>
@@ -225,18 +208,20 @@
                                     <option value="Temporary">Temporary</option>
                                 </select>
                             </div>
+                            <div class="col-md-4">
+                                <label for="employeeBasicPay" class="pp-form-label">Basic Pay (₱, monthly)</label>
+                                <input type="number" class="form-control pp-form-control" id="employeeBasicPay" min="0" max="10000000" step="0.01" data-validate="number" data-decimals="2" inputmode="decimal" placeholder="e.g. 18000.00">
+                            </div>
                         </div>
 
                         <!-- Faculty and Faculty/Admin (Table 1) -->
                         <div class="row g-3 mb-3 d-none" id="facultyFields">
                             <div class="col-md-3">
                                 <label for="employeeRank" class="pp-form-label">Instructor Rank</label>
-                                <input type="text" class="form-control pp-form-control" id="employeeRank" list="instructorRanks" maxlength="20" data-validate="text" placeholder="e.g. Instructor I">
-                                <datalist id="instructorRanks">
-                                    <option value="Instructor I"></option>
-                                    <option value="Instructor II"></option>
-                                    <option value="Instructor III"></option>
-                                </datalist>
+                                <!-- Choices come from Maintenance → Instructor Ranks (api/ranks). -->
+                                <select class="form-select pp-form-select" id="employeeRank">
+                                    <option value="">—</option>
+                                </select>
                             </div>
                             <div class="col-md-3">
                                 <label for="employeeRateUnit" class="pp-form-label" id="employeeRateUnitLabel">Rate per Hour/Unit (₱)</label>
@@ -290,11 +275,6 @@
                                 <label for="employeeTinId" class="pp-form-label">TIN</label>
                                 <input type="text" class="form-control pp-form-control" id="employeeTinId" maxlength="50" data-validate="gov-id" data-digits="9,12,14" placeholder="XXX-XXX-XXX-XXX">
                             </div>
-                        </div>
-
-                        <div class="mb-0">
-                            <label for="employeeNotes" class="pp-form-label">Notes</label>
-                            <textarea class="form-control pp-form-control" id="employeeNotes" rows="2" maxlength="1000" data-validate="text" placeholder="Add a short note about the employee"></textarea>
                         </div>
                     </div>
                     <div class="modal-footer">

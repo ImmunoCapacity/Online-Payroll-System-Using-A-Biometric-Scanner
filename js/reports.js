@@ -375,7 +375,7 @@
     /* Loan Report (paper, 8.5): balances and deduction history, from the database via api/loans */
     function renderLoanReport() {
         var columns = ['EMP. ID', 'EMPLOYEE', 'LOAN TYPE', 'REFERENCE', 'LOAN AMOUNT',
-            'PER PAYROLL', 'TOTAL DEDUCTED', 'BALANCE', 'STATUS'];
+            'PER PAYROLL', 'TOTAL DEDUCTED', 'BALANCE'];
         tableHead.innerHTML = headRow(columns);
         tableBody.innerHTML = '<tr><td colspan="' + columns.length + '" class="report-empty">Loading loans…</td></tr>';
         tableFooter.innerHTML = '';
@@ -400,15 +400,14 @@
                     return [
                         escapeHtml(l.employeeId), '<strong>' + escapeHtml(l.employeeName) + '</strong>',
                         escapeHtml(l.type), escapeHtml(l.reference || '—'),
-                        peso(l.amount), peso(l.deductionPerPayroll), peso(l.totalDeducted), peso(l.remainingBalance),
-                        escapeHtml(l.status)
+                        peso(l.amount), peso(l.deductionPerPayroll), peso(l.totalDeducted), peso(l.remainingBalance)
                     ];
                 });
 
                 tableBody.innerHTML = bodyRows(rows, columns.length);
                 tableFooter.innerHTML = rows.length
                     ? '<tr><th colspan="4">Total</th><th>' + peso(totals.amount) + '</th><th></th><th>' +
-                      peso(totals.deducted) + '</th><th>' + peso(totals.balance) + '</th><th></th></tr>'
+                      peso(totals.deducted) + '</th><th>' + peso(totals.balance) + '</th></tr>'
                     : '';
                 setText('reportRecordLabel', rows.length + (rows.length === 1 ? ' record' : ' records'));
             })
@@ -420,7 +419,7 @@
 
     /* Employee List Report (paper, 8.6): from the database via api/employees */
     function renderEmployeeListReport() {
-        var columns = ['EMP. NO.', 'EMPLOYEE', 'TYPE', 'EMAIL', 'CONTACT', 'DATE HIRED', 'STATUS'];
+        var columns = ['EMP. NO.', 'EMPLOYEE', 'TYPE', 'EMAIL', 'CONTACT', 'DATE HIRED'];
         tableHead.innerHTML = headRow(columns);
         tableBody.innerHTML = '<tr><td colspan="' + columns.length + '" class="report-empty">Loading employees…</td></tr>';
         tableFooter.innerHTML = '';
@@ -447,7 +446,7 @@
                     return [
                         escapeHtml(e.employeeNumber), '<strong>' + escapeHtml(e.displayName) + '</strong>',
                         escapeHtml(e.department), escapeHtml(e.email), escapeHtml(e.phone),
-                        escapeHtml(e.dateHired || '—'), escapeHtml(e.status)
+                        escapeHtml(e.dateHired || '—')
                     ];
                 });
                 tableBody.innerHTML = bodyRows(rows, columns.length);

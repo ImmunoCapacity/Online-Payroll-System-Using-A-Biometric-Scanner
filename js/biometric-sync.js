@@ -15,6 +15,14 @@
 
     if (!syncButton) return;
 
+    // The server syncs the K40 by itself every minute (BiometricAutoSync), so
+    // reload the table regularly to show new scans. Skipped while the tab is
+    // hidden or a dialog is open, so nothing changes under the user.
+    setInterval(function () {
+        if (document.hidden || document.querySelector('.modal.show')) return;
+        document.dispatchEvent(new CustomEvent('pp:dtr-synced'));
+    }, 30000);
+
     syncButton.addEventListener('click', function () {
 
         var originalText = syncButton.innerHTML;

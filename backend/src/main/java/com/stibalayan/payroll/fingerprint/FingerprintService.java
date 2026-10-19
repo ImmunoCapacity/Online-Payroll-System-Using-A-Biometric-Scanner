@@ -98,6 +98,16 @@ public class FingerprintService {
         return row(employeeId, a);
     }
 
+    /** Whether the employee already has a device User ID (a fingerprint registration). */
+    @Transactional(readOnly = true)
+    public boolean isRegistered(String employeeId) {
+        EmployeeId id = EmployeeId.parse(employeeId);
+        StaffMember staff = id.isFaculty()
+                ? faculty.findById(id.number()).orElseThrow(FingerprintService::notFound)
+                : admins.findById(id.number()).orElseThrow(FingerprintService::notFound);
+        return staff.getFingerprintId() != null && !staff.getFingerprintId().isEmpty();
+    }
+
     @Transactional
     public void remove(String employeeId) {
         EmployeeId id = EmployeeId.parse(employeeId);

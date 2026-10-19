@@ -428,6 +428,7 @@
                         reason: r.remarks
                     },
                     employee: {
+                        key: r.employeeId,
                         id: r.employeeNumber,
                         displayName: r.employeeName,
                         type: r.type
@@ -529,8 +530,11 @@
                             : '';
 
 
+                    // Clicking a row opens the employee's attendance (js/dtr-views.js).
                     return `
-                        <tr>
+                        <tr class="pp-row-clickable" tabindex="0" role="button"
+                            data-employee="${escapeHtml(emp.key || '')}"
+                            aria-label="Attendance of ${escapeHtml(emp.displayName)}">
 
                             <td>
 
@@ -617,38 +621,6 @@
             );
 
         });
-
-
-    const statusFilterClearBtn =
-        document.getElementById(
-            'statusFilterClearBtn'
-        );
-
-
-    if (statusFilterClearBtn) {
-
-        statusFilterClearBtn.addEventListener(
-            'click',
-            function () {
-
-                if (filterDate) {
-                    filterDate.value = today;
-                }
-
-                if (filterType) {
-                    filterType.value = 'all';
-                }
-
-                if (filterSearch) {
-                    filterSearch.value = '';
-                }
-
-                loadDtrRecords();
-
-            }
-        );
-
-    }
 
 
     /* Manual Entry */

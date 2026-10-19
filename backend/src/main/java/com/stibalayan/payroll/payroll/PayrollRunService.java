@@ -51,8 +51,11 @@ public class PayrollRunService {
     private final LoanService loans;
     private final AuditService audit;
 
+    private final PayrollAdjustmentService adjustments;
+
     public PayrollRunService(JdbcTemplate jdbc, ObjectMapper json, EmployeeDirectory employees, LoanService loans,
-                             AuditService audit) {
+                             AuditService audit, PayrollAdjustmentService adjustments) {
+        this.adjustments = adjustments;
         this.jdbc = jdbc;
         this.json = json;
         this.employees = employees;
@@ -132,6 +135,19 @@ public class PayrollRunService {
         return view(runId);
     }
 
+    /** "Review All": marks every employee of an unreleased period as reviewed. */
+    @Transactional
+    public Map<String, Object> reviewAll(int runId, int userId) {
+        Run run = run(runId);
+        if (RELEASED.equals(run.status())) {
+            throw new ApiException(HttpStatus.CONFLICT, "This pay period is already released.");
+        }
+        int changed = jdbc.update("UPDATE payroll SET review_status = 'Reviewed' WHERE payroll_run_id = ? AND review_status <> 'Reviewed'",
+                runId);
+        audit.log(userId, "Payroll", "Reviewed all", run.label() + " · " + changed + " employee" + (changed == 1 ? "" : "s"));
+        return view(runId);
+    }
+
     /**
      * Releases a period once everyone is reviewed: records each loan
      * deduction against its loan (Loan Management), writes the itemised
@@ -178,6 +194,8 @@ public class PayrollRunService {
         jdbc.update("UPDATE payroll SET review_status = 'Released', date_generated = NOW() WHERE payroll_run_id = ?", runId);
         jdbc.update("UPDATE payroll_run SET status = ?, released_by = ?, released_at = NOW() WHERE payroll_run_id = ?",
                 RELEASED, userId, runId);
+        // Payroll Adjustments paid in this cut-off are now done.
+        adjustments.markApplied(runId, run.from(), run.to());
         audit.log(userId, "Payroll", "Released payroll", run.label() + " · " + rows.size() + " employee"
                 + (rows.size() == 1 ? "" : "s") + " · net ₱" + String.format("%,.2f", totalNet));
         return view(runId);
@@ -204,16 +222,20 @@ public class PayrollRunService {
                 Map<?, ?> l = (Map<?, ?>) o;
                 benefits.add(new PayslipRequest.Benefit(String.valueOf(l.get("name")), money(l.get("amount"))));
             }
-            BigDecimal loan = ((BigDecimal) r.get("sss_loan")).add((BigDecimal) r.get("pagibig_loan")).add((BigDecimal) r.get("other_deductions"));
             slips.add(new PayslipRequest.Payslip(
                     EmployeeDirectory.idOf((Integer) r.get("faculty_id"), (Integer) r.get("adminstaff_id")),
                     (BigDecimal) r.get("total_hours_worked"), (BigDecimal) r.get("employee_rate"),
                     (BigDecimal) r.get("basic_salary"), benefits,
                     new PayslipRequest.Deductions((BigDecimal) r.get("sss_contribution"), (BigDecimal) r.get("philhealth_contribution"),
-                            (BigDecimal) r.get("pagibig_contribution"), (BigDecimal) r.get("tax"), loan),
+                            (BigDecimal) r.get("pagibig_contribution"), (BigDecimal) r.get("tax"),
+                            (BigDecimal) r.get("sss_loan"), (BigDecimal) r.get("pagibig_loan"), (BigDecimal) r.get("other_deductions")),
                     earnings));
         }
-        return new PayslipRequest(run.label(), run.to().plusDays(1).toString(), slips);
+        // The Payroll Master who released the period signs the payslips.
+        List<String> releasedBy = jdbc.queryForList("SELECT TRIM(CONCAT(u.first_name, ' ', u.last_name)) FROM payroll_run r "
+                + "JOIN users u ON u.user_id = r.released_by WHERE r.payroll_run_id = ?", String.class, runId);
+        return new PayslipRequest(run.label(), run.to().plusDays(1).toString(),
+                releasedBy.isEmpty() ? "" : releasedBy.get(0), slips);
     }
 
     /** Saves how each payslip email went. */
@@ -409,6 +431,12 @@ public class PayrollRunService {
             if (!released && s != null) {
                 b.put("name", s.getFullName());
                 b.put("employeeNumber", s.getEmployeeNumber());
+            } else if (r.get("employee_number") != null) {
+                // Released: the stored number (kept up to date when IDs were reformatted).
+                b.put("employeeNumber", r.get("employee_number"));
+            }
+            if (s != null) {
+                b.put("designation", PayslipPdf.designation(s));
             }
             b.put("status", String.valueOf(r.get("review_status")).toLowerCase());
             b.put("emailStatus", r.get("email_status"));

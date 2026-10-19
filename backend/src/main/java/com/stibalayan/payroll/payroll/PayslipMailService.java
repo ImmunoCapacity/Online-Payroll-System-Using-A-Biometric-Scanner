@@ -17,21 +17,22 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpStatus;
-import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.HtmlUtils;
 
 /**
- * Emails each employee their complete payslip (paper, Payslip Report:
- * "Payslips are automatically sent to the employee's registered company
- * email address").
+ * Emails each employee their payslip (paper, Payslip Report: "Payslips are
+ * automatically sent to the employee's registered company email address").
+ * The payslip itself is a PDF attachment in the school's payslip format
+ * (PayslipPdf); the email body is a short note with the net pay.
  *
  * The recipient always comes from the employee's record in the database,
- * never from the request. Totals are recomputed here from the itemised
- * amounts, so the email always adds up.
+ * never from the request. Totals are recomputed from the itemised amounts,
+ * so the payslip always adds up.
  */
 @Service
 public class PayslipMailService {
@@ -42,17 +43,20 @@ public class PayslipMailService {
     private final JavaMailSender mailSender;
     private final FacultyStaffRepository faculty;
     private final AdminStaffRepository admins;
+    private final PayslipPdf pdf;
     private final String username;
     private final String from;
     private final String schoolName;
 
     public PayslipMailService(JavaMailSender mailSender, FacultyStaffRepository faculty, AdminStaffRepository admins,
+                              PayslipPdf pdf,
                               @Value("${spring.mail.username:}") String username,
                               @Value("${payslip.mail.from:}") String from,
                               @Value("${payslip.mail.school-name:}") String schoolName) {
         this.mailSender = mailSender;
         this.faculty = faculty;
         this.admins = admins;
+        this.pdf = pdf;
         this.username = username;
         this.from = from.isBlank() ? username : from;
         this.schoolName = schoolName.isBlank() ? "Payroll Office" : schoolName;
@@ -77,16 +81,16 @@ public class PayslipMailService {
 
         // Validate every payslip before sending anything, so a bad amount
         // can't leave the batch half-sent.
-        request.payslips().forEach(PayslipMailService::totals);
+        request.payslips().forEach(PayslipMailService::netPay);
 
         List<Map<String, String>> results = new ArrayList<>();
         for (PayslipRequest.Payslip payslip : request.payslips()) {
-            results.add(sendOne(payslip, period, text(request.payDate())));
+            results.add(sendOne(payslip, period, text(request.preparedBy())));
         }
         return results;
     }
 
-    private Map<String, String> sendOne(PayslipRequest.Payslip p, String period, String payDate) {
+    private Map<String, String> sendOne(PayslipRequest.Payslip p, String period, String preparedBy) {
         Map<String, String> result = new LinkedHashMap<>();
         result.put("employeeId", p.employeeId());
 
@@ -108,15 +112,18 @@ public class PayslipMailService {
         result.put("email", to);
 
         try {
+            byte[] attachment = pdf.render(s, p, period, preparedBy);
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
             helper.setFrom(from, schoolName + " Payroll");
             helper.setTo(to);
             helper.setSubject("Payslip for " + period);
-            helper.setText(plainText(s, p, period, payDate), html(s, p, period, payDate));
+            BigDecimal net = netPay(p);
+            helper.setText(plainText(s, period, net), html(s, period, net));
+            helper.addAttachment(fileName(s, period), new ByteArrayResource(attachment), "application/pdf");
             mailSender.send(message);
             result.put("status", "sent");
-        } catch (MailException | jakarta.mail.MessagingException | java.io.UnsupportedEncodingException e) {
+        } catch (Exception e) {
             log.warn("Could not email payslip to {} ({})", to, p.employeeId(), e);
             result.put("status", "failed");
             result.put("message", "The email could not be sent. Check the mail settings and the address.");
@@ -134,118 +141,41 @@ public class PayslipMailService {
     }
 
     // ---------------------------------------------------------------
-    // Payslip content: earnings, benefits, itemised deductions, net pay.
-    // ---------------------------------------------------------------
 
-    private record Totals(BigDecimal gross, BigDecimal benefits, BigDecimal deductions, BigDecimal net) {
-    }
-
-    private static Totals totals(PayslipRequest.Payslip p) {
+    /** Applied salary + benefits − all deductions; refuses negative amounts. */
+    private static BigDecimal netPay(PayslipRequest.Payslip p) {
         BigDecimal gross = money(p.gross());
-        BigDecimal benefits = p.benefits() == null ? BigDecimal.ZERO
-                : p.benefits().stream().map(b -> money(b.amount())).reduce(BigDecimal.ZERO, BigDecimal::add);
-        PayslipRequest.Deductions d = p.deductions();
-        BigDecimal deductions = d == null ? BigDecimal.ZERO
-                : money(d.sss()).add(money(d.philhealth())).add(money(d.pagibig())).add(money(d.bir())).add(money(d.loan()));
-        return new Totals(gross, benefits, deductions, gross.add(benefits).subtract(deductions));
+        if (p.benefits() != null) {
+            for (PayslipRequest.Benefit b : p.benefits()) gross = gross.add(money(b.amount()));
+        }
+        PayslipRequest.Deductions d = p.deductions() == null ? PayslipRequest.Deductions.none() : p.deductions();
+        BigDecimal deductions = money(d.sss()).add(money(d.philhealth())).add(money(d.pagibig())).add(money(d.bir()))
+                .add(money(d.sssLoan())).add(money(d.pagibigLoan())).add(money(d.other()));
+        return gross.subtract(deductions);
     }
 
-    private String html(StaffMember s, PayslipRequest.Payslip p, String period, String payDate) {
-        Totals t = totals(p);
-        PayslipRequest.Deductions d = p.deductions() == null
-                ? new PayslipRequest.Deductions(null, null, null, null, null) : p.deductions();
+    /** e.g. Payslip_STIBLN-0011-M_Oct-11-25-2026.pdf */
+    private static String fileName(StaffMember s, String period) {
+        String safePeriod = period.replaceAll("[^A-Za-z0-9]+", "-").replaceAll("(^-|-$)", "");
+        return "Payslip_" + text(s.getEmployeeNumber()) + "_" + safePeriod + ".pdf";
+    }
 
-        StringBuilder benefitRows = new StringBuilder();
-        if (p.benefits() != null) {
-            for (PayslipRequest.Benefit b : p.benefits()) {
-                benefitRows.append(row(esc(b.name()), peso(b.amount())));
-            }
-        }
-        if (benefitRows.isEmpty()) {
-            benefitRows.append(row("None", peso(BigDecimal.ZERO)));
-        }
-
-        return "<div style=\"font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;color:#1f2937\">"
-                + "<h2 style=\"margin:0 0 4px;color:#1f4fa3\">" + esc(schoolName) + "</h2>"
-                + "<div style=\"color:#6b7280;margin-bottom:16px\">Payslip — " + esc(period)
-                + (payDate.isEmpty() ? "" : " · Pay date " + esc(payDate)) + "</div>"
-                + "<p style=\"margin:0 0 16px\"><strong>" + esc(s.getFullName()) + "</strong><br>"
-                + "Employee No. " + esc(s.getEmployeeNumber()) + "</p>"
-                + section("Earnings")
-                + "<table style=\"width:100%;border-collapse:collapse\">"
-                + earningRows(p)
-                + row("<strong>Gross pay</strong>", "<strong>" + peso(t.gross()) + "</strong>")
-                + "</table>"
-                + section("Benefits")
-                + "<table style=\"width:100%;border-collapse:collapse\">" + benefitRows
-                + row("<strong>Total benefits</strong>", "<strong>" + peso(t.benefits()) + "</strong>")
-                + "</table>"
-                + section("Deductions")
-                + "<table style=\"width:100%;border-collapse:collapse\">"
-                + row("SSS", peso(d.sss()))
-                + row("PhilHealth", peso(d.philhealth()))
-                + row("Pag-IBIG", peso(d.pagibig()))
-                + row("Withholding tax (BIR)", peso(d.bir()))
-                + row("Loan repayment", peso(d.loan()))
-                + row("<strong>Total deductions</strong>", "<strong>" + peso(t.deductions()) + "</strong>")
-                + "</table>"
-                + "<div style=\"margin-top:16px;padding:12px;background:#eef4ff;border-radius:6px;font-size:18px\">"
-                + "<strong>Net pay: " + peso(t.net()) + "</strong></div>"
-                + "<p style=\"color:#6b7280;font-size:12px;margin-top:16px\">This payslip was sent automatically by the "
-                + esc(schoolName) + " payroll system. Please contact the Payroll Office about any discrepancy.</p>"
+    private String html(StaffMember s, String period, BigDecimal net) {
+        return "<div style=\"font-family:Arial,Helvetica,sans-serif;max-width:560px;color:#1f2937;line-height:1.5\">"
+                + "<p>Hello " + esc(s.getFirstname()) + ",</p>"
+                + "<p>Your payslip for <strong>" + esc(period) + "</strong> is attached as a PDF.</p>"
+                + "<p style=\"font-size:16px\">Net pay: <strong>₱" + amount(net) + "</strong></p>"
+                + "<p>Please contact the Payroll Office about any discrepancy.</p>"
+                + "<p style=\"color:#6b7280;font-size:12px\">" + esc(schoolName) + " · Sent automatically by the payroll system.</p>"
                 + "</div>";
     }
 
-    private String plainText(StaffMember s, PayslipRequest.Payslip p, String period, String payDate) {
-        Totals t = totals(p);
-        PayslipRequest.Deductions d = p.deductions() == null
-                ? new PayslipRequest.Deductions(null, null, null, null, null) : p.deductions();
-        return schoolName + "\nPayslip — " + period + (payDate.isEmpty() ? "" : " (pay date " + payDate + ")") + "\n\n"
-                + s.getFullName() + " — Employee No. " + s.getEmployeeNumber() + "\n\n"
-                + earningText(p) + "Gross pay: " + peso(t.gross()) + "\n"
-                + "Total benefits: " + peso(t.benefits()) + "\n\n"
-                + "SSS: " + peso(d.sss()) + "\nPhilHealth: " + peso(d.philhealth()) + "\nPag-IBIG: " + peso(d.pagibig())
-                + "\nWithholding tax (BIR): " + peso(d.bir()) + "\nLoan repayment: " + peso(d.loan())
-                + "\nTotal deductions: " + peso(t.deductions()) + "\n\nNET PAY: " + peso(t.net()) + "\n";
-    }
-
-    /**
-     * Earnings lines: one per role (office hours from the biometric DTR,
-     * approved teaching hours from Faculty Teaching Hours), each at its own
-     * rate. Older requests without lines show hours × rate.
-     */
-    private static String earningRows(PayslipRequest.Payslip p) {
-        if (p.earnings() == null || p.earnings().isEmpty()) {
-            return row("Hours worked", esc(number(p.hours()))) + row("Rate", peso(p.rate()));
-        }
-        StringBuilder rows = new StringBuilder();
-        for (PayslipRequest.Earning e : p.earnings()) {
-            rows.append(row(esc(e.label()) + "<br><span style=\"color:#6b7280;font-size:12px\">"
-                    + esc(number(e.hours())) + " hrs × " + peso(e.rate()) + "</span>", peso(e.amount())));
-        }
-        return rows.toString();
-    }
-
-    private static String earningText(PayslipRequest.Payslip p) {
-        if (p.earnings() == null || p.earnings().isEmpty()) {
-            return "Hours worked: " + number(p.hours()) + "\nRate: " + peso(p.rate()) + "\n";
-        }
-        StringBuilder text = new StringBuilder();
-        for (PayslipRequest.Earning e : p.earnings()) {
-            text.append(e.label()).append(": ").append(number(e.hours())).append(" hrs × ")
-                    .append(peso(e.rate())).append(" = ").append(peso(e.amount())).append('\n');
-        }
-        return text.toString();
-    }
-
-    private static String section(String title) {
-        return "<div style=\"margin:16px 0 4px;font-weight:bold;text-transform:uppercase;font-size:12px;color:#6b7280\">"
-                + title + "</div>";
-    }
-
-    private static String row(String label, String value) {
-        return "<tr><td style=\"padding:4px 0;border-bottom:1px solid #e5e7eb\">" + label + "</td>"
-                + "<td style=\"padding:4px 0;border-bottom:1px solid #e5e7eb;text-align:right\">" + value + "</td></tr>";
+    private String plainText(StaffMember s, String period, BigDecimal net) {
+        return "Hello " + text(s.getFirstname()) + ",\n\n"
+                + "Your payslip for " + period + " is attached as a PDF.\n"
+                + "Net pay: PHP " + amount(net) + "\n\n"
+                + "Please contact the Payroll Office about any discrepancy.\n\n"
+                + schoolName + " (sent automatically by the payroll system)";
     }
 
     private static BigDecimal money(BigDecimal value) {
@@ -258,12 +188,8 @@ public class PayslipMailService {
         return value.setScale(2, RoundingMode.HALF_UP);
     }
 
-    private static String peso(BigDecimal value) {
-        return "₱" + new DecimalFormat("#,##0.00").format(money(value));
-    }
-
-    private static String number(BigDecimal value) {
-        return value == null ? "0" : value.stripTrailingZeros().toPlainString();
+    private static String amount(BigDecimal value) {
+        return new DecimalFormat("#,##0.00").format(value);
     }
 
     private static String esc(String value) {

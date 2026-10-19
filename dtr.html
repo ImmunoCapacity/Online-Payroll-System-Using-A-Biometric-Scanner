@@ -62,7 +62,22 @@
 
                             <div class="pp-filter-group">
 
-                                <label for="filterDate" class="pp-form-label">
+                                <label for="filterView" class="pp-form-label">
+                                    View
+                                </label>
+
+                                <!-- Daily: one day. Weekly / Monthly: totals per employee (js/dtr-views.js). -->
+                                <select class="form-select pp-form-select" id="filterView">
+                                    <option value="daily">Daily</option>
+                                    <option value="weekly">Weekly</option>
+                                    <option value="monthly">Monthly</option>
+                                </select>
+
+                            </div>
+
+                            <div class="pp-filter-group">
+
+                                <label for="filterDate" class="pp-form-label" id="filterDateLabel">
                                     Date
                                 </label>
 
@@ -106,18 +121,45 @@
 
                             </div>
 
-                            <div class="pp-filter-group">
+                        </div>
 
-                                <button type="button" class="btn btn-pp-outline" id="statusFilterClearBtn">
-                                    <i class="bi bi-arrow-counterclockwise me-1"></i>
-                                    Reset
-                                </button>
+                        <p class="pp-table-hint" id="dtrViewHint">
+                            <i class="bi bi-hand-index" aria-hidden="true"></i>
+                            <span>Click an employee to see their attendance by day, week or month.</span>
+                        </p>
 
+                        <!-- Weekly / monthly totals per employee -->
+                        <div class="pp-card pp-dtr-table-card d-none" id="dtrSummaryCard">
+
+                            <div class="pp-table-wrap">
+
+                                <table class="pp-table" id="dtrSummaryTable">
+
+                                    <thead>
+                                        <tr>
+                                            <th>Employee Name</th>
+                                            <th>Employee Type</th>
+                                            <th class="text-end">Present</th>
+                                            <th class="text-end">Late</th>
+                                            <th class="text-end">Absent</th>
+                                            <th class="text-end">On Leave</th>
+                                            <th class="text-end">Total Hours</th>
+                                        </tr>
+                                    </thead>
+
+                                    <tbody id="dtrSummaryBody"></tbody>
+
+                                </table>
+
+                            </div>
+
+                            <div class="pp-empty-state d-none" id="dtrSummaryEmpty">
+                                No employees match the current filters.
                             </div>
 
                         </div>
 
-                        <div class="pp-card pp-dtr-table-card">
+                        <div class="pp-card pp-dtr-table-card" id="dtrDailyCard">
 
                             <div class="pp-table-wrap">
 
@@ -351,6 +393,37 @@
 
 
 
+    <!-- One employee's attendance: daily / weekly / monthly (js/dtr-views.js) -->
+    <div class="modal fade pp-modal" id="attendanceModal" tabindex="-1" aria-labelledby="attendanceTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div>
+                        <h2 class="modal-title" id="attendanceTitle">Attendance</h2>
+                        <div class="pp-att-sub" id="attendanceSub"></div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="pp-att-toolbar">
+                        <div class="btn-group" role="group" aria-label="View">
+                            <button type="button" class="btn btn-pp-outline" data-att-view="daily">Daily</button>
+                            <button type="button" class="btn btn-pp-outline" data-att-view="weekly">Weekly</button>
+                            <button type="button" class="btn btn-pp-outline" data-att-view="monthly">Monthly</button>
+                        </div>
+                        <div class="pp-att-nav">
+                            <button type="button" class="btn btn-pp-outline btn-sm" id="attPrev" aria-label="Previous"><i class="bi bi-chevron-left"></i></button>
+                            <span class="pp-att-range" id="attRange"></span>
+                            <button type="button" class="btn btn-pp-outline btn-sm" id="attNext" aria-label="Next"><i class="bi bi-chevron-right"></i></button>
+                        </div>
+                    </div>
+                    <div class="pp-att-totals" id="attTotals"></div>
+                    <div id="attBody"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="vendor/bootstrap/bootstrap.bundle.min.js"></script>
 
     <script src="js/data-store.js"></script>
@@ -361,6 +434,7 @@
     <script src="js/form-validation.js"></script>
     <script src="js/dtr.js"></script>
     <script src="js/biometric-sync.js"></script>
+    <script src="js/dtr-views.js"></script>
 
 </body>
 

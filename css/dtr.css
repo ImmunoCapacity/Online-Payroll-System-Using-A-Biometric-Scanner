@@ -185,8 +185,7 @@
     grid-template-columns:
         minmax(150px, 0.8fr)
         minmax(150px, 0.8fr)
-        minmax(220px, 1.5fr)
-        auto;
+        minmax(220px, 1.5fr);
     align-items: end;
     gap: 0.75rem;
     margin-bottom: 1rem;
@@ -628,4 +627,142 @@
     .pp-dtr-sidebar-link {
         font-size: 0.875rem;
     }
+}
+/* ---- Employee attendance window (js/dtr-views.js) ---- */
+
+.pp-att-sub {
+    color: var(--pp-text-muted, #6b7280);
+    font-size: 0.8125rem;
+}
+
+.pp-att-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.pp-att-toolbar .btn-group .btn.active {
+    background: var(--pp-primary, #1a5f7a);
+    border-color: var(--pp-primary, #1a5f7a);
+    color: #fff;
+}
+
+.pp-att-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.pp-att-range {
+    min-width: 170px;
+    text-align: center;
+    font-weight: 600;
+    color: var(--pp-primary-dark, #134a61);
+}
+
+.pp-att-totals {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.25rem;
+    margin-bottom: 0.75rem;
+    font-size: 0.8125rem;
+    color: var(--pp-text-muted, #6b7280);
+}
+
+.pp-att-totals strong {
+    color: var(--pp-text, #1f2937);
+}
+
+.pp-badge.pp-att-muted {
+    background: var(--pp-surface-alt, #f1f4f6);
+    color: var(--pp-text-muted, #6b7280);
+}
+
+.pp-att-day {
+    padding: 1rem;
+    border: 1px solid var(--pp-border, #e2e5e9);
+    border-radius: 8px;
+}
+
+.pp-att-day-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin-top: 0.85rem;
+}
+
+.pp-att-day-grid span {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--pp-text-muted, #6b7280);
+}
+
+.pp-att-day-grid strong {
+    font-size: 1.05rem;
+}
+
+.pp-att-month {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 4px;
+}
+
+.pp-att-weekday {
+    text-align: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--pp-text-muted, #6b7280);
+    text-transform: uppercase;
+    padding-bottom: 2px;
+}
+
+.pp-att-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-height: 64px;
+    padding: 4px 6px;
+    border: 1px solid var(--pp-border, #e2e5e9);
+    border-radius: 6px;
+    background: #fff;
+    font-size: 0.7rem;
+    text-align: left;
+    cursor: pointer;
+}
+
+.pp-att-cell:hover {
+    border-color: var(--pp-primary, #1a5f7a);
+}
+
+.pp-att-cell.empty {
+    border: none;
+    background: none;
+    cursor: default;
+}
+
+.pp-att-num {
+    font-weight: 700;
+    font-size: 0.8rem;
+}
+
+.pp-att-cell-hours {
+    margin-top: auto;
+    color: var(--pp-text-muted, #6b7280);
+}
+
+.pp-att-cell.status-present { background: #ecf8f1; }
+.pp-att-cell.status-late { background: #fff6e5; }
+.pp-att-cell.status-absent { background: #fdeeee; }
+.pp-att-cell.status-leave { background: #eef3fd; }
+.pp-att-cell.status-rest-day,
+.pp-att-cell.status-upcoming,
+.pp-att-cell.status-not-hired { background: var(--pp-surface-alt, #f6f8f9); color: var(--pp-text-muted, #6b7280); }
+
+@media (max-width: 576px) {
+    .pp-att-cell { min-height: 48px; }
+    .pp-att-cell-status { display: none; }
+    .pp-att-day-grid { grid-template-columns: 1fr; }
 }

@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * GET    /api/employees        list faculty + admin staff
  * POST   /api/employees        create
+ * GET    /api/employees/next-id  the ID the next new employee gets (STIBLN-####, before M/F)
  * PUT    /api/employees/{id}   update ("F3" / "A5")
  * POST   /api/employees/{id}/archive   archive (employees are never deleted)
  * POST   /api/employees/{id}/restore   bring an archived employee back
@@ -46,11 +47,16 @@ public class EmployeeController {
         return Map.of("success", true, "employees", employees.listAll(archived));
     }
 
+    @GetMapping("/next-id")
+    public Map<String, Object> nextId() {
+        return Map.of("success", true, "nextId", employees.previewNextId());
+    }
+
     @PostMapping
     public Map<String, Object> create(@RequestBody EmployeeRequest request, HttpServletRequest http) {
         String id = employees.create(request);
         rates.syncEmployee(id, AuthInterceptor.currentUser(http).id());
-        return Map.of("success", true, "id", id);
+        return Map.of("success", true, "id", id, "employeeNumber", employees.employeeNumberOf(id));
     }
 
     @PutMapping("/{id}")

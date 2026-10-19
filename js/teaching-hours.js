@@ -195,7 +195,6 @@
                     'aria-label="Open the classes of ' + escapeHtml(t.displayName) + '">' +
                 '<td><strong>' + escapeHtml(t.displayName) + '</strong></td>' +
                 '<td>' + escapeHtml(t.employeeNumber) + '</td>' +
-                '<td>' + employeeStatusBadge(t.status) + '</td>' +
                 '<td class="text-end">' + s.classes + '</td>' +
                 '<td class="text-end">' + (s.needsChecks ? '<span class="fm-status incomplete">' + s.needsChecks + '</span>' : '0') + '</td>' +
                 '<td class="text-end">' + (s.pending ? '<span class="fm-status pending">' + s.pending + '</span>' : '0') + '</td>' +
@@ -242,7 +241,7 @@
         el('rangeLabel').textContent = view === 'day'
             ? prettyDate(r.from)
             : 'Week of ' + prettyDate(r.from) + ' – ' + prettyDate(r.to);
-        body.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Loading classes…</td></tr>';
+        body.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">Loading classes…</td></tr>';
         emptyState.classList.add('d-none');
         return api('api/teaching-hours/classes?from=' + r.from + '&to=' + r.to + '&employeeId=' + encodeURIComponent(teacher.id))
             .then(function (data) {
@@ -304,12 +303,11 @@
                     'aria-label="Classroom checks for ' + escapeHtml(r.subject) + '">' +
                 '<td>' + time12(r.scheduledStart) + ' – ' + time12(r.scheduledEnd) + '</td>' +
                 '<td><span class="fm-subject">' + escapeHtml(r.subject) + '</span>' +
-                    '<span class="fm-sub">' + escapeHtml(r.classSection) + (r.room ? ' · ' + escapeHtml(r.room) : '') + '</span></td>' +
+                    '<span class="fm-sub">' + escapeHtml(r.classSection) + (r.room ? ' · ' + escapeHtml(r.room) : '') + '</span>' +
+                    (r.flags.length ? '<span class="fm-flag" title="' + escapeHtml(r.flags.join('\n')) + '"><i class="bi bi-flag-fill"></i> ' + r.flags.length + '</span>' : '') +
+                    '</td>' +
                 '<td>' + checkCell(r.startCheckAt, r.startCheckStatus) + '</td>' +
                 '<td>' + checkCell(r.endCheckAt, r.endCheckStatus) + '</td>' +
-                '<td>' + statusBadge(r.approvalStatus) +
-                    (r.flags.length ? '<span class="fm-flag" title="' + escapeHtml(r.flags.join('\n')) + '"><i class="bi bi-flag-fill"></i> ' + r.flags.length + '</span>' : '') +
-                '</td>' +
                 '<td class="text-end">' + payable + '</td>' +
             '</tr>';
         }).join('');
@@ -660,7 +658,7 @@
         statusFilter.value = params.get('status');
     }
 
-    el('facultyBody').innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Loading faculty…</td></tr>';
+    el('facultyBody').innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">Loading faculty…</td></tr>';
     loadTeachers()
         .catch(function (error) {
             PPToast.error(error.message || 'Could not load faculty.');

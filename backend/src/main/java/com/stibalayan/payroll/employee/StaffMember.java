@@ -2,6 +2,7 @@ package com.stibalayan.payroll.employee;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.MappedSuperclass;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -73,6 +74,10 @@ public abstract class StaffMember {
 
     private String notes;
 
+    /** Monthly basic pay, for the record only — payroll is still computed from hours x rate. */
+    @Column(name = "basic_pay")
+    private BigDecimal basicPay;
+
     /** Archived employees are kept (with all their history) but hidden from lists and pickers. */
     @Column(name = "is_archived")
     private boolean archived;
@@ -127,6 +132,8 @@ public abstract class StaffMember {
     public void setTinId(String tinId) { this.tinId = tinId; }
     public String getNotes() { return notes; }
     public void setNotes(String notes) { this.notes = notes; }
+    public BigDecimal getBasicPay() { return basicPay; }
+    public void setBasicPay(BigDecimal basicPay) { this.basicPay = basicPay; }
     public boolean isArchived() { return archived; }
     public void setArchived(boolean archived) { this.archived = archived; }
     public LocalDateTime getArchivedAt() { return archivedAt; }

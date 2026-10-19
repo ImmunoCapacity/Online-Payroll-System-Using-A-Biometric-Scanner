@@ -38,6 +38,13 @@ public class DtrController {
         return Map.of("success", true, "employees", summaries.summary(from, to));
     }
 
+    /** One employee day by day (Biometric Records → click a row: daily, weekly or monthly). */
+    @GetMapping("/employee-days")
+    @RequireModule(SystemModule.DAILY_TIME_RECORD)
+    public Map<String, Object> employeeDays(@RequestParam String employeeId, @RequestParam String from, @RequestParam String to) {
+        return Map.of("success", true, "attendance", summaries.employeeDays(employeeId, from, to));
+    }
+
     @GetMapping
     @RequireModule(SystemModule.DAILY_TIME_RECORD)
     public Map<String, Object> forDate(@RequestParam(required = false) String date) {

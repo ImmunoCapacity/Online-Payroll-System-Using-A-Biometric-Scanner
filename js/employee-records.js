@@ -27,14 +27,14 @@
     const employeeId = document.getElementById('employeeId');
     const employeeFirstName = document.getElementById('employeeFirstName');
     const employeeLastName = document.getElementById('employeeLastName');
-    const employeeNumber = document.getElementById('employeeNumber');
-    const employeeNumberError = document.getElementById('employeeNumberError');
+    const employeeNumber = document.getElementById('employeeNumber');   // read-only, assigned by the server
+    const employeeGender = document.getElementById('employeeGender');
+    let nextIdBase = '';   // e.g. "STIBLN-0015" for a new employee (api/employees/next-id)
     const employeeDepartmentSelect = document.getElementById('employeeDepartmentSelect');
     const employeeEmail = document.getElementById('employeeEmail');
     const employeePhone = document.getElementById('employeePhone');
     const employeeStatusSelect = document.getElementById('employeeStatusSelect');
     const employeeJoined = document.getElementById('employeeJoined');
-    const employeeNotes = document.getElementById('employeeNotes');
     const saveButton = employeeForm.querySelector('button[type="submit"]');
     const archiveEmployeeBtn = document.getElementById('archiveEmployeeBtn');
     const restoreEmployeeBtn = document.getElementById('restoreEmployeeBtn');
@@ -51,6 +51,7 @@
         dependents: { id: 'employeeDependents', number: true },
         address: { id: 'employeeAddress' },
         employeeType: { id: 'employeeType' },
+        basicPay: { id: 'employeeBasicPay', number: true },   // monthly; record only
         sssId: { id: 'employeeSssId' },
         philhealthId: { id: 'employeePhilhealthId' },
         pagibigId: { id: 'employeePagibigId' },
@@ -102,9 +103,28 @@
 
     function fillFields(fields, employee) {
         Object.keys(fields).forEach(function (key) {
-            const value = employee[key];
-            document.getElementById(fields[key].id).value = value == null ? '' : value;
+            const value = employee[key] == null ? '' : String(employee[key]);
+            const input = document.getElementById(fields[key].id);
+            // A saved choice that is no longer in a list (e.g. a rank) still shows.
+            if (input.tagName === 'SELECT' && value && !Array.prototype.some.call(input.options, function (o) { return o.value === value; })) {
+                input.insertAdjacentHTML('beforeend', '<option value="' + escapeHtml(value) + '">' + escapeHtml(value) + '</option>');
+            }
+            input.value = value;
         });
+    }
+
+    // Instructor Rank choices: Maintenance → Instructor Ranks (api/ranks).
+    function loadRanks() {
+        return fetch('api/ranks')
+            .then(function (response) { return response.json(); })
+            .then(function (data) {
+                if (!data.success) return;
+                document.getElementById('employeeRank').innerHTML = '<option value="">—</option>' +
+                    data.ranks.map(function (r) {
+                        return '<option value="' + escapeHtml(r.name) + '">' + escapeHtml(r.name) + '</option>';
+                    }).join('');
+            })
+            .catch(function () { /* the field just offers no ranks */ });
     }
 
     // Faculty and Admin staff have different employment fields; Faculty/Admin get both.
@@ -121,7 +141,7 @@
     // ================================================================
 
     function loadEmployees() {
-        employeeBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">Loading employees…</td></tr>';
+        employeeBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4">Loading employees…</td></tr>';
         emptyState.classList.add('d-none');
 
         // Archived employees too, for the Status filter's "Archived" view.
@@ -158,17 +178,8 @@
         });
     }
 
-    function updateSummary() {
-        const current = employeeList.filter(function (e) { return !e.archived; });
-        document.getElementById('summaryActive').textContent = current.filter(function (e) { return e.status === 'Active'; }).length;
-        document.getElementById('summaryFaculty').textContent = current.filter(function (e) { return e.department === 'Faculty'; }).length;
-        document.getElementById('summaryAdmin').textContent = current.filter(function (e) { return e.department === 'Admin'; }).length;
-        document.getElementById('summaryFacultyAdmin').textContent = current.filter(function (e) { return e.department === 'Faculty/Admin'; }).length;
-    }
-
     function renderTable() {
         const rows = getFilteredEmployees();
-        updateSummary();
 
         if (rows.length === 0) {
             employeeBody.innerHTML = '';
@@ -187,7 +198,6 @@
                     '<td>' + escapeHtml(employee.department) + '</td>' +
                     '<td>' + escapeHtml(employee.email) + '</td>' +
                     '<td>' + escapeHtml(employee.phone) + '</td>' +
-                    '<td>' + statusBadge(employee) + '</td>' +
                 '</tr>'
             );
         }).join('');
@@ -214,6 +224,7 @@
         dateHired: 'employeeJoined',
         status: 'employeeStatusSelect',
         employeeType: 'employeeType',
+        basicPay: 'employeeBasicPay',
         instructorRank: 'employeeRank',
         rate: 'employeeRateHour',
         teachingRate: 'employeeRateUnit',
@@ -225,8 +236,7 @@
         sssId: 'employeeSssId',
         philhealthId: 'employeePhilhealthId',
         pagibigId: 'employeePagibigId',
-        tinId: 'employeeTinId',
-        notes: 'employeeNotes'
+        tinId: 'employeeTinId'
     };
 
     function serverFields(department) {
@@ -234,15 +244,6 @@
         return department === 'Faculty'
             ? Object.assign({}, SERVER_FIELDS, { rate: 'employeeRateUnit' })
             : SERVER_FIELDS;
-    }
-
-    function statusBadge(employee) {
-        if (employee.archived) {
-            return '<span class="pp-badge pp-badge-archived" title="' + escapeHtml(employee.status) + '">Archived</span>';
-        }
-        const cls = employee.status === 'Active' ? 'pp-badge-present'
-            : employee.status === 'On Leave' ? 'pp-badge-late' : 'pp-badge-absent';
-        return '<span class="pp-badge ' + cls + '">' + escapeHtml(employee.status) + '</span>';
     }
 
     // Archived records can be viewed but not edited.
@@ -273,6 +274,45 @@
         toggleTypeFields(employeeDepartmentSelect.value);
     });
 
+    // Employee ID: STIBLN-####-M / -F. New employees see the number they will
+    // get; the letter follows the Gender field (also when it is corrected).
+    function genderLetter() {
+        return employeeGender.value === 'Female' ? 'F' : employeeGender.value === 'Male' ? 'M' : '?';
+    }
+
+    function showEmployeeId() {
+        if (employeeId.value) {
+            employeeNumber.value = employeeNumber.value.replace(/-[MF?]$/, '-' + genderLetter());
+        } else {
+            const letter = genderLetter();
+            employeeNumber.value = nextIdBase + (letter === '?' ? '' : '-' + letter);
+        }
+    }
+
+    /** Next ID from the loaded list (archived included), until the server's answer arrives. */
+    function nextIdFromList() {
+        const highest = employeeList.reduce(function (max, e) {
+            const m = /^STIBLN-(\d+)-[MF]$/.exec(e.employeeNumber || '');
+            return m ? Math.max(max, Number(m[1])) : max;
+        }, 0);
+        return 'STIBLN-' + String(highest + 1).padStart(4, '0');
+    }
+
+    function loadNextId() {
+        nextIdBase = nextIdFromList();
+        showEmployeeId();
+        fetch('api/employees/next-id')
+            .then(function (response) { return response.json(); })
+            .then(function (data) {
+                if (!data.success || employeeId.value) return;
+                nextIdBase = data.nextId;
+                showEmployeeId();
+            })
+            .catch(function () { /* the server assigns it on save anyway */ });
+    }
+
+    employeeGender.addEventListener('change', showEmployeeId);
+
     function openModal(employee) {
         resetForm();
         if (employee) {
@@ -293,7 +333,6 @@
             employeePhone.value = employee.phone;
             employeeStatusSelect.value = employee.status;
             employeeJoined.value = employee.dateHired;
-            employeeNotes.value = employee.notes || '';
             // Older records may hold e.g. "0917-000-0000"; keep only the allowed characters.
             PPValidate.sanitize(employeeForm);
 
@@ -305,6 +344,8 @@
             } else {
                 archiveEmployeeBtn.classList.remove('d-none');
             }
+        } else {
+            loadNextId();
         }
 
         const modal = new bootstrap.Modal(employeeModal);
@@ -321,30 +362,20 @@
         clearNumberError();
 
         const editingId = employeeId.value || null;
-        const number = employeeNumber.value.trim();
 
         if (!PPValidate.validateForm(employeeForm)) {
             return;
         }
-        const duplicate = employeeList.find(function (e) {
-            return e.employeeNumber === number && e.id !== editingId;
-        });
-        if (duplicate) {
-            PPValidate.setError(employeeNumber, 'This Employee ID is already used by ' + duplicate.displayName + '.');
-            employeeNumber.focus();
-            return;
-        }
 
+        // No employeeNumber: the server assigns it (STIBLN-####-M/F).
         const payload = {
-            employeeNumber: number,
             firstName: employeeFirstName.value.trim(),
             lastName: employeeLastName.value.trim(),
             department: employeeDepartmentSelect.value,
             email: employeeEmail.value.trim(),
             phone: employeePhone.value.trim(),
             status: employeeStatusSelect.value,
-            dateHired: employeeJoined.value,
-            notes: employeeNotes.value.trim()
+            dateHired: employeeJoined.value
         };
         readFields(PROFILE_FIELDS, payload);
         readFields(typeFields(payload.department), payload);
@@ -370,7 +401,7 @@
                 }
 
                 bootstrap.Modal.getInstance(employeeModal).hide();
-                PPToast.success(editingId ? 'Employee updated.' : 'Employee added.');
+                PPToast.success(editingId ? 'Employee updated.' : 'Employee added with ID ' + data.employeeNumber + '.');
                 loadEmployees();
             })
             .catch(function (error) {
@@ -485,7 +516,7 @@
 
     employeeModal.addEventListener('hidden.bs.modal', resetForm);
 
-    loadEmployees().then(function () {
+    Promise.all([loadEmployees(), loadRanks()]).then(function () {
         if (new URLSearchParams(location.search).get('action') === 'add') {
             openModal(null);
         }

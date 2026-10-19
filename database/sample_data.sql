@@ -21,8 +21,8 @@
 -- Benefits: Rice (all), Transportation (Admin, Faculty/Admin) and Internet
 -- (Faculty, Faculty/Admin) allowances, paid every payroll period.
 --
--- Safe to run again: the 10 sample employees (employee numbers
--- 02001000101–02001000110) are deleted first, together with everything
+-- Safe to run again: the 10 sample employees (Employee IDs
+-- STIBLN-0001 to STIBLN-0010, emails @example.com) are deleted first, with everything
 -- linked to them, and the payroll runs of the three sample periods are
 -- cleared so they can be run again. Other employees are not touched.
 -- Emails use example.com so payslip emails never reach real people.
@@ -43,8 +43,10 @@ SET @master := (SELECT user_id FROM users
 DELETE FROM payroll_run
 WHERE (pay_period_start, pay_period_end) IN
       (('2026-09-11', '2026-09-25'), ('2026-09-26', '2026-10-10'), ('2026-10-11', '2026-10-25'));
-DELETE FROM faculty_staff WHERE employee_number BETWEEN '02001000101' AND '02001000110';
-DELETE FROM admin_staff   WHERE employee_number BETWEEN '02001000101' AND '02001000110';
+DELETE FROM faculty_staff WHERE employee_number IN ('STIBLN-0001-M', 'STIBLN-0002-F', 'STIBLN-0003-M', 'STIBLN-0004-M', 'STIBLN-0005-M', 'STIBLN-0006-M', 'STIBLN-0007-F', 'STIBLN-0008-F', 'STIBLN-0009-F', 'STIBLN-0010-F')
+    AND email_address LIKE '%@example.com';
+DELETE FROM admin_staff   WHERE employee_number IN ('STIBLN-0001-M', 'STIBLN-0002-F', 'STIBLN-0003-M', 'STIBLN-0004-M', 'STIBLN-0005-M', 'STIBLN-0006-M', 'STIBLN-0007-F', 'STIBLN-0008-F', 'STIBLN-0009-F', 'STIBLN-0010-F')
+    AND email_address LIKE '%@example.com';
 
 
 -- ---------------------------------------------------------------
@@ -55,7 +57,7 @@ DELETE FROM admin_staff   WHERE employee_number BETWEEN '02001000101' AND '02001
 INSERT INTO faculty_staff (employee_number, fingerprint_id, firstname, middlename, lastname, gender, age, birthdate,
     contact_number, address, email_address, civil_status, dependent_number, employment_status, employee_type, date_hired,
     load_units, lecture_hours, rate_per_hour_unit, sss_id, philhealth_id, pagibig_id, tin_id, instructor_rank, notes)
-VALUES ('02001000101', '101', 'Jose', 'Marquez', 'Ramirez', 'Male', 38, '1988-03-14',
+VALUES ('STIBLN-0006-M', '101', 'Jose', 'Marquez', 'Ramirez', 'Male', 38, '1988-03-14',
     '09171234501', 'Brgy. Caloocan, Balayan, Batangas', 'jose.ramirez@example.com', 'Married', 2, 'Active', 'Full-time', '2019-06-03',
     18, 7.0, 420.00, '34-1234501-1', '12-345678901-1', '1234-5678-9101', '123-456-701-000', 'Instructor II', 'IT department; adviser of BSIT 2A.');
 SET @f1 := LAST_INSERT_ID();
@@ -63,7 +65,7 @@ SET @f1 := LAST_INSERT_ID();
 INSERT INTO faculty_staff (employee_number, fingerprint_id, firstname, middlename, lastname, gender, age, birthdate,
     contact_number, address, email_address, civil_status, dependent_number, employment_status, employee_type, date_hired,
     load_units, lecture_hours, rate_per_hour_unit, sss_id, philhealth_id, pagibig_id, tin_id, instructor_rank, notes)
-VALUES ('02001000102', '102', 'Angela', 'Cruz', 'Dizon', 'Female', 29, '1997-07-22',
+VALUES ('STIBLN-0009-F', '102', 'Angela', 'Cruz', 'Dizon', 'Female', 29, '1997-07-22',
     '09171234502', 'Brgy. Gimalas, Balayan, Batangas', 'angela.dizon@example.com', 'Single', 0, 'Active', 'Part-time', '2023-08-07',
     9, 6.0, 380.00, '34-1234502-2', '12-345678902-2', '1234-5678-9102', '123-456-702-000', 'Instructor I', 'General Education.');
 SET @f2 := LAST_INSERT_ID();
@@ -71,7 +73,7 @@ SET @f2 := LAST_INSERT_ID();
 INSERT INTO faculty_staff (employee_number, fingerprint_id, firstname, middlename, lastname, gender, age, birthdate,
     contact_number, address, email_address, civil_status, dependent_number, employment_status, employee_type, date_hired,
     load_units, lecture_hours, rate_per_hour_unit, sss_id, philhealth_id, pagibig_id, tin_id, instructor_rank, notes)
-VALUES ('02001000103', '103', 'Paolo', 'Santos', 'Villareal', 'Male', 45, '1981-11-02',
+VALUES ('STIBLN-0003-M', '103', 'Paolo', 'Santos', 'Villareal', 'Male', 45, '1981-11-02',
     '09171234503', 'Brgy. Calzada, Calaca, Batangas', 'paolo.villareal@example.com', 'Married', 3, 'Active', 'Full-time', '2014-06-16',
     15, 7.0, 450.00, '34-1234503-3', '12-345678903-3', '1234-5678-9103', '123-456-703-000', 'Instructor III', 'Senior faculty, networking and databases.');
 SET @f3 := LAST_INSERT_ID();
@@ -79,7 +81,7 @@ SET @f3 := LAST_INSERT_ID();
 INSERT INTO faculty_staff (employee_number, fingerprint_id, firstname, middlename, lastname, gender, age, birthdate,
     contact_number, address, email_address, civil_status, dependent_number, employment_status, employee_type, date_hired,
     load_units, lecture_hours, rate_per_hour_unit, sss_id, philhealth_id, pagibig_id, tin_id, instructor_rank, notes)
-VALUES ('02001000104', '104', 'Kristine', 'Lopez', 'Bautista', 'Female', 27, '1999-01-30',
+VALUES ('STIBLN-0010-F', '104', 'Kristine', 'Lopez', 'Bautista', 'Female', 27, '1999-01-30',
     '09171234504', 'Brgy. Sampaga, Balayan, Batangas', 'kristine.bautista@example.com', 'Single', 0, 'Active', 'Contractual', '2025-06-09',
     9, 5.0, 360.00, '34-1234504-4', '12-345678904-4', '1234-5678-9104', '123-456-704-000', 'Instructor I', 'Mathematics.');
 SET @f4 := LAST_INSERT_ID();
@@ -88,7 +90,7 @@ SET @f4 := LAST_INSERT_ID();
 INSERT INTO admin_staff (employee_number, fingerprint_id, firstname, middlename, lastname, gender, age, birthdate,
     contact_number, address, email_address, civil_status, dependent_number, employment_status, employee_type, date_hired,
     department, position, office_hours, rate_per_hour, is_faculty, sss_id, philhealth_id, pagibig_id, tin_id, notes)
-VALUES ('02001000105', '105', 'Ramon', 'Aguilar', 'Castillo', 'Male', 41, '1985-05-18',
+VALUES ('STIBLN-0004-M', '105', 'Ramon', 'Aguilar', 'Castillo', 'Male', 41, '1985-05-18',
     '09171234505', 'Brgy. Poblacion 3, Balayan, Batangas', 'ramon.castillo@example.com', 'Married', 2, 'Active', 'Full-time', '2016-02-01',
     'Registrar', 'Registrar Officer', 8.0, 130.00, 0, '34-1234505-5', '12-345678905-5', '1234-5678-9105', '123-456-705-000', NULL);
 SET @a1 := LAST_INSERT_ID();
@@ -96,7 +98,7 @@ SET @a1 := LAST_INSERT_ID();
 INSERT INTO admin_staff (employee_number, fingerprint_id, firstname, middlename, lastname, gender, age, birthdate,
     contact_number, address, email_address, civil_status, dependent_number, employment_status, employee_type, date_hired,
     department, position, office_hours, rate_per_hour, is_faculty, sss_id, philhealth_id, pagibig_id, tin_id, notes)
-VALUES ('02001000106', '106', 'Liza', 'Flores', 'Mercado', 'Female', 34, '1992-09-09',
+VALUES ('STIBLN-0007-F', '106', 'Liza', 'Flores', 'Mercado', 'Female', 34, '1992-09-09',
     '09171234506', 'Brgy. Lanatan, Balayan, Batangas', 'liza.mercado@example.com', 'Married', 1, 'Active', 'Full-time', '2020-07-13',
     'Accounting', 'Cashier', 8.0, 110.00, 0, '34-1234506-6', '12-345678906-6', '1234-5678-9106', '123-456-706-000', NULL);
 SET @a2 := LAST_INSERT_ID();
@@ -104,7 +106,7 @@ SET @a2 := LAST_INSERT_ID();
 INSERT INTO admin_staff (employee_number, fingerprint_id, firstname, middlename, lastname, gender, age, birthdate,
     contact_number, address, email_address, civil_status, dependent_number, employment_status, employee_type, date_hired,
     department, position, office_hours, rate_per_hour, is_faculty, sss_id, philhealth_id, pagibig_id, tin_id, notes)
-VALUES ('02001000107', '107', 'Danilo', 'Perez', 'Ocampo', 'Male', 50, '1976-12-05',
+VALUES ('STIBLN-0001-M', '107', 'Danilo', 'Perez', 'Ocampo', 'Male', 50, '1976-12-05',
     '09171234507', 'Brgy. Langgangan, Balayan, Batangas', 'danilo.ocampo@example.com', 'Widowed', 1, 'Active', 'Full-time', '2010-03-22',
     'Facilities', 'Maintenance Staff', 8.0, 95.00, 0, '34-1234507-7', '12-345678907-7', '1234-5678-9107', '123-456-707-000', NULL);
 SET @a3 := LAST_INSERT_ID();
@@ -112,7 +114,7 @@ SET @a3 := LAST_INSERT_ID();
 INSERT INTO admin_staff (employee_number, fingerprint_id, firstname, middlename, lastname, gender, age, birthdate,
     contact_number, address, email_address, civil_status, dependent_number, employment_status, employee_type, date_hired,
     department, position, office_hours, rate_per_hour, is_faculty, sss_id, philhealth_id, pagibig_id, tin_id, notes)
-VALUES ('02001000108', '108', 'Joanna', 'Reyes', 'Salazar', 'Female', 31, '1995-04-27',
+VALUES ('STIBLN-0008-F', '108', 'Joanna', 'Reyes', 'Salazar', 'Female', 31, '1995-04-27',
     '09171234508', 'Brgy. Navotas, Balayan, Batangas', 'joanna.salazar@example.com', 'Single', 0, 'Active', 'Full-time', '2021-09-01',
     'Admissions', 'Admissions Officer', 8.0, 120.00, 0, '34-1234508-8', '12-345678908-8', '1234-5678-9108', '123-456-708-000', NULL);
 SET @a4 := LAST_INSERT_ID();
@@ -123,7 +125,7 @@ INSERT INTO admin_staff (employee_number, fingerprint_id, firstname, middlename,
     contact_number, address, email_address, civil_status, dependent_number, employment_status, employee_type, date_hired,
     department, position, office_hours, rate_per_hour, is_faculty, instructor_rank, rate_per_hour_unit, load_units, lecture_hours,
     sss_id, philhealth_id, pagibig_id, tin_id, notes)
-VALUES ('02001000109', '109', 'Teresa', 'Mendoza', 'Aquino', 'Female', 47, '1979-08-11',
+VALUES ('STIBLN-0002-F', '109', 'Teresa', 'Mendoza', 'Aquino', 'Female', 47, '1979-08-11',
     '09171234509', 'Brgy. Dalig, Balayan, Batangas', 'teresa.aquino@example.com', 'Married', 2, 'Active', 'Full-time', '2012-06-04',
     'Academic Affairs', 'Program Head', 8.0, 160.00, 1, 'Instructor III', 400.00, 3, 3.0,
     '34-1234509-9', '12-345678909-9', '1234-5678-9109', '123-456-709-000', 'Also teaches Ethics.');
@@ -133,7 +135,7 @@ INSERT INTO admin_staff (employee_number, fingerprint_id, firstname, middlename,
     contact_number, address, email_address, civil_status, dependent_number, employment_status, employee_type, date_hired,
     department, position, office_hours, rate_per_hour, is_faculty, instructor_rank, rate_per_hour_unit, load_units, lecture_hours,
     sss_id, philhealth_id, pagibig_id, tin_id, notes)
-VALUES ('02001000110', '110', 'Vincent', 'Torres', 'Gomez', 'Male', 36, '1990-02-17',
+VALUES ('STIBLN-0005-M', '110', 'Vincent', 'Torres', 'Gomez', 'Male', 36, '1990-02-17',
     '09171234510', 'Brgy. Magabe, Balayan, Batangas', 'vincent.gomez@example.com', 'Married', 1, 'Active', 'Full-time', '2018-01-15',
     'IT Department', 'IT Coordinator', 8.0, 140.00, 1, 'Instructor II', 380.00, 3, 4.0,
     '34-1234510-0', '12-345678910-0', '1234-5678-9110', '123-456-710-000', 'Also teaches Web Development.');
@@ -373,27 +375,19 @@ JOIN tmp_emp e ON e.kind = 'Admin'
 WHERE WEEKDAY(t.d) < 5 AND t.d <= '2026-10-08'
   AND NOT EXISTS (SELECT 1 FROM daily_time_record r WHERE r.adminstaff_id = e.adminstaff_id AND r.record_date = t.d);
 
--- A mix of other requests.
+-- Other approved leave, as the Payroll Master records it (approved outside the system).
 INSERT INTO employee_leave (faculty_id, adminstaff_id, leave_category, leave_category_id, is_paid, reason, status,
     date_requested, date_approved, approved_by, recorded_by, date_from, date_to, remarks, total_days, total_leave_credit)
 VALUES
-    -- pending: family trip next week
-    (NULL, @a2, 'Vacation Leave', @vacation, 1, 'Family trip to Bicol.', 'Pending',
-     '2026-10-07 10:15:00', NULL, NULL, @master, '2026-10-19', '2026-10-21', NULL, 3, NULL),
-    -- rejected: peak enrollment week
-    (NULL, @a3, 'Vacation Leave', @vacation, 1, 'Personal errands.', 'Rejected',
-     '2026-10-05 14:00:00', '2026-10-06 09:30:00', @masterName, @master, '2026-10-12', '2026-10-16',
-     'Peak enrollment week; please refile for after Oct 23.', 5, NULL),
-    -- approved, unpaid
+    -- paid: family trip
+    (NULL, @a2, 'Vacation Leave', @vacation, 1, 'Family trip to Bicol.', 'Approved',
+     '2026-10-07 10:15:00', '2026-10-07 10:15:00', @masterName, @master, '2026-10-19', '2026-10-21', NULL, 3, 15),
+    -- unpaid
     (NULL, @a4, 'Leave Without Pay', @lwop, 0, 'Accompanying a family member to a hospital in Manila.', 'Approved',
      '2026-10-06 08:45:00', '2026-10-06 16:00:00', @masterName, @master, '2026-10-22', '2026-10-23', NULL, 2, NULL),
-    -- pending, faculty
-    (@f1, NULL, 'Paternity Leave', @paternity, 1, 'Birth of second child (expected Oct 27).', 'Pending',
-     '2026-10-08 11:20:00', NULL, NULL, @master, '2026-10-27', '2026-11-04', NULL, 7, NULL),
-    -- cancelled
-    (NULL, @a5, 'Sick Leave', @sick, 1, 'Migraine.', 'Cancelled',
-     '2026-09-30 07:10:00', '2026-10-01 08:05:00', @masterName, @master, '2026-10-01', '2026-10-01',
-     'Reported for work after all.', 1, NULL);
+    -- paid, faculty
+    (@f1, NULL, 'Paternity Leave', @paternity, 1, 'Birth of second child (expected Oct 27).', 'Approved',
+     '2026-10-08 11:20:00', '2026-10-08 11:20:00', @masterName, @master, '2026-10-27', '2026-11-04', NULL, 7, NULL);
 
 
 -- ---------------------------------------------------------------
@@ -434,6 +428,22 @@ SELECT @internet, e.faculty_id, e.adminstaff_id, 250.00 FROM tmp_emp e WHERE e.k
 
 
 -- ---------------------------------------------------------------
+-- 8. Basic pay (monthly, record only): a regular month at their rates.
+--    Admin: rate/hour x office hours x 22 days. Faculty: rate/hour/unit x
+--    weekly lecture hours x 4. Faculty/Admin: both.
+-- ---------------------------------------------------------------
+
+UPDATE faculty_staff
+SET basic_pay = ROUND(IFNULL(rate_per_hour_unit, 0) * IFNULL(lecture_hours, 0) * 4)
+WHERE employee_number IN ('STIBLN-0001-M', 'STIBLN-0002-F', 'STIBLN-0003-M', 'STIBLN-0004-M', 'STIBLN-0005-M', 'STIBLN-0006-M', 'STIBLN-0007-F', 'STIBLN-0008-F', 'STIBLN-0009-F', 'STIBLN-0010-F');
+
+UPDATE admin_staff
+SET basic_pay = ROUND(IFNULL(rate_per_hour, 0) * IFNULL(office_hours, 0) * 22
+                + IF(is_faculty, IFNULL(rate_per_hour_unit, 0) * IFNULL(lecture_hours, 0) * 4, 0))
+WHERE employee_number IN ('STIBLN-0001-M', 'STIBLN-0002-F', 'STIBLN-0003-M', 'STIBLN-0004-M', 'STIBLN-0005-M', 'STIBLN-0006-M', 'STIBLN-0007-F', 'STIBLN-0008-F', 'STIBLN-0009-F', 'STIBLN-0010-F');
+
+
+-- ---------------------------------------------------------------
 -- Clean up and show what was added
 -- ---------------------------------------------------------------
 
@@ -443,30 +453,30 @@ DROP TEMPORARY TABLE IF EXISTS tmp_days;
 DROP TEMPORARY TABLE IF EXISTS tmp_cls;
 
 SELECT 'Sample employees' AS item,
-       (SELECT COUNT(*) FROM faculty_staff WHERE employee_number BETWEEN '02001000101' AND '02001000110')
-     + (SELECT COUNT(*) FROM admin_staff WHERE employee_number BETWEEN '02001000101' AND '02001000110') AS total
+       (SELECT COUNT(*) FROM faculty_staff WHERE employee_number IN ('STIBLN-0001-M', 'STIBLN-0002-F', 'STIBLN-0003-M', 'STIBLN-0004-M', 'STIBLN-0005-M', 'STIBLN-0006-M', 'STIBLN-0007-F', 'STIBLN-0008-F', 'STIBLN-0009-F', 'STIBLN-0010-F'))
+     + (SELECT COUNT(*) FROM admin_staff WHERE employee_number IN ('STIBLN-0001-M', 'STIBLN-0002-F', 'STIBLN-0003-M', 'STIBLN-0004-M', 'STIBLN-0005-M', 'STIBLN-0006-M', 'STIBLN-0007-F', 'STIBLN-0008-F', 'STIBLN-0009-F', 'STIBLN-0010-F')) AS total
 UNION ALL
 SELECT 'Classes (Sep 11 – Oct 25)', COUNT(*) FROM faculty_class_schedule c
     LEFT JOIN faculty_staff f ON f.faculty_id = c.faculty_id
     LEFT JOIN admin_staff a ON a.adminstaff_id = c.adminstaff_id
-    WHERE COALESCE(f.employee_number, a.employee_number) BETWEEN '02001000101' AND '02001000110'
+    WHERE COALESCE(f.employee_number, a.employee_number) IN ('STIBLN-0001-M', 'STIBLN-0002-F', 'STIBLN-0003-M', 'STIBLN-0004-M', 'STIBLN-0005-M', 'STIBLN-0006-M', 'STIBLN-0007-F', 'STIBLN-0008-F', 'STIBLN-0009-F', 'STIBLN-0010-F')
 UNION ALL
 SELECT CONCAT('Classroom checks: ', approval_status), COUNT(*) FROM faculty_teaching_attendance ta
     JOIN faculty_class_schedule c ON c.class_schedule_id = ta.class_schedule_id
     LEFT JOIN faculty_staff f ON f.faculty_id = c.faculty_id
     LEFT JOIN admin_staff a ON a.adminstaff_id = c.adminstaff_id
-    WHERE COALESCE(f.employee_number, a.employee_number) BETWEEN '02001000101' AND '02001000110'
+    WHERE COALESCE(f.employee_number, a.employee_number) IN ('STIBLN-0001-M', 'STIBLN-0002-F', 'STIBLN-0003-M', 'STIBLN-0004-M', 'STIBLN-0005-M', 'STIBLN-0006-M', 'STIBLN-0007-F', 'STIBLN-0008-F', 'STIBLN-0009-F', 'STIBLN-0010-F')
     GROUP BY approval_status
 UNION ALL
 SELECT 'DTR records (Sep 11 – Oct 8)', COUNT(*) FROM daily_time_record r
     LEFT JOIN faculty_staff f ON f.faculty_id = r.faculty_id
     LEFT JOIN admin_staff a ON a.adminstaff_id = r.adminstaff_id
-    WHERE COALESCE(f.employee_number, a.employee_number) BETWEEN '02001000101' AND '02001000110'
+    WHERE COALESCE(f.employee_number, a.employee_number) IN ('STIBLN-0001-M', 'STIBLN-0002-F', 'STIBLN-0003-M', 'STIBLN-0004-M', 'STIBLN-0005-M', 'STIBLN-0006-M', 'STIBLN-0007-F', 'STIBLN-0008-F', 'STIBLN-0009-F', 'STIBLN-0010-F')
 UNION ALL
 SELECT CONCAT('Leave requests: ', l.status), COUNT(*) FROM employee_leave l
     LEFT JOIN faculty_staff f ON f.faculty_id = l.faculty_id
     LEFT JOIN admin_staff a ON a.adminstaff_id = l.adminstaff_id
-    WHERE COALESCE(f.employee_number, a.employee_number) BETWEEN '02001000101' AND '02001000110'
+    WHERE COALESCE(f.employee_number, a.employee_number) IN ('STIBLN-0001-M', 'STIBLN-0002-F', 'STIBLN-0003-M', 'STIBLN-0004-M', 'STIBLN-0005-M', 'STIBLN-0006-M', 'STIBLN-0007-F', 'STIBLN-0008-F', 'STIBLN-0009-F', 'STIBLN-0010-F')
     GROUP BY l.status
 UNION ALL
 SELECT 'Loans', COUNT(*) FROM loan WHERE reference_no IN ('SSS-2026-104501', 'HDMF-MPL-2026-0206', 'HDMF-CAL-2026-0031', 'ADV-2026-007')
@@ -474,5 +484,5 @@ UNION ALL
 SELECT CONCAT('Benefit: ', b.benefit_name), COUNT(*) FROM employee_benefit eb JOIN benefit b USING (benefit_id)
     LEFT JOIN faculty_staff f ON f.faculty_id = eb.faculty_id
     LEFT JOIN admin_staff a ON a.adminstaff_id = eb.adminstaff_id
-    WHERE COALESCE(f.employee_number, a.employee_number) BETWEEN '02001000101' AND '02001000110'
+    WHERE COALESCE(f.employee_number, a.employee_number) IN ('STIBLN-0001-M', 'STIBLN-0002-F', 'STIBLN-0003-M', 'STIBLN-0004-M', 'STIBLN-0005-M', 'STIBLN-0006-M', 'STIBLN-0007-F', 'STIBLN-0008-F', 'STIBLN-0009-F', 'STIBLN-0010-F')
     GROUP BY b.benefit_name;

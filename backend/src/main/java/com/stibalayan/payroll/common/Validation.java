@@ -28,7 +28,6 @@ public final class Validation {
             Pattern.compile("^[A-Za-z0-9._%+-]+@[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?(?:\\.[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)*\\.[A-Za-z]{2,}$");
 
     /** Employee number format already in use: 11 digits (e.g. 02000839239). */
-    private static final Pattern EMPLOYEE_NUMBER = Pattern.compile("^\\d{11}$");
 
     /** Digits with optional dashes or spaces between groups (government ID numbers). */
     private static final Pattern GOV_ID = Pattern.compile("^\\d[\\d -]*\\d$");
@@ -79,14 +78,6 @@ public final class Validation {
         String text = requiredText(value, field, label, 100);
         if (!EMAIL.matcher(text).matches() || text.contains("..")) {
             throw invalid(field, "Enter a valid email address (e.g. name@example.com).");
-        }
-        return text;
-    }
-
-    public static String employeeNumber(String value, String field) {
-        String text = requiredText(value, field, "Employee ID", 50);
-        if (!EMPLOYEE_NUMBER.matcher(text).matches()) {
-            throw invalid(field, "Employee ID must be exactly 11 digits (e.g. 02000839239).");
         }
         return text;
     }

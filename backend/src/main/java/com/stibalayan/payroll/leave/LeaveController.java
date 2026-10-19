@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * GET  /api/leave/categories                 POST /api/leave/categories        PUT /api/leave/categories/{id}
  * GET  /api/leave/requests                   POST /api/leave/requests          PUT /api/leave/requests/{id}
- * POST /api/leave/requests/{id}/approve | /reject | /cancel   { remarks }
+ *      (records approved leave: { employeeId, categoryId, dateFrom, dateTo, reason, paid })
  * GET  /api/leave/balance?employeeId=&year=  PUT /api/leave/credits  { employeeId, year, totalCredits }
  */
 @RestController
@@ -65,27 +65,23 @@ public class LeaveController {
 
     @PostMapping("/requests")
     public Map<String, Object> create(@RequestBody LeaveService.LeaveRequest request, HttpServletRequest http) {
-        return Map.of("success", true, "request", leave.create(request, user(http).id()));
+        SessionUser u = user(http);
+        Map<String, Object> saved = leave.create(request, u.id(), u.name());
+        audit.log(u.id(), "Leave Management", "Recorded leave", describe(saved));
+        return Map.of("success", true, "request", saved);
     }
 
     @PutMapping("/requests/{id}")
-    public Map<String, Object> update(@PathVariable int id, @RequestBody LeaveService.LeaveRequest request) {
-        return Map.of("success", true, "request", leave.update(id, request));
+    public Map<String, Object> update(@PathVariable int id, @RequestBody LeaveService.LeaveRequest request, HttpServletRequest http) {
+        SessionUser u = user(http);
+        Map<String, Object> saved = leave.update(id, request, u.name());
+        audit.log(u.id(), "Leave Management", "Edited leave", describe(saved));
+        return Map.of("success", true, "request", saved);
     }
 
-    @PostMapping("/requests/{id}/approve")
-    public Map<String, Object> approve(@PathVariable int id, @RequestBody Map<String, String> body, HttpServletRequest http) {
-        return Map.of("success", true, "request", leave.approve(id, body.get("remarks"), user(http).name()));
-    }
-
-    @PostMapping("/requests/{id}/reject")
-    public Map<String, Object> reject(@PathVariable int id, @RequestBody Map<String, String> body, HttpServletRequest http) {
-        return Map.of("success", true, "request", leave.reject(id, body.get("remarks"), user(http).name()));
-    }
-
-    @PostMapping("/requests/{id}/cancel")
-    public Map<String, Object> cancel(@PathVariable int id, @RequestBody Map<String, String> body, HttpServletRequest http) {
-        return Map.of("success", true, "request", leave.cancel(id, body.get("remarks"), user(http).name()));
+    private static String describe(Map<String, Object> l) {
+        return l.get("employeeName") + " · " + l.get("category") + " · " + l.get("dateFrom") + " to " + l.get("dateTo")
+                + " · " + (Boolean.TRUE.equals(l.get("paid")) ? "paid" : "unpaid");
     }
 
     @GetMapping("/balance")

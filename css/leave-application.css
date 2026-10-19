@@ -476,3 +476,9 @@
     color: var(--pp-text-muted);
     margin: 1.25rem 0 0.5rem;
 }
+
+/* "Recorded by ..." beside the form buttons when editing */
+.leave-recorded-note {
+    color: var(--pp-text-muted, #6b7280);
+    font-size: 12px;
+}

@@ -119,6 +119,18 @@
                                     id="payrollCalendar">
                                 </div>
 
+                                <div class="payroll-calendar-legend" aria-hidden="true">
+                                    <span><i class="payroll-holiday-dot payroll-calendar-day-holiday-regular"></i>Regular holiday</span>
+                                    <span><i class="payroll-holiday-dot payroll-calendar-day-holiday-special"></i>Special non-working</span>
+                                    <span><i class="payroll-holiday-dot payroll-calendar-day-holiday-working"></i>Special working</span>
+                                </div>
+
+                                <div
+                                    class="payroll-calendar-holidays"
+                                    id="payrollCalendarHolidays"
+                                    aria-live="polite">
+                                </div>
+
                             </div>
 
 
@@ -211,7 +223,7 @@
                                                 Payroll Period
                                             </strong>
 
-                                            <span>
+                                            <span id="payrollPeriodLegendDates">
                                                 September 11 – September 25, 2026
                                             </span>
 
@@ -237,16 +249,6 @@
                                 <i class="bi bi-file-earmark-text me-1"></i>
 
                                 Continue Payroll
-
-                            </a>
-
-                            <a
-                                href="payroll-processing.html"
-                                class="btn btn-pp-outline flex-grow-1">
-
-                                <i class="bi bi-calendar3 me-1"></i>
-
-                                View Payroll Period
 
                             </a>
 

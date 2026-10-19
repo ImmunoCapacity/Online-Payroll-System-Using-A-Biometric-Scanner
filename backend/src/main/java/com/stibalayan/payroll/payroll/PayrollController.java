@@ -34,6 +34,7 @@ import org.springframework.web.bind.annotation.RestController;
  * GET  /api/payroll/runs/summary                every saved period with its totals
  * PUT  /api/payroll/runs                        { from, to, label, employees }  save Run Payroll / Recompute
  * POST /api/payroll/runs/{id}/review            { employeeId }  mark one employee reviewed
+ * POST /api/payroll/runs/{id}/review-all        mark every employee of the period reviewed
  * POST /api/payroll/runs/{id}/release           record loan deductions and lock the period
  * POST /api/payroll/runs/{id}/email             "Distribute Payslips": email each stored payslip
  * GET  /api/payroll/released?year=              released payroll rows (Reports)
@@ -117,6 +118,11 @@ public class PayrollController {
     @PostMapping("/runs/{id}/review")
     public Map<String, Object> review(@PathVariable int id, @RequestBody ReviewRequest request) {
         return Map.of("success", true, "run", runs.review(id, request.employeeId()));
+    }
+
+    @PostMapping("/runs/{id}/review-all")
+    public Map<String, Object> reviewAll(@PathVariable int id, HttpServletRequest http) {
+        return Map.of("success", true, "run", runs.reviewAll(id, AuthInterceptor.currentUser(http).id()));
     }
 
     @PostMapping("/runs/{id}/release")

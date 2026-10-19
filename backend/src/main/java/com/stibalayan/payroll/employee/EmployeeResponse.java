@@ -46,7 +46,8 @@ public record EmployeeResponse(
         BigDecimal officeHours,
         BigDecimal teachingRate,
         boolean archived,
-        String archivedAt) {
+        String archivedAt,
+        BigDecimal basicPay) {
 
     static EmployeeResponse of(FacultyStaff f) {
         return build("F", f, f.getRatePerHourUnit(), f.getInstructorRank(), f.getLoadUnits(),
@@ -102,7 +103,8 @@ public record EmployeeResponse(
                 officeHours,
                 teachingRate,
                 s.isArchived(),
-                s.getArchivedAt() == null ? null : s.getArchivedAt().toString());
+                s.getArchivedAt() == null ? null : s.getArchivedAt().toString(),
+                s.getBasicPay());
     }
 
     private static String text(LocalDate date) {

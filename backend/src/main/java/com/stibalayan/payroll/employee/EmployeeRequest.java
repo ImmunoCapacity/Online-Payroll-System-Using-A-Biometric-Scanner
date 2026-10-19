@@ -12,6 +12,7 @@ import java.math.BigDecimal;
  * officeDepartment, position and officeHours apply to admin staff. A
  * Faculty/Admin employee has both sets: rate is their office rate per hour and
  * teachingRate their rate per hour/unit for teaching.
+ * basicPay is the monthly basic pay, kept for the record only.
  */
 public record EmployeeRequest(
         String employeeNumber,
@@ -41,5 +42,6 @@ public record EmployeeRequest(
         String officeDepartment,
         String position,
         BigDecimal officeHours,
-        BigDecimal teachingRate) {
+        BigDecimal teachingRate,
+        BigDecimal basicPay) {
 }

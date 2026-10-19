@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="js/auth-guard.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payroll Adjustment — PayrollPro</title>
+    <link rel="icon" type="image/png" href="sti_logo.png">
+    <link href="vendor/bootstrap/bootstrap.min.css" rel="stylesheet">
+    <link href="vendor/bootstrap-icons/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="css/payrollpro.css" rel="stylesheet">
+    <link href="css/payroll-adjustment.css" rel="stylesheet">
+</head>
+<body class="pp-app pp-app-shell">
+
+    <div id="pp-sidebar-mount"></div>
+
+    <div class="pp-shell-main">
+        <div id="pp-topbar-mount"></div>
+
+        <main class="pp-content">
+            <header class="pp-content-header">
+                <div>
+                    <h1 class="pp-content-title">Payroll Adjustment</h1>
+                    <p class="pp-content-subtitle">Correct pay in a later cut-off, e.g. leave that wasn't recorded in time and was deducted.</p>
+                </div>
+            </header>
+
+            <section class="pp-widget" aria-labelledby="adjustmentTitle">
+                <div class="pp-widget-header">
+                    <h2 class="pp-widget-title" id="adjustmentTitle">Adjustments</h2>
+                </div>
+                <div class="pp-widget-body">
+                    <div class="pp-filter-bar pp-adjust-toolbar">
+                        <div class="pp-filter-group">
+                            <label for="cutoffSelect" class="pp-form-label">Paid in Cut-off</label>
+                            <select class="form-select pp-form-select" id="cutoffSelect"></select>
+                        </div>
+                        <div class="pp-filter-group search">
+                            <label for="adjustmentSearch" class="pp-form-label">Search</label>
+                            <div class="pp-search-input">
+                                <i class="bi bi-search"></i>
+                                <input type="search" class="form-control pp-form-control" id="adjustmentSearch" maxlength="100" placeholder="Search by ID or name…">
+                            </div>
+                        </div>
+                        <div class="pp-filter-group pp-adjust-save">
+                            <button type="button" class="btn btn-pp-primary" id="saveAdjustmentsBtn">
+                                <i class="bi bi-check2 me-1"></i> Save Adjustments
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="pp-table-wrap pp-adjust-wrap">
+                        <table class="pp-table pp-adjust-table" id="adjustmentTable">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Employee Type</th>
+                                    <th class="text-end">Rate / Hour</th>
+                                    <th>Date From – Date To</th>
+                                    <th class="text-end">Days</th>
+                                    <th class="text-end">Addition<span class="pp-sub">hrs / day</span></th>
+                                    <th class="text-end">Addition<span class="pp-sub">amount</span></th>
+                                    <th class="text-end">Deduction<span class="pp-sub">hrs / day</span></th>
+                                    <th class="text-end">Deduction<span class="pp-sub">amount</span></th>
+                                    <th class="text-end">Total</th>
+                                    <th>Reason</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adjustmentBody"></tbody>
+                            <tfoot id="adjustmentFoot"></tfoot>
+                        </table>
+                        <div class="pp-empty-state d-none" id="emptyState">No employees.</div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="vendor/bootstrap/bootstrap.bundle.min.js"></script>
+    <script src="js/data-store.js"></script>
+    <script src="js/confirm-modal.js"></script>
+    <script src="js/toast.js"></script>
+    <script src="js/payrollpro-layout.js"></script>
+    <script src="js/select-hint.js"></script>
+    <script src="js/payroll-adjustment.js"></script>
+</body>
+</html>

@@ -238,7 +238,6 @@
         tbody.innerHTML = filtered.map(function (loan) {
             var totalDeducted = getTotalDeducted(loan);
             var remaining = getRemainingBalance(loan);
-            var currentStatus = getLoanStatus(loan);
 
             return (
                 '<tr class="pp-row-clickable" tabindex="0" role="button" ' +
@@ -281,10 +280,6 @@
                             : '') +
                     '">' +
                         peso(remaining) +
-                    '</td>' +
-
-                    '<td>' +
-                        statusBadge(currentStatus) +
                     '</td>' +
                 '</tr>'
             );

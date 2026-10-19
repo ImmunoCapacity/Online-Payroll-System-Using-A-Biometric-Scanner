@@ -199,6 +199,15 @@
     background: var(--pp-error-bg);
 }
 
+/* e.g. Remove on an instructor rank that employees still have */
+.pp-btn-row:disabled,
+.pp-btn-row:disabled:hover {
+    color: var(--pp-text-muted);
+    background: none;
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
 .pp-badge-active {
     background: var(--pp-success-bg);
     color: var(--pp-success);

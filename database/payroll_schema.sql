@@ -79,6 +79,7 @@ CREATE TABLE IF NOT EXISTS faculty_staff (
     tin_id             VARCHAR(50),
     instructor_rank    VARCHAR(20),                 -- Instructor I | II | III
     notes              TEXT,
+    basic_pay          DECIMAL(10,2),                   -- monthly basic pay (record only; payroll uses hours x rate)
     is_archived        TINYINT(1)   NOT NULL DEFAULT 0,  -- archived records are kept, never deleted
     archived_at        DATETIME
 ) ENGINE=InnoDB;
@@ -118,6 +119,7 @@ CREATE TABLE IF NOT EXISTS admin_staff (
     pagibig_id         VARCHAR(50),
     tin_id             VARCHAR(50),
     notes              TEXT,
+    basic_pay          DECIMAL(10,2),                   -- monthly basic pay (record only; payroll uses hours x rate)
     is_archived        TINYINT(1)   NOT NULL DEFAULT 0,  -- archived records are kept, never deleted
     archived_at        DATETIME
 ) ENGINE=InnoDB;
@@ -606,4 +608,78 @@ CREATE TABLE IF NOT EXISTS password_reset (
     used_at          DATETIME,
     created_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_reset_user FOREIGN KEY (user_id) REFERENCES users (user_id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- 25. Holidays (Philippines), shown on the Dashboard calendar. One row per
+--     date. holiday_type is 'Regular Holiday', 'Special Non-Working Day' or
+--     'Special Working Day' (no holiday pay). Dates change every year by
+--     presidential proclamation, so new years are added as they're declared.
+CREATE TABLE IF NOT EXISTS holiday (
+    holiday_id   INT AUTO_INCREMENT PRIMARY KEY,
+    holiday_date DATE         NOT NULL,
+    holiday_name VARCHAR(100) NOT NULL,
+    holiday_type VARCHAR(30)  NOT NULL,
+    UNIQUE KEY uq_holiday_date (holiday_date)
+) ENGINE=InnoDB;
+
+-- 2026: Proclamation No. 1006 (Sept 3, 2025). Eid'l Fitr and Eid'l Adha are
+-- set by separate proclamations each year.
+INSERT IGNORE INTO holiday (holiday_date, holiday_name, holiday_type) VALUES
+    ('2026-01-01', 'New Year''s Day',                       'Regular Holiday'),
+    ('2026-02-17', 'Chinese New Year',                      'Special Non-Working Day'),
+    ('2026-02-25', 'EDSA People Power Revolution Anniversary', 'Special Working Day'),
+    ('2026-03-20', 'Eid''l Fitr',                           'Regular Holiday'),
+    ('2026-04-02', 'Maundy Thursday',                       'Regular Holiday'),
+    ('2026-04-03', 'Good Friday',                           'Regular Holiday'),
+    ('2026-04-04', 'Black Saturday',                        'Special Non-Working Day'),
+    ('2026-04-09', 'Araw ng Kagitingan',                    'Regular Holiday'),
+    ('2026-05-01', 'Labor Day',                             'Regular Holiday'),
+    ('2026-05-27', 'Eid''l Adha',                           'Regular Holiday'),
+    ('2026-06-12', 'Independence Day',                      'Regular Holiday'),
+    ('2026-08-21', 'Ninoy Aquino Day',                      'Special Non-Working Day'),
+    ('2026-08-31', 'National Heroes Day',                   'Regular Holiday'),
+    ('2026-11-01', 'All Saints'' Day',                      'Special Non-Working Day'),
+    ('2026-11-02', 'All Souls'' Day',                       'Special Non-Working Day'),
+    ('2026-11-30', 'Bonifacio Day',                         'Regular Holiday'),
+    ('2026-12-08', 'Feast of the Immaculate Conception of Mary', 'Special Non-Working Day'),
+    ('2026-12-24', 'Christmas Eve',                         'Special Non-Working Day'),
+    ('2026-12-25', 'Christmas Day',                         'Regular Holiday'),
+    ('2026-12-30', 'Rizal Day',                             'Regular Holiday'),
+    ('2026-12-31', 'Last Day of the Year',                  'Special Non-Working Day');
+
+-- 26. Payroll Adjustment: one row per employee per cut-off, entered in a
+--     grid (Payroll Processing -> Payroll Adjustment). It corrects pay in a
+--     later cut-off, e.g. approved leave that wasn't recorded in time and was
+--     deducted. days = working days (Mon-Fri) from date_from to date_to;
+--     add_hours / deduct_hours are hours per day; amounts = hours x days x rate
+--     (the rate on date_from); amount = add_amount - deduct_amount, part of
+--     gross pay of the cut-off apply_start..apply_end. Applied once that
+--     cut-off's payroll is released.
+CREATE TABLE IF NOT EXISTS payroll_adjustment (
+    adjustment_id  INT AUTO_INCREMENT PRIMARY KEY,
+    faculty_id     INT,
+    adminstaff_id  INT,
+    apply_start    DATE          NOT NULL,          -- cut-off the adjustment is paid in
+    apply_end      DATE          NOT NULL,
+    date_from      DATE          NOT NULL,          -- the days being corrected
+    date_to        DATE          NOT NULL,
+    days           INT           NOT NULL,
+    add_hours      DECIMAL(4,1)  NOT NULL DEFAULT 0, -- hours per day added
+    deduct_hours   DECIMAL(4,1)  NOT NULL DEFAULT 0, -- hours per day deducted
+    rate           DECIMAL(10,2) NOT NULL,
+    add_amount     DECIMAL(10,2) NOT NULL DEFAULT 0,
+    deduct_amount  DECIMAL(10,2) NOT NULL DEFAULT 0,
+    amount         DECIMAL(10,2) NOT NULL,          -- add_amount - deduct_amount
+    reason         VARCHAR(200)  NOT NULL,
+    status         VARCHAR(20)   NOT NULL DEFAULT 'Pending',  -- Pending | Applied
+    payroll_run_id INT,
+    recorded_by    INT,
+    created_at     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_adjust_faculty (faculty_id, apply_start),
+    UNIQUE KEY uq_adjust_admin   (adminstaff_id, apply_start),
+    KEY idx_adjust_period (apply_start, apply_end),
+    CONSTRAINT fk_adjust_faculty FOREIGN KEY (faculty_id)     REFERENCES faculty_staff (faculty_id)  ON DELETE CASCADE,
+    CONSTRAINT fk_adjust_admin   FOREIGN KEY (adminstaff_id)  REFERENCES admin_staff (adminstaff_id) ON DELETE CASCADE,
+    CONSTRAINT fk_adjust_run     FOREIGN KEY (payroll_run_id) REFERENCES payroll_run (payroll_run_id) ON DELETE SET NULL,
+    CONSTRAINT fk_adjust_user    FOREIGN KEY (recorded_by)    REFERENCES users (user_id)             ON DELETE SET NULL
 ) ENGINE=InnoDB;

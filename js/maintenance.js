@@ -64,13 +64,14 @@
     var AUDIT_MODULES = {
         rates: 'Employee Rates',
         leave: 'Leave Categories',
+        ranks: 'Instructor Ranks',
         bir: 'BIR Table',
         philhealth: 'PhilHealth Table',
         pagibig: 'Pag-IBIG Table',
         sss: 'SSS Table'
     };
     var AUDIT_TARGETS = {
-        rates: 'ratesAudit', leave: 'leaveAudit', bir: 'birAudit',
+        rates: 'ratesAudit', leave: 'leaveAudit', ranks: 'ranksAudit', bir: 'birAudit',
         philhealth: 'phAudit', pagibig: 'pagAudit', sss: 'sssAudit'
     };
 
@@ -99,6 +100,7 @@
     var sectionMap = {
         rates: 'sectionRates',
         leave: 'sectionLeave',
+        ranks: 'sectionRanks',
         bir: 'sectionBir',
         philhealth: 'sectionPhilhealth',
         pagibig: 'sectionPagibig',
@@ -134,14 +136,14 @@
             renderRates();
         }).catch(function () {
             document.getElementById('ratesBody').innerHTML =
-                '<tr><td colspan="7" class="text-center text-muted py-4">Could not load employee rates from the server.</td></tr>';
+                '<tr><td colspan="6" class="text-center text-muted py-4">Could not load employee rates from the server.</td></tr>';
         });
     }
 
     function renderRates() {
         if (!rates.length) {
             document.getElementById('ratesBody').innerHTML =
-                '<tr><td colspan="7" class="text-center text-muted py-4">No employees with a rate yet. Rates are set in Employee Records or here.</td></tr>';
+                '<tr><td colspan="6" class="text-center text-muted py-4">No employees with a rate yet. Rates are set in Employee Records or here.</td></tr>';
             return;
         }
         document.getElementById('ratesBody').innerHTML = rates.map(function (r) {
@@ -154,7 +156,6 @@
                     '<td class="col-money">' + peso(r.amount) + '</td>' +
                     '<td>' + formatDate(r.effective) + '</td>' +
                     '<td>' + (r.end ? formatDate(r.end) : '—') + '</td>' +
-                    '<td>' + (r.active ? '<span class="pp-badge-active">Active</span>' : '<span class="pp-badge-inactive">Historical</span>') + '</td>' +
                     '<td>' + (r.recordedBy ? escapeHtml(r.recordedBy) : '<span class="text-muted small">—</span>') + '</td>' +
                 '</tr>'
             );
@@ -272,7 +273,7 @@
             renderLeave();
         }).catch(function () {
             document.getElementById('leaveBody').innerHTML =
-                '<tr><td colspan="6" class="text-center text-muted py-4">Could not load leave categories from the server.</td></tr>';
+                '<tr><td colspan="5" class="text-center text-muted py-4">Could not load leave categories from the server.</td></tr>';
         });
     }
 
@@ -289,7 +290,6 @@
                     '<td>' + (c.paid ? '<span class="pp-badge-leave-paid">Paid</span>' : '<span class="pp-badge-leave-unpaid">Unpaid</span>') + '</td>' +
                     '<td class="col-num">' + (c.maxDays == null ? '—' : c.maxDays) + '</td>' +
                     '<td>' + (c.usesCredits ? 'Uses credits' : '<span class="text-muted">—</span>') + '</td>' +
-                    '<td>' + (c.active ? '<span class="pp-badge-active">Active</span>' : '<span class="pp-badge-inactive">Inactive</span>') + '</td>' +
                     '<td class="col-actions">' + (c.active ? rowActions()
                         : '<button type="button" class="btn btn-sm btn-pp-outline" data-action="reactivate">Reactivate</button>') + '</td>' +
                 '</tr>'
@@ -717,13 +717,124 @@
         });
     });
 
+    // ================================================================
+    // INSTRUCTOR RANKS (api/ranks) — the choices for an employee's
+    // Instructor Rank. Renaming updates the employees who have it; a rank
+    // can only be removed when nobody has it.
+    // ================================================================
+
+    var ranks = [];
+    var rankEditId = null;
+
+    function loadRanks() {
+        return api('api/ranks').then(function (data) {
+            if (!data.success) throw new Error(data.message);
+            ranks = data.ranks;
+            renderRanks();
+        }).catch(function () {
+            document.getElementById('ranksBody').innerHTML =
+                '<tr><td colspan="3" class="text-center text-muted py-4">Could not load instructor ranks from the server.</td></tr>';
+        });
+    }
+
+    function renderRanks() {
+        var body = document.getElementById('ranksBody');
+        if (!ranks.length) {
+            body.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-4">No ranks yet. Click Add Rank.</td></tr>';
+            return;
+        }
+        body.innerHTML = ranks.map(function (r) {
+            var remove = r.employees
+                ? '<button type="button" class="pp-btn-row" disabled title="' + r.employees + ' employee(s) have this rank">Remove</button>'
+                : '<button type="button" class="pp-btn-row deactivate" data-action="remove">Remove</button>';
+            return '<tr data-id="' + r.id + '">' +
+                '<td><strong>' + escapeHtml(r.name) + '</strong></td>' +
+                '<td class="col-num">' + r.employees + '</td>' +
+                '<td class="col-actions"><span class="pp-maint-row-actions">' +
+                    '<button type="button" class="pp-btn-row" data-action="edit">Edit</button>' + remove +
+                '</span></td>' +
+            '</tr>';
+        }).join('');
+    }
+
+    function rankOf(btn) {
+        var id = parseInt(btn.closest('tr').dataset.id, 10);
+        return ranks.find(function (r) { return r.id === id; });
+    }
+
+    function openRankForm(rank) {
+        rankEditId = rank ? rank.id : null;
+        document.getElementById('rankModalTitle').textContent = rank ? 'Rename Instructor Rank' : 'Add Instructor Rank';
+        document.getElementById('rankForm').reset();
+        document.getElementById('rankName').value = rank ? rank.name : '';
+        PPValidate.clear(document.getElementById('rankForm'));
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('rankModal')).show();
+    }
+
+    document.getElementById('btnAddRank').addEventListener('click', function () { openRankForm(null); });
+
+    document.getElementById('rankName').ppValidator = function (value) {
+        var taken = ranks.some(function (r) {
+            return r.id !== rankEditId && String(r.name).toLowerCase() === value.trim().toLowerCase();
+        });
+        return taken ? 'This rank already exists.' : '';
+    };
+
+    document.getElementById('ranksBody').addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        var rank = rankOf(btn);
+        if (!rank) return;
+        if (btn.dataset.action === 'edit') {
+            openRankForm(rank);
+            return;
+        }
+        ConfirmModal.show({
+            title: 'Remove Instructor Rank',
+            message: 'Remove "' + rank.name + '"? It will no longer be offered in Employee Records.',
+            confirmText: 'Remove',
+            tone: 'danger'
+        }).then(function (confirmed) {
+            if (!confirmed) return;
+            api('api/ranks/' + rank.id, 'DELETE').then(function (data) {
+                if (!data.success) { PPToast.error(data.message); return; }
+                ranks = data.ranks;
+                renderRanks();
+                PPToast.success('"' + rank.name + '" removed.');
+                loadAudit();
+            }).catch(function () { PPToast.error('Could not reach the server.'); });
+        });
+    });
+
+    document.getElementById('rankForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        var form = e.target;
+        if (!PPValidate.validateForm(form)) return;
+        var name = document.getElementById('rankName').value.trim();
+        api(rankEditId ? 'api/ranks/' + rankEditId : 'api/ranks', rankEditId ? 'PUT' : 'POST', { name: name })
+            .then(function (data) {
+                if (!data.success) {
+                    if (!PPValidate.showServerError(form, data, { name: 'rankName' })) PPToast.error(data.message);
+                    return;
+                }
+                bootstrap.Modal.getInstance(document.getElementById('rankModal')).hide();
+                ranks = data.ranks;
+                renderRanks();
+                PPToast.success(rankEditId ? 'Rank renamed.' : '"' + name + '" added.');
+                loadAudit();
+            }).catch(function () { PPToast.error('Could not reach the server.'); });
+    });
+
     loadRates();
     loadLeaveCategories();
+    loadRanks();
     loadTables();
     loadAudit();
 
     if (location.hash === '#leave') {
         document.querySelector('[data-section="leave"]').click();
+    } else if (location.hash === '#ranks') {
+        document.querySelector('[data-section="ranks"]').click();
     } else if (location.hash === '#bir') {
         document.querySelector('[data-section="bir"]').click();
     } else if (location.hash === '#sss') {

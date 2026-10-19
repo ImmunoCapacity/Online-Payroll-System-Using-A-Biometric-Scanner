@@ -41,6 +41,18 @@
         ]
     };
 
+    // Payroll Processing: computing a cut-off, and corrections paid in a later one.
+    var PAYROLL_SUBMENU = {
+        groupClass: 'pp-payroll-sidebar-group',
+        linkClass: 'pp-payroll-sidebar-link',
+        dataKey: 'payroll',
+        hrefFor: function (key) { return key === 'adjustment' ? 'payroll-adjustment.html' : 'payroll-processing.html'; },
+        items: [
+            { key: 'computation', label: 'Payroll Computation', icon: 'bi-calculator', href: 'payroll-processing.html' },
+            { key: 'adjustment', label: 'Payroll Adjustment', icon: 'bi-sliders', href: 'payroll-adjustment.html' }
+        ]
+    };
+
     var REPORTS_SUBMENU = {
         groupClass: 'pp-reports-sidebar-group',
         linkClass: 'pp-reports-sidebar-link',
@@ -107,7 +119,8 @@
             id: 'payroll',
             label: 'Payroll Processing',
             icon: 'bi-cash-stack',
-            href: 'payroll-processing.html'
+            href: 'payroll-processing.html',
+            submenu: PAYROLL_SUBMENU
         },
 
         {
@@ -1063,6 +1076,16 @@
     // ============================================================
     // INITIALIZE
     // ============================================================
+
+    // Number fields have no up/down arrows (css/payrollpro.css); also stop the
+    // mouse wheel from silently changing a focused number while scrolling.
+    global.document.addEventListener('wheel', function (event) {
+        var target = event.target;
+        if (target && target.type === 'number' && target === global.document.activeElement) {
+            target.blur();
+        }
+    }, { passive: true });
+
 
     function init(options) {
 

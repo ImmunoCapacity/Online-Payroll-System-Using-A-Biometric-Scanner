@@ -7,7 +7,7 @@
  *   data-validate="name"             letters, spaces, - ' . (no digits)
  *   data-validate="phone"            09XXXXXXXXX or +639XXXXXXXXX
  *   data-validate="email"
- *   data-validate="employee-number"  11 digits, the format already in use
+ *   data-validate="employee-number"  STIBLN-####-M or STIBLN-####-F (assigned by the server)
  *   data-validate="number"           not negative; data-decimals (default 2), min, max
  *   data-validate="gov-id"           digits/dashes; data-digits="10" or "9,12,14"
  *   data-validate="username"
@@ -32,7 +32,7 @@
     var NAME = /^\p{L}[\p{L}\p{M} .'’-]*$/u;
     var PHONE = /^(09\d{9}|\+639\d{9})$/;
     var EMAIL = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)*\.[A-Za-z]{2,}$/;
-    var EMPLOYEE_NUMBER = /^\d{11}$/;
+    var EMPLOYEE_NUMBER = /^STIBLN-\d{4,}-[MF]$/;
     var GOV_ID = /^\d[\d -]*\d$/;
     var USERNAME = /^[A-Za-z0-9._-]{3,50}$/;
     var IPV4 = /^(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}$/;
@@ -44,7 +44,7 @@
             var plus = v.trim().charAt(0) === '+';
             return (plus ? '+' : '') + v.replace(/\D/g, '').slice(0, plus ? 12 : 11);
         },
-        'employee-number': function (v) { return v.replace(/\D/g, '').slice(0, 11); },
+        'employee-number': function (v) { return v.toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 20); },
         'gov-id': function (v) { return v.replace(/[^\d -]/g, ''); },
         'username': function (v) { return v.replace(/[^A-Za-z0-9._-]/g, ''); },
         'ipv4': function (v) { return v.replace(/[^\d.]/g, ''); }
@@ -117,7 +117,7 @@
                 if (!EMAIL.test(value) || value.indexOf('..') !== -1 || value.length > 100) message = 'Enter a valid email address (e.g. name@example.com).';
                 break;
             case 'employee-number':
-                if (!EMPLOYEE_NUMBER.test(value)) message = 'Employee ID must be exactly 11 digits (e.g. 02000839239).';
+                if (!EMPLOYEE_NUMBER.test(value)) message = 'Employee ID must look like STIBLN-0001-M or STIBLN-0001-F.';
                 break;
             case 'number':
                 message = checkNumber(input, value, label);

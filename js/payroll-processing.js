@@ -278,7 +278,8 @@
             api('api/payroll/loan-deductions?from=' + period.from + '&to=' + period.to),
             api('api/payroll/benefits'),
             api('api/payroll/contribution-tables'),
-            api('api/payroll/rates?date=' + period.to)
+            api('api/payroll/rates?date=' + period.to),
+            api('api/payroll/adjustments/period?from=' + period.from + '&to=' + period.to)
         ]).then(function (results) {
             var employeesData = results[0];
             var hoursData = results[1];
@@ -310,6 +311,11 @@
             var hoursById = {};
             hoursData.hours.forEach(function (h) { hoursById[h.employeeId] = h; });
 
+            // Payroll Adjustment: corrections paid in this cut-off (+ add, − deduct).
+            // They are part of gross pay, so contributions and tax follow them.
+            if (!results[6].success) throw new Error(results[6].message || 'Could not load payroll adjustments.');
+            var adjustmentsById = results[6].adjustments || {};
+
             var year = Number(period.to.slice(0, 4));
 
             return employeesData.employees
@@ -321,12 +327,15 @@
                     var worked = hoursById[e.id] || {
                         officeHours: 0, teachingHours: 0, daysWorked: 0, overlapHours: 0, unapprovedClasses: 0, paidLeaveDays: 0
                     };
-                    var earnings = buildEarnings(e, worked);
+                    var earnings = buildEarnings(e, worked).concat((adjustmentsById[e.id] || []).map(function (a) {
+                        return { label: a.label, hours: Number(a.hours) || 0, rate: Number(a.rate) || 0, amount: round2(Number(a.amount) || 0) };
+                    }));
                     var emp = {
                         id: e.id,
                         employeeNumber: e.employeeNumber,
                         name: e.displayName,
                         type: e.department,
+                        designation: e.position || e.instructorRank || e.department,
                         hours: round2(earnings.reduce(function (s, l) { return s + l.hours; }, 0)),
                         daysWorked: worked.daysWorked,
                         overlapHours: Number(worked.overlapHours) || 0,
@@ -357,6 +366,7 @@
     var btnRun = document.getElementById('btnRunPayroll');
     var btnRelease = document.getElementById('btnRelease');
     var btnDistribute = document.getElementById('btnDistribute');
+    var btnReviewAll = document.getElementById('btnReviewAll');
 
     btnRun.addEventListener('click', function () {
         var period = PERIODS[currentPeriod];
@@ -407,22 +417,6 @@
     // RENDER
     // ================================================================
 
-    function statusBadge(emp) {
-        var map = {
-            computed: ['pp-badge-computed', 'Computed'],
-            reviewed: ['pp-badge-reviewed', 'Reviewed'],
-            released: ['pp-badge-released', 'Released']
-        };
-        var item = map[emp.status] || map.computed;
-        var mail = '';
-        if (emp.emailStatus === 'sent') {
-            mail = ' <i class="bi bi-envelope-check-fill text-success" title="Payslip emailed"></i>';
-        } else if (emp.emailStatus) {
-            mail = ' <i class="bi bi-envelope-exclamation-fill text-danger" title="' + escapeHtml(emp.emailMessage || 'Not sent') + '"></i>';
-        }
-        return '<span class="pp-badge ' + item[0] + '">' + item[1] + '</span>' + mail;
-    }
-
     function typeBadge(type) {
         var cls = type === 'Faculty' ? 'pp-badge-faculty' : type === 'Faculty/Admin' ? 'pp-badge-faculty-admin' : 'pp-badge-admin';
         return '<span class="pp-badge ' + cls + '">' + type + '</span>';
@@ -447,6 +441,7 @@
             ? '<i class="bi bi-arrow-repeat me-1"></i> Recompute Payroll'
             : '<i class="bi bi-play-fill me-1"></i> Run Payroll';
         btnRelease.disabled = loading || state.status !== 'processing' || !allReviewed();
+        btnReviewAll.disabled = loading || state.status !== 'processing' || !getEmployees().length || allReviewed();
         btnDistribute.disabled = loading || state.status !== 'released';
         btnDistribute.innerHTML = state.distributed
             ? '<i class="bi bi-envelope-paper me-1"></i> Resend Payslips'
@@ -503,7 +498,6 @@
                         '<td class="col-money">' + peso(calcGross(emp)) + '</td>' +
                         '<td class="col-money">' + peso(calcDeductionsTotal(emp.deductions)) + '</td>' +
                         '<td class="col-money"><strong>' + peso(calcNet(emp)) + '</strong></td>' +
-                        '<td>' + statusBadge(emp) + '</td>' +
                     '</tr>'
                 );
             }).join('');
@@ -513,8 +507,62 @@
         updateButtons();
     }
 
-    function line(label, amount) {
-        return '<div class="pp-breakdown-line"><span>' + label + '</span><span class="amount">' + peso(amount) + '</span></div>';
+    // ----------------------------------------------------------------
+    // Breakdown: laid out like the emailed payslip (PayslipPdf on the
+    // server): rows, columns and totals in the same order and wording.
+    // ----------------------------------------------------------------
+
+    function num2(n) {
+        return (Number(n) || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function hrs(n) {
+        return String(Math.round((Number(n) || 0) * 100) / 100);
+    }
+
+    /** Earnings lines grouped into the payslip rows (same rule as the PDF). */
+    function payslipEarnings(emp) {
+        var rows = { lecture: null, office: null, leave: null, adjustment: null };
+        function add(key, l) {
+            var r = rows[key] || (rows[key] = { hours: 0, amount: 0, rate: null, mixed: false });
+            r.hours += Number(l.hours) || 0;
+            r.amount += Number(l.amount) || 0;
+            if (l.rate != null) {
+                if (r.rate != null && Number(r.rate) !== Number(l.rate)) r.mixed = true;
+                r.rate = l.rate;
+            }
+        }
+        var lines = emp.earnings || [{ label: emp.type === 'Faculty' ? 'teaching' : 'office', hours: emp.hours, rate: emp.rate, amount: calcGross(emp) }];
+        lines.forEach(function (l) {
+            var label = String(l.label || '').toLowerCase();
+            add(label.indexOf('adjustment') === 0 ? 'adjustment'
+                : label.indexOf('teaching') !== -1 ? 'lecture'
+                : label.indexOf('office') !== -1 ? 'office'
+                : label.indexOf('leave') !== -1 ? 'leave' : 'adjustment', l);
+        });
+        return rows;
+    }
+
+    /** Loans as on the payslip: SSS loan, Pag-IBIG loan, others (the server's rule). */
+    function payslipLoans(emp) {
+        var sss = 0, pagibig = 0, other = 0;
+        if (emp.loanItems && emp.loanItems.length) {
+            emp.loanItems.forEach(function (l) {
+                var t = String(l.type || '').toLowerCase();
+                var a = Number(l.amount) || 0;
+                if (t.indexOf('sss') !== -1) sss += a;
+                else if (t.indexOf('pag-ibig') !== -1 || t.indexOf('pagibig') !== -1) pagibig += a;
+                else other += a;
+            });
+        } else {
+            other = Number(emp.deductions.loan) || 0;
+        }
+        return { sss: sss, pagibig: pagibig, other: other };
+    }
+
+    function psRow(label, hours, rate, amount, cls) {
+        return '<tr' + (cls ? ' class="' + cls + '"' : '') + '><td>' + label + '</td>' +
+            '<td class="num">' + hours + '</td><td class="num">' + rate + '</td><td class="num">' + amount + '</td></tr>';
     }
 
     function showBreakdown(idx) {
@@ -522,42 +570,61 @@
         if (!emp) return;
 
         var ded = emp.deductions;
-        var benefitsHtml = emp.benefits.length
-            ? emp.benefits.map(function (b) { return line(escapeHtml(b.name), b.amount); }).join('')
-            : '<div class="pp-breakdown-line"><span class="text-muted">No benefits applied</span><span class="amount">₱0.00</span></div>';
+        var e = payslipEarnings(emp);
+        function earningRow(label, r) {
+            return psRow(label, r ? hrs(r.hours) : '', r && r.rate != null && !r.mixed ? num2(r.rate) : '', r ? num2(r.amount) : '');
+        }
+        var applied = calcGross(emp);
+        var benefits = calcBenefitsTotal(emp.benefits);
+        var loans = payslipLoans(emp);
+        var period = PERIODS[currentPeriod] ? PERIODS[currentPeriod].label : (run ? run.label : '');
 
-        document.getElementById('breakdownTitle').textContent = emp.name;
+        document.getElementById('breakdownTitle').textContent = 'Payslip';
         document.getElementById('breakdownBody').innerHTML =
-            '<p class="pp-breakdown-meta">' + escapeHtml(emp.employeeNumber) + ' · ' + emp.type + ' · ' +
-                emp.hours + ' payable hours' +
-                (emp.earnings ? '' : ' @ ' + peso(emp.rate) + ' per hour') + '</p>' +
-            '<div class="pp-breakdown-section"><div class="pp-breakdown-section-title">Earnings</div>' +
-                (emp.earnings || []).map(function (l) {
-                    return line(escapeHtml(l.label) + '<br><span class="text-muted" style="font-size:0.75rem;">' +
-                        l.hours + ' hrs × ' + peso(l.rate) + '</span>', l.amount);
-                }).join('') +
-                (emp.overlapHours
-                    ? '<div class="pp-breakdown-line"><span class="text-muted" style="font-size:0.75rem;">' + emp.overlapHours +
-                      ' office hrs overlapped approved classes and were not counted twice</span><span></span></div>'
-                    : '') +
-                (emp.unapprovedClasses
-                    ? '<div class="pp-breakdown-line"><span class="text-warning" style="font-size:0.75rem;">' + emp.unapprovedClasses +
-                      ' scheduled class(es) not yet approved in Faculty Teaching Hours — not paid</span><span></span></div>'
-                    : '') +
-                '<div class="pp-breakdown-line total"><span>Gross Pay</span><span class="amount">' + peso(calcGross(emp)) + '</span></div></div>' +
-            '<div class="pp-breakdown-section"><div class="pp-breakdown-section-title">Benefits</div>' + benefitsHtml + '</div>' +
-            '<div class="pp-breakdown-section"><div class="pp-breakdown-section-title">Deductions</div>' +
-                line('SSS', ded.sss) +
-                line('PhilHealth', ded.philhealth) +
-                line('Pag-IBIG', ded.pagibig) +
-                line('BIR Withholding Tax', ded.bir) +
-                ((emp.loanItems && emp.loanItems.length)
-                    ? emp.loanItems.map(function (l) { return line('Loan: ' + escapeHtml(l.type) + ' (' + escapeHtml(l.reference) + ')', l.amount); }).join('')
-                    : line('Loan Repayment', ded.loan)) +
-                '<div class="pp-breakdown-line total"><span>Total Deductions</span><span class="amount">' + peso(calcDeductionsTotal(ded)) + '</span></div></div>' +
-            '<div class="pp-breakdown-section"><div class="pp-breakdown-line total"><span>Net Pay</span><span class="amount" style="color:var(--pp-accent);font-size:1.125rem;">' + peso(calcNet(emp)) + '</span></div></div>' +
+            '<table class="pp-payslip">' +
+                '<tbody class="pp-payslip-info">' +
+                    '<tr><th>Payroll Computation For:</th><td colspan="3">' + escapeHtml(String(period).toUpperCase()) + '</td></tr>' +
+                    '<tr><th>Employee No.</th><td colspan="3">' + escapeHtml(emp.employeeNumber) + '</td></tr>' +
+                    '<tr><th>Employee Name</th><td colspan="3">' + escapeHtml(String(emp.name).toUpperCase()) + '</td></tr>' +
+                    '<tr><th>Designation</th><td colspan="3">' + escapeHtml(String(emp.designation || emp.type).toUpperCase()) + '</td></tr>' +
+                '</tbody>' +
+                '<tbody>' +
+                    '<tr class="pp-payslip-head"><td></td><td class="num">Hrs Worked</td><td class="num">Rate</td><td class="num">Applied Salary</td></tr>' +
+                    earningRow('No. of Hours Lecture', e.lecture) +
+                    earningRow('No. of Office Hours', e.office) +
+                    (e.leave ? earningRow('Paid Leave', e.leave) : '') +
+                    psRow('Holiday', '', '', '') +
+                    earningRow('Adjustment', e.adjustment) +
+                    '<tr class="pp-payslip-total"><td></td><td colspan="2">Total Applied Salary</td><td class="num">' + num2(applied) + '</td></tr>' +
+                '</tbody>' +
+                '<tbody>' +
+                    '<tr class="pp-payslip-section"><td colspan="4">Benefits</td></tr>' +
+                    (emp.benefits.length
+                        ? emp.benefits.map(function (b) {
+                            return '<tr><td colspan="3">' + escapeHtml(String(b.name).toUpperCase()) + '</td><td class="num">' + num2(b.amount) + '</td></tr>';
+                        }).join('')
+                        : '<tr><td colspan="3">NONE</td><td class="num">0.00</td></tr>') +
+                    '<tr class="pp-payslip-total"><td></td><td colspan="2">Gross Pay</td><td class="num">' + num2(applied + benefits) + '</td></tr>' +
+                '</tbody>' +
+                '<tbody>' +
+                    '<tr class="pp-payslip-section"><td colspan="4">Deductions</td></tr>' +
+                    [['SSS Contri', ded.sss], ['Pag-IBIG', ded.pagibig], ['PhilHealth', ded.philhealth], ['Tax', ded.bir],
+                     ['SSS Loan', loans.sss], ['Pag-IBIG Loan', loans.pagibig], ['Other Deductions', loans.other]].map(function (d) {
+                        return '<tr><td colspan="2">' + d[0].toUpperCase() + '</td><td class="num">' + num2(d[1]) + '</td><td></td></tr>';
+                    }).join('') +
+                    '<tr class="pp-payslip-total"><td colspan="2" class="num">Total Deductions</td><td class="num">' + num2(calcDeductionsTotal(ded)) + '</td><td></td></tr>' +
+                '</tbody>' +
+                '<tbody><tr class="pp-payslip-net"><td colspan="3">Net Pay</td><td class="num">' + num2(calcNet(emp)) + '</td></tr></tbody>' +
+            '</table>' +
+            (emp.overlapHours
+                ? '<p class="pp-payslip-note">' + emp.overlapHours + ' office hrs overlapped approved classes and were not counted twice.</p>'
+                : '') +
+            (emp.unapprovedClasses
+                ? '<p class="pp-payslip-note text-warning">' + emp.unapprovedClasses +
+                  ' scheduled class(es) not yet approved in Faculty Teaching Hours — not paid.</p>'
+                : '') +
             (emp.status === 'computed'
-                ? '<button type="button" class="btn btn-pp-primary w-100" id="btnMarkReviewed">Mark as Reviewed</button>'
+                ? '<button type="button" class="btn btn-pp-primary w-100 mt-3" id="btnMarkReviewed">Mark as Reviewed</button>'
                 : '');
 
         if (emp.status === 'computed') {
@@ -586,6 +653,32 @@
     // Management) and the itemised deductions, then locks the period —
     // all or nothing. Reports read the released payroll.
     // ================================================================
+
+    // Review All: marks every computed employee of the period as reviewed.
+    btnReviewAll.addEventListener('click', function () {
+        if (!run || allReviewed()) return;
+        var pending = getEmployees().filter(function (e) { return e.status === 'computed'; }).length;
+        ConfirmModal.show({
+            title: 'Review All',
+            message: 'Mark all ' + pending + ' employee' + (pending === 1 ? '' : 's') + ' not yet reviewed as reviewed? ' +
+                'Check their breakdowns first — this is the same as clicking Mark as Reviewed for each.',
+            confirmText: 'Review All'
+        }).then(function (confirmed) {
+            if (!confirmed) return;
+            btnReviewAll.disabled = true;
+            jsonPost('api/payroll/runs/' + run.id + '/review-all').then(function (data) {
+                if (!data.success) throw new Error(data.message || 'Could not review all.');
+                run = data.run;
+                render();
+                PPToast.success('All employees are reviewed. You can now release the payroll.');
+            }).catch(function (error) {
+                PPToast.error(error.message === 'Not Found.'
+                    ? 'The server doesn\'t have Review All yet. Restart it with start-payroll.bat.'
+                    : error.message || 'Could not reach the server.');
+                updateButtons();
+            });
+        });
+    });
 
     btnRelease.addEventListener('click', function () {
         if (!run || !allReviewed()) return;

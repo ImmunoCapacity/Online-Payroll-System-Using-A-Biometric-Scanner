@@ -1,0 +1,96 @@
+/* Payroll Adjustment grid */
+
+.pp-adjust-toolbar {
+    align-items: flex-end;
+}
+
+.pp-adjust-toolbar .pp-adjust-save {
+    margin-left: auto;
+    flex: 0 0 auto;
+}
+
+.pp-adjust-wrap {
+    overflow-x: auto;
+}
+
+.pp-adjust-table {
+    min-width: 1280px;
+}
+
+.pp-adjust-table th,
+.pp-adjust-table td {
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.pp-adjust-table .pp-sub {
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 500;
+    text-transform: none;
+    color: var(--pp-text-muted, #6b7280);
+}
+
+/* Inputs inside the grid */
+.pp-adjust-table .pp-cell {
+    height: 32px;
+    padding: 0.2rem 0.45rem;
+    font-size: 0.8125rem;
+}
+
+.pp-adjust-table .pp-cell-date {
+    width: 132px;
+}
+
+.pp-adjust-table .pp-cell-hours {
+    width: 72px;
+    margin-left: auto;
+    text-align: right;
+}
+
+.pp-adjust-table .pp-cell-reason {
+    min-width: 220px;
+}
+
+.pp-adjust-dates {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.pp-adjust-table .amount-add {
+    color: var(--pp-accent, #2d7a5f);
+}
+
+.pp-adjust-table .amount-deduct {
+    color: var(--pp-error, #b42318);
+}
+
+.pp-adjust-table .amount-total {
+    font-weight: 700;
+}
+
+.pp-adjust-table tr.is-changed td {
+    background: var(--pp-warning-bg, #fff8e6);
+}
+
+.pp-adjust-table tr.is-locked td {
+    opacity: 0.75;
+}
+
+.pp-adjust-table tfoot th {
+    background: var(--pp-surface-alt, #f4f7f9);
+    font-weight: 700;
+}
+
+.pp-adjust-lock {
+    color: var(--pp-text-muted, #6b7280);
+    font-size: 0.75rem;
+    margin-left: 0.25rem;
+}
+
+.pp-sub {
+    display: block;
+    color: var(--pp-text-muted, #6b7280);
+    font-size: 0.75rem;
+}

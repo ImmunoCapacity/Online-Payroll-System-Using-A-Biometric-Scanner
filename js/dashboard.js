@@ -23,24 +23,116 @@
        CURRENT PAYROLL PERIOD
        ============================================================ */
 
+    // Semi-monthly cutoffs: the 11th–25th, and the 26th to the 10th of the
+    // next month. The current period is the one today falls in.
+    function periodContaining(date) {
+        var y = date.getFullYear();
+        var m = date.getMonth();
+        var d = date.getDate();
+
+        if (d >= 11 && d <= 25) {
+            return { start: new Date(y, m, 11), end: new Date(y, m, 25) };
+        }
+
+        if (d >= 26) {
+            return { start: new Date(y, m, 26), end: new Date(y, m + 1, 10) };
+        }
+
+        return { start: new Date(y, m - 1, 26), end: new Date(y, m, 10) };
+    }
+
+    function longDate(date) {
+        return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    }
+
+    var period = periodContaining(new Date());
+
     var currentPayroll = {
-        year: 2026,
-        month: 8,
+        start: period.start,
+        end: period.end,
 
-        startDay: 11,
-        endDay: 25,
+        startDate: longDate(period.start),
+        endDate: longDate(period.end),
 
-        startDate: 'September 11, 2026',
-        endDate: 'September 25, 2026',
-
-        periodLabel: 'September 11 – September 25, 2026',
+        periodLabel:
+            period.start.toLocaleDateString('en-US', { month: 'long', day: 'numeric' }) +
+            ' – ' + longDate(period.end),
 
         status: 'Processing'
     };
 
 
-    var calendarYear = currentPayroll.year;
-    var calendarMonth = currentPayroll.month;
+    var calendarYear = currentPayroll.start.getFullYear();
+    var calendarMonth = currentPayroll.start.getMonth();
+
+
+    /* ============================================================
+       HOLIDAYS (api/holidays), loaded once per year
+       ============================================================ */
+
+    var holidaysByYear = {};
+
+    var HOLIDAY_CLASS = {
+        'Regular Holiday': 'payroll-calendar-day-holiday-regular',
+        'Special Non-Working Day': 'payroll-calendar-day-holiday-special',
+        'Special Working Day': 'payroll-calendar-day-holiday-working'
+    };
+
+    function isoDate(year, month, day) {
+        return year + '-' + String(month + 1).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+    }
+
+    function loadHolidays(year) {
+        if (holidaysByYear[year]) {
+            return;
+        }
+
+        holidaysByYear[year] = {};   // loading; re-render when it arrives
+
+        fetch('api/holidays?year=' + year)
+            .then(function (response) { return response.json(); })
+            .then(function (data) {
+                if (!data.success) return;
+                data.holidays.forEach(function (h) { holidaysByYear[year][h.date] = h; });
+                if (year === calendarYear) renderPayrollCalendar();
+            })
+            .catch(function () {
+                delete holidaysByYear[year];   // try again next time the month changes
+            });
+    }
+
+    function renderHolidayList(holidays) {
+        var list = document.getElementById('payrollCalendarHolidays');
+        if (!list) return;
+
+        list.innerHTML = '';
+
+        if (holidays.length === 0) {
+            list.innerHTML = '<div class="payroll-holiday-empty">No holidays this month.</div>';
+            return;
+        }
+
+        holidays.forEach(function (h) {
+            var item = document.createElement('div');
+            item.className = 'payroll-holiday-item';
+            item.title = h.type;
+
+            var dot = document.createElement('span');
+            dot.className = 'payroll-holiday-dot ' + (HOLIDAY_CLASS[h.type] || '');
+
+            var day = document.createElement('strong');
+            day.textContent = new Date(h.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+            var name = document.createElement('span');
+            name.className = 'payroll-holiday-name';
+            name.textContent = h.name;
+
+            item.appendChild(dot);
+            item.appendChild(day);
+            item.appendChild(name);
+            list.appendChild(item);
+        });
+    }
 
 
     /* ============================================================
@@ -57,6 +149,12 @@
         if (!calendar || !monthLabel) {
             return;
         }
+
+
+        loadHolidays(calendarYear);
+
+        var holidays = holidaysByYear[calendarYear] || {};
+        var monthHolidays = [];
 
 
         var firstDay =
@@ -149,15 +247,13 @@
             dayElement.textContent = day;
 
 
-            var isPayrollMonth =
-                calendarYear === currentPayroll.year &&
-                calendarMonth === currentPayroll.month;
+            var date = new Date(calendarYear, calendarMonth, day);
+            var titles = [];
 
 
             if (
-                isPayrollMonth &&
-                day >= currentPayroll.startDay &&
-                day <= currentPayroll.endDay
+                date >= currentPayroll.start &&
+                date <= currentPayroll.end
             ) {
                 dayElement.classList.add(
                     'payroll-calendar-day-period'
@@ -165,29 +261,39 @@
             }
 
 
-            if (
-                isPayrollMonth &&
-                day === currentPayroll.startDay
-            ) {
+            if (date.getTime() === currentPayroll.start.getTime()) {
                 dayElement.classList.add(
                     'payroll-calendar-day-start'
                 );
 
-                dayElement.title =
-                    'Payroll Period Start';
+                titles.push('Payroll Period Start');
             }
 
 
-            if (
-                isPayrollMonth &&
-                day === currentPayroll.endDay
-            ) {
+            if (date.getTime() === currentPayroll.end.getTime()) {
                 dayElement.classList.add(
                     'payroll-calendar-day-end'
                 );
 
-                dayElement.title =
-                    'Payroll Period End';
+                titles.push('Payroll Period End');
+            }
+
+
+            var holiday = holidays[isoDate(calendarYear, calendarMonth, day)];
+
+            if (holiday) {
+                dayElement.classList.add(
+                    'payroll-calendar-day-holiday',
+                    HOLIDAY_CLASS[holiday.type] || 'payroll-calendar-day-holiday-special'
+                );
+
+                titles.push(holiday.name + ' (' + holiday.type + ')');
+                monthHolidays.push(holiday);
+            }
+
+
+            if (titles.length) {
+                dayElement.title = titles.join('\n');
             }
 
 
@@ -220,6 +326,9 @@
 
             calendar.appendChild(nextDayElement);
         }
+
+
+        renderHolidayList(monthHolidays);
     }
 
 
@@ -334,6 +443,23 @@
         if (endDate) {
             endDate.textContent =
                 currentPayroll.endDate;
+        }
+
+
+        var legendDates =
+            document.getElementById('payrollPeriodLegendDates');
+
+        if (legendDates) {
+            legendDates.textContent = currentPayroll.periodLabel;
+        }
+
+
+        var markers =
+            document.querySelectorAll('.payroll-period-marker');
+
+        if (markers.length === 2) {
+            markers[0].textContent = currentPayroll.start.getDate();
+            markers[1].textContent = currentPayroll.end.getDate();
         }
     }
 

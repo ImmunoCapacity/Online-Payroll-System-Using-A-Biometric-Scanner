@@ -132,6 +132,75 @@
     padding: 1.25rem;
 }
 
+/* Breakdown laid out like the emailed payslip (4 columns) */
+.pp-breakdown-offcanvas.offcanvas-end {
+    width: min(600px, 100vw);
+}
+
+.pp-payslip {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8125rem;
+    color: var(--pp-text);
+}
+
+.pp-payslip td,
+.pp-payslip th {
+    padding: 0.35rem 0.4rem;
+    border-bottom: 1px solid var(--pp-border);
+    text-align: left;
+    font-weight: 400;
+}
+
+.pp-payslip th {
+    font-weight: 700;
+    text-transform: uppercase;
+    white-space: nowrap;
+    width: 46%;
+}
+
+.pp-payslip .num {
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.pp-payslip tbody + tbody tr:first-child td {
+    padding-top: 0.9rem;
+}
+
+.pp-payslip td:first-child {
+    text-transform: uppercase;
+}
+
+.pp-payslip-head td,
+.pp-payslip-total td,
+.pp-payslip-section td {
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.pp-payslip-section td {
+    border-bottom-color: var(--pp-border);
+}
+
+.pp-payslip-net td {
+    font-weight: 700;
+    font-size: 0.9375rem;
+    text-transform: uppercase;
+    border: 1.5px solid var(--pp-text);
+}
+
+.pp-payslip-net .num {
+    color: var(--pp-accent);
+}
+
+.pp-payslip-note {
+    margin: 0.75rem 0 0;
+    font-size: 0.75rem;
+    color: var(--pp-text-muted);
+}
+
 .pp-breakdown-section {
     margin-bottom: 1.25rem;
 }

@@ -14,6 +14,7 @@ import java.util.Set;
 import java.util.function.Supplier;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +28,10 @@ import org.springframework.transaction.annotation.Transactional;
  * NOTE: the staff type cannot be changed on update — the id prefix (F/A)
  * fixes which table an employee lives in. Moving someone between Faculty and
  * Admin would mean migrating their row and its DTR/payroll history.
+ *
+ * Employee IDs are assigned by the server: STIBLN-####-M or STIBLN-####-F,
+ * the next number across both tables plus the gender letter. The number never
+ * changes; the letter follows the gender if it is corrected.
  */
 @Service
 public class EmployeeService {
@@ -54,15 +59,20 @@ public class EmployeeService {
     private static final int MAX_DEPENDENTS = 20;
     private static final int MAX_LOAD_UNITS = 99;
     private static final BigDecimal MAX_RATE = new BigDecimal("100000.00");
+    private static final BigDecimal MAX_BASIC_PAY = new BigDecimal("10000000.00");
     private static final BigDecimal MAX_LECTURE_HOURS = new BigDecimal("999.9");   // decimal(4,1)
     private static final BigDecimal MAX_OFFICE_HOURS = new BigDecimal("24.0");     // per day
 
+    private static final String ID_PREFIX = "STIBLN-";
+
     private final FacultyStaffRepository faculty;
     private final AdminStaffRepository admins;
+    private final JdbcTemplate jdbc;
 
-    public EmployeeService(FacultyStaffRepository faculty, AdminStaffRepository admins) {
+    public EmployeeService(FacultyStaffRepository faculty, AdminStaffRepository admins, JdbcTemplate jdbc) {
         this.faculty = faculty;
         this.admins = admins;
+        this.jdbc = jdbc;
     }
 
     /** Every employee; archived ones only when asked for (Employee Records' Archived view). */
@@ -76,25 +86,30 @@ public class EmployeeService {
         return result;
     }
 
+    /** synchronized: two employees added at the same moment never get the same number. */
     @Transactional
-    public String create(EmployeeRequest request) {
+    public synchronized String create(EmployeeRequest request) {
         String department = request.department() == null ? "" : request.department();
         if (!department.equals(FACULTY) && !department.equals(ADMIN) && !department.equals(FACULTY_ADMIN)) {
             throw Validation.invalid("department", "Choose a staff type: Faculty, Admin or Faculty/Admin.");
         }
         validate(request);
-        // employee_number and email must be unique across BOTH tables; the
-        // database can only enforce uniqueness within one table at a time.
+        checkRank(request.instructorRank());
+        // Email must be unique across BOTH tables; the database can only
+        // enforce uniqueness within one table at a time.
         checkUnique(request, null);
+        String employeeNumber = ID_PREFIX + nextSequence() + "-" + genderLetter(request.gender());
 
         if (department.equals(FACULTY)) {
             FacultyStaff staff = new FacultyStaff();
             apply(staff, request);
+            staff.setEmployeeNumber(employeeNumber);
             return "F" + saveOrExplain(() -> faculty.saveAndFlush(staff)).getId();
         }
         AdminStaff staff = new AdminStaff();
         staff.setFaculty(department.equals(FACULTY_ADMIN));
         apply(staff, request);
+        staff.setEmployeeNumber(employeeNumber);
         return "A" + saveOrExplain(() -> admins.saveAndFlush(staff)).getId();
     }
 
@@ -103,15 +118,18 @@ public class EmployeeService {
         EmployeeId eid = EmployeeId.parse(id);
         requireNotArchived(find(id));
         validate(request);
+        checkRank(request.instructorRank());
         checkUnique(request, eid);
 
         if (eid.isFaculty()) {
             FacultyStaff staff = faculty.findById(eid.number()).orElseThrow(EmployeeService::notFound);
             apply(staff, request);
+            staff.setEmployeeNumber(withGender(staff.getEmployeeNumber(), request.gender()));
             saveOrExplain(() -> faculty.saveAndFlush(staff));
         } else {
             AdminStaff staff = admins.findById(eid.number()).orElseThrow(EmployeeService::notFound);
             apply(staff, request);
+            staff.setEmployeeNumber(withGender(staff.getEmployeeNumber(), request.gender()));
             saveOrExplain(() -> admins.saveAndFlush(staff));
         }
     }
@@ -181,6 +199,9 @@ public class EmployeeService {
         Validation.name(r.firstName(), "firstName", "First name", true);
         Validation.name(r.middleName(), "middleName", "Middle name", false);
         Validation.name(r.lastName(), "lastName", "Last name", true);
+        if (r.gender() == null || r.gender().isBlank()) {
+            throw Validation.invalid("gender", "Gender is required (it sets the M/F at the end of the Employee ID).");
+        }
         oneOf(r.gender(), GENDERS, "gender", "Gender");
 
         LocalDate today = LocalDate.now();
@@ -199,7 +220,6 @@ public class EmployeeService {
         Validation.email(r.email(), "email", "Email");
         Validation.phone(r.phone(), "phone", "Contact number");
 
-        Validation.employeeNumber(r.employeeNumber(), "employeeNumber");
         LocalDate dateHired = Validation.date(r.dateHired(), "dateHired", "Date hired", true);
         if (dateHired.isAfter(today)) {
             throw Validation.invalid("dateHired", "Date hired can't be in the future.");
@@ -218,6 +238,7 @@ public class EmployeeService {
         Validation.optionalText(r.instructorRank(), "instructorRank", "Instructor rank", 20);
         Validation.money(r.rate(), "rate", "Rate", MAX_RATE);
         Validation.money(r.teachingRate(), "teachingRate", "Teaching rate", MAX_RATE);
+        Validation.money(r.basicPay(), "basicPay", "Basic pay", MAX_BASIC_PAY);
         Validation.wholeNumber(r.loadUnits(), "loadUnits", "Load units", MAX_LOAD_UNITS);
         Validation.decimal(r.lectureHours(), "lectureHours", "Lecture hours", 1, MAX_LECTURE_HOURS);
         Validation.optionalText(r.officeDepartment(), "officeDepartment", "Department", 50);
@@ -238,28 +259,66 @@ public class EmployeeService {
         }
     }
 
-    /** Employee number and email must be unique across both staff tables. */
+    /**
+     * The next Employee ID number, zero-padded to 4 digits: one more than the
+     * highest STIBLN number in either staff table (archived employees included,
+     * so a number is never reused).
+     */
+    private String nextSequence() {
+        Integer max = jdbc.queryForObject(
+                "SELECT MAX(CAST(SUBSTRING(employee_number, 8, LENGTH(employee_number) - 9) AS UNSIGNED)) FROM ("
+                + " SELECT employee_number FROM faculty_staff UNION ALL SELECT employee_number FROM admin_staff) t"
+                + " WHERE employee_number REGEXP '^STIBLN-[0-9]+-[MF]$'", Integer.class);
+        return String.format("%04d", (max == null ? 0 : max) + 1);
+    }
+
+    /** The Employee ID (STIBLN-####-M/F) of an employee, e.g. right after it was created. */
+    @Transactional(readOnly = true)
+    public String employeeNumberOf(String id) {
+        return find(id).getEmployeeNumber();
+    }
+
+    /** The ID the next new employee would get, without the M/F letter (e.g. "STIBLN-0015"). */
+    @Transactional(readOnly = true)
+    public String previewNextId() {
+        return ID_PREFIX + nextSequence();
+    }
+
+    private static String genderLetter(String gender) {
+        return "Female".equals(gender == null ? null : gender.trim()) ? "F" : "M";
+    }
+
+    /** Same number, letter for the (possibly corrected) gender: STIBLN-0007-M -> STIBLN-0007-F. */
+    private static String withGender(String employeeNumber, String gender) {
+        if (employeeNumber == null || !employeeNumber.matches("^STIBLN-\\d+-[MF]$")) {
+            return employeeNumber;
+        }
+        return employeeNumber.substring(0, employeeNumber.length() - 1) + genderLetter(gender);
+    }
+
+    /** An Instructor Rank must be one of the ranks in Maintenance (table employee_rank). */
+    private void checkRank(String rank) {
+        if (rank == null || rank.isBlank()) {
+            return;
+        }
+        Integer known = jdbc.queryForObject("SELECT COUNT(*) FROM employee_rank WHERE rank_name = ?", Integer.class, rank.trim());
+        if (known == null || known == 0) {
+            throw Validation.invalid("instructorRank", "Choose an instructor rank from the list (add new ranks in Maintenance).");
+        }
+    }
+
+    /** Email must be unique across both staff tables. */
     private void checkUnique(EmployeeRequest r, EmployeeId current) {
-        String employeeNumber = trim(r.employeeNumber());
         String email = trim(r.email());
-        boolean numberTaken;
         boolean emailTaken;
         if (current == null) {
-            numberTaken = faculty.existsByEmployeeNumber(employeeNumber) || admins.existsByEmployeeNumber(employeeNumber);
             emailTaken = faculty.existsByEmailAddressIgnoreCase(email) || admins.existsByEmailAddressIgnoreCase(email);
         } else if (current.isFaculty()) {
-            numberTaken = faculty.existsByEmployeeNumberAndIdNot(employeeNumber, current.number())
-                    || admins.existsByEmployeeNumber(employeeNumber);
             emailTaken = faculty.existsByEmailAddressIgnoreCaseAndIdNot(email, current.number())
                     || admins.existsByEmailAddressIgnoreCase(email);
         } else {
-            numberTaken = admins.existsByEmployeeNumberAndIdNot(employeeNumber, current.number())
-                    || faculty.existsByEmployeeNumber(employeeNumber);
             emailTaken = admins.existsByEmailAddressIgnoreCaseAndIdNot(email, current.number())
                     || faculty.existsByEmailAddressIgnoreCase(email);
-        }
-        if (numberTaken) {
-            throw Validation.invalid("employeeNumber", "This Employee ID is already in use.");
         }
         if (emailTaken) {
             throw Validation.invalid("email", "This email address is already used by another employee.");
@@ -268,7 +327,6 @@ public class EmployeeService {
 
     /** Copies a validated request onto the entity. */
     private static void apply(StaffMember staff, EmployeeRequest r) {
-        staff.setEmployeeNumber(trim(r.employeeNumber()));
         staff.setFirstname(trim(r.firstName()));
         staff.setMiddlename(blankToNull(r.middleName()));
         staff.setLastname(trim(r.lastName()));
@@ -276,7 +334,11 @@ public class EmployeeService {
         staff.setContactNumber(trim(r.phone()));
         staff.setEmploymentStatus(r.status() == null || r.status().isBlank() ? "Active" : r.status());
         staff.setDateHired(parseDate(r.dateHired(), "Date hired"));
-        staff.setNotes(trim(r.notes()));
+        // Notes are no longer on the form; keep any saved ones unless notes are sent.
+        if (r.notes() != null) {
+            staff.setNotes(trim(r.notes()));
+        }
+        staff.setBasicPay(r.basicPay());
 
         staff.setGender(blankToNull(r.gender()));
         LocalDate birthdate = blankToNull(r.birthdate()) == null ? null : parseDate(r.birthdate(), "Birthdate");

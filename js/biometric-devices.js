@@ -33,7 +33,7 @@
             devices = data.devices;
             renderTable();
         }).catch(function () {
-            deviceBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Could not load devices from the server.</td></tr>';
+            deviceBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">Could not load devices from the server.</td></tr>';
         });
     }
 
@@ -68,7 +68,6 @@
                     '<td><strong>' + escapeHtml(d.deviceName) + '</strong></td>' +
                     '<td>' + escapeHtml(d.location) + '</td>' +
                     '<td>' + escapeHtml(d.ipAddress) + '</td>' +
-                    '<td><span class="pp-badge ' + (d.status === 'Active' ? 'pp-badge-present' : 'pp-badge-absent') + '">' + d.status + '</span></td>' +
                     '<td>' + formatDate(d.dateAdded) + '</td>' +
                     '<td class="col-actions text-center">' +
                         '<button type="button" class="btn btn-sm btn-pp-outline me-2" data-action="edit" data-id="' + d.id + '" aria-label="Edit ' + escapeHtml(d.deviceName) + '"><i class="bi bi-pencil"></i></button>' +
