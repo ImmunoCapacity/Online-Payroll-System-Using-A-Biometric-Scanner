@@ -37,6 +37,9 @@ public class LoanPayment {
     @Column(name = "remaining_balance")
     private BigDecimal remainingBalance;
 
+    /** The pay wasn't enough this period: nothing deducted (amount 0). */
+    private boolean skipped;
+
     @Column(name = "date_processed")
     private LocalDateTime dateProcessed;
 
@@ -56,6 +59,8 @@ public class LoanPayment {
     public void setAmount(BigDecimal amount) { this.amount = amount; }
     public BigDecimal getRemainingBalance() { return remainingBalance; }
     public void setRemainingBalance(BigDecimal remainingBalance) { this.remainingBalance = remainingBalance; }
+    public boolean isSkipped() { return skipped; }
+    public void setSkipped(boolean skipped) { this.skipped = skipped; }
     public LocalDateTime getDateProcessed() { return dateProcessed; }
     public void setDateProcessed(LocalDateTime dateProcessed) { this.dateProcessed = dateProcessed; }
     public Integer getRecordedBy() { return recordedBy; }

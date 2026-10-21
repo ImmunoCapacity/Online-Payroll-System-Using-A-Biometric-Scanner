@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
     <script src="js/auth-guard.js"></script>
-    <script src="js/auth-guard.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -25,803 +24,391 @@
 
         <main class="pp-content">
 
-            <!-- LOAN MANAGEMENT VIEW -->
+            <!-- 1. EMPLOYEES: one row per employee -->
             <div id="loanManagementView">
 
                 <div class="pp-page-toolbar">
-
                     <header class="pp-content-header mb-0">
                         <h1 class="pp-content-title">Loan Management</h1>
-
                         <p class="pp-content-subtitle">
-                            Record employee loans and monitor payroll deductions and remaining balances.
+                            Record employee loans; they are deducted automatically when payroll is computed.
                         </p>
                     </header>
-
-                    <button
-                        type="button"
-                        class="btn btn-pp-primary"
-                        data-bs-toggle="modal"
-                        data-bs-target="#recordLoanModal">
-
-                        <i class="bi bi-plus-lg me-1"></i>
-                        Record Loan
+                    <button type="button" class="btn btn-pp-primary" id="btnAddLoanAny">
+                        <i class="bi bi-plus-lg me-1"></i> Add Loan
                     </button>
-
                 </div>
-
 
                 <div class="loan-info-note">
-
                     <i class="bi bi-info-circle-fill"></i>
-
                     <div>
-                        Loans are approved by the applicable lending institution.
-                        This module records approved employee loans for payroll deduction and balance monitoring.
+                        Loans are approved by the lender (SSS, Pag-IBIG, a bank, etc.). Payroll deducts them every period
+                        from Payment From to Payment To. When an employee's pay isn't enough to cover a loan, it is
+                        <strong>skipped</strong> for that period and flagged, and the loan runs one period longer.
                     </div>
-
                 </div>
-
 
                 <section class="pp-section-card">
 
                     <div class="loan-toolbar">
-
                         <div class="loan-filters">
-
                             <div class="loan-search">
-
-                                <label for="loanSearch" class="pp-form-label">
-                                    Search Employee
-                                </label>
-
-                                <input
-                                    type="search"
-                                    class="form-control pp-form-control"
-                                    id="loanSearch" maxlength="100"
+                                <label for="loanSearch" class="pp-form-label">Search Employee</label>
+                                <input type="search" class="form-control pp-form-control" id="loanSearch" maxlength="100"
                                     placeholder="Employee name or ID">
-
                             </div>
-
-
                             <div class="loan-filter">
-
-                                <label for="loanTypeFilter" class="pp-form-label">
-                                    Loan Type
-                                </label>
-
-                                <select data-clearable
-                                    class="form-select pp-form-select"
-                                    id="loanTypeFilter">
-
-                                    <option value="all" hidden data-hint>All loan types</option>
-                                    <option value="SSS Salary Loan">SSS Salary Loan</option>
-                                    <option value="Pag-IBIG MPL">Pag-IBIG MPL</option>
-                                    <option value="Pag-IBIG Calamity Loan">Pag-IBIG Calamity Loan</option>
-                                    <option value="Other Loan">Other Loan</option>
-
+                                <label for="loanTypeFilter" class="pp-form-label">Employee Type</label>
+                                <select data-clearable class="form-select pp-form-select" id="loanTypeFilter">
+                                    <option value="all" hidden data-hint>All employee types</option>
+                                    <option value="Admin">Admin</option>
+                                    <option value="Faculty">Faculty</option>
+                                    <option value="Faculty/Admin">Faculty/Admin</option>
                                 </select>
-
                             </div>
-
-
                             <div class="loan-filter">
-
-                                <label for="loanStatusFilter" class="pp-form-label">
-                                    Status
-                                </label>
-
-                                <select data-clearable
-                                    class="form-select pp-form-select"
-                                    id="loanStatusFilter">
-
-                                    <option value="all" hidden data-hint>All statuses</option>
-                                    <option value="Active">Active</option>
-                                    <option value="Paid">Paid</option>
-
+                                <label for="loanStatusFilter" class="pp-form-label">Loans</label>
+                                <select data-clearable class="form-select pp-form-select" id="loanStatusFilter">
+                                    <option value="all" hidden data-hint>All employees</option>
+                                    <option value="with">With active loans</option>
+                                    <option value="skipped">With a skipped deduction</option>
+                                    <option value="none">No active loans</option>
                                 </select>
-
                             </div>
-
                         </div>
-
                     </div>
-
 
                     <p class="pp-table-hint loan-table-hint">
                         <i class="bi bi-hand-index" aria-hidden="true"></i>
-                        Click a row to view loan details.
+                        Click an employee to see their loans and add one.
                     </p>
 
-
-
                     <div class="pp-table-wrap border-0 rounded-0">
-
-                        <table
-                            class="pp-table pp-table-financial"
-                            id="loanTable">
-
+                        <table class="pp-table pp-table-financial" id="loanTable">
                             <thead>
                                 <tr>
                                     <th>Employee ID</th>
                                     <th>Employee Name</th>
-                                    <th>Loan Type</th>
-                                    <th>Reference No.</th>
-                                    <th>Loan Amount</th>
-                                    <th>Deduction / Payroll</th>
-                                    <th>Total Deducted</th>
-                                    <th>Remaining Balance</th>
+                                    <th>Type</th>
+                                    <th class="text-end">Active Loans</th>
+                                    <th class="text-end">Deduction / Payroll</th>
+                                    <th class="text-end">Remaining Balance</th>
                                 </tr>
                             </thead>
-
                             <tbody id="loanTableBody"></tbody>
-
                         </table>
-
-
-                        <div
-                            class="pp-empty-state d-none"
-                            id="loanEmptyState">
-
-                            No loan records found.
-
-                        </div>
-
+                        <div class="pp-empty-state d-none" id="loanEmptyState">No employees match the filters.</div>
                     </div>
 
                 </section>
-
             </div>
 
 
-            <!-- =====================================================
-                 LOAN DETAILS VIEW
-                 THIS REPLACES THE OLD VIEW DETAILS MODAL
-                 ===================================================== -->
-
-            <div id="loanDetailsView" class="d-none">
+            <!-- 2. ONE EMPLOYEE'S LOANS -->
+            <div id="employeeLoansView" class="d-none">
 
                 <div class="loan-details-page-header">
-
                     <div>
-
-                        <button
-                            type="button"
-                            class="loan-back-btn"
-                            id="backToLoanManagement">
-
-                            <span class="loan-back-icon" aria-hidden="true">
-                                <i class="bi bi-arrow-left"></i>
-                            </span>
+                        <button type="button" class="loan-back-btn" id="backToEmployees">
+                            <span class="loan-back-icon" aria-hidden="true"><i class="bi bi-arrow-left"></i></span>
                             Back to Loan Management
-
                         </button>
-
-
-                        <h1 class="pp-content-title mt-3">
-                            Loan Details
-                        </h1>
-
-                        <p class="pp-content-subtitle">
-                            View employee loan information, payroll deductions, and remaining balance.
-                        </p>
-
                     </div>
-
                 </div>
-
 
                 <section class="pp-section-card loan-details-page">
 
-
-                    <!-- EMPLOYEE HEADER -->
-
                     <div class="loan-detail-header">
-
-                        <div
-                            class="loan-avatar"
-                            id="detailEmployeeInitials">
-                            --
-                        </div>
-
-
+                        <div class="loan-avatar" id="empInitials">--</div>
                         <div class="loan-detail-employee">
-
-                            <h2
-                                class="loan-detail-name"
-                                id="detailEmployeeName">
-                                —
-                            </h2>
-
-                            <p
-                                class="loan-detail-meta"
-                                id="detailEmployeeMeta">
-                                —
-                            </p>
-
+                            <h2 class="loan-detail-name" id="empName">—</h2>
+                            <p class="loan-detail-meta" id="empMeta">—</p>
                         </div>
-
-
-                        <div
-                            class="loan-detail-status"
-                            id="detailLoanStatus">
+                        <div class="loan-detail-status">
+                            <button type="button" class="btn btn-pp-primary" id="btnAddLoan">
+                                <i class="bi bi-plus-lg me-1"></i> Add Loan
+                            </button>
                         </div>
-
                     </div>
 
-
-                    <!-- LOAN INFORMATION + BALANCE -->
-
-                    <div class="loan-details-overview">
-
-
-                        <!-- LOAN INFORMATION -->
-
-                        <section class="loan-detail-section">
-
-                            <div class="loan-detail-section-title">
-
-                                <i class="bi bi-file-earmark-text me-2"></i>
-                                Loan Information
-
-                            </div>
-
-
-                            <div class="loan-detail-grid">
-
-
-                                <div>
-
-                                    <span class="loan-detail-label">
-                                        Loan Type
-                                    </span>
-
-                                    <span
-                                        class="loan-detail-value"
-                                        id="detailLoanType">
-                                        —
-                                    </span>
-
-                                </div>
-
-
-                                <div>
-
-                                    <span class="loan-detail-label">
-                                        Reference No.
-                                    </span>
-
-                                    <span
-                                        class="loan-detail-value"
-                                        id="detailReference">
-                                        —
-                                    </span>
-
-                                </div>
-
-
-                                <div>
-
-                                    <span class="loan-detail-label">
-                                        Deduction Start Period
-                                    </span>
-
-                                    <span
-                                        class="loan-detail-value"
-                                        id="detailStartPeriod">
-                                        —
-                                    </span>
-
-                                </div>
-
-
-                                <div>
-
-                                    <span class="loan-detail-label">
-                                        Deduction / Payroll
-                                    </span>
-
-                                    <span
-                                        class="loan-detail-value"
-                                        id="detailDeduction">
-                                        ₱0.00
-                                    </span>
-
-                                </div>
-
-
-                            </div>
-
-                        </section>
-
-
-                        <!-- LOAN BALANCE -->
-
-                        <section class="loan-detail-section">
-
-                            <div class="loan-detail-section-title">
-
-                                <i class="bi bi-wallet2 me-2"></i>
-                                Loan Balance
-
-                            </div>
-
-
-                            <div class="loan-balance-grid">
-
-
-                                <div class="loan-balance-card">
-
-                                    <span class="loan-balance-label">
-                                        Original Loan Amount
-                                    </span>
-
-                                    <span
-                                        class="loan-balance-value"
-                                        id="detailLoanAmount">
-                                        ₱0.00
-                                    </span>
-
-                                </div>
-
-
-                                <div class="loan-balance-card">
-
-                                    <span class="loan-balance-label">
-                                        Total Deducted
-                                    </span>
-
-                                    <span
-                                        class="loan-balance-value"
-                                        id="detailTotalDeducted">
-                                        ₱0.00
-                                    </span>
-
-                                </div>
-
-
-                                <div class="loan-balance-card">
-
-                                    <span class="loan-balance-label">
-                                        Remaining Balance
-                                    </span>
-
-                                    <span
-                                        class="loan-balance-value remaining"
-                                        id="detailRemainingBalance">
-                                        ₱0.00
-                                    </span>
-
-                                </div>
-
-
-                            </div>
-
-                        </section>
-
-
+                    <div class="loan-balance-grid loan-summary-grid">
+                        <div class="loan-balance-card">
+                            <span class="loan-balance-label">Active Loans</span>
+                            <span class="loan-balance-value" id="empActiveCount">0</span>
+                        </div>
+                        <div class="loan-balance-card">
+                            <span class="loan-balance-label">Deducted Every Payroll</span>
+                            <span class="loan-balance-value" id="empPerPayroll">₱0.00</span>
+                        </div>
+                        <div class="loan-balance-card">
+                            <span class="loan-balance-label">Total Paid So Far</span>
+                            <span class="loan-balance-value" id="empPaid">₱0.00</span>
+                        </div>
+                        <div class="loan-balance-card">
+                            <span class="loan-balance-label">Remaining Balance</span>
+                            <span class="loan-balance-value remaining" id="empRemaining">₱0.00</span>
+                        </div>
                     </div>
-
-
-                    <!-- DEDUCTION HISTORY -->
 
                     <section class="loan-detail-section loan-history-section">
-
                         <div class="loan-detail-section-title">
-
-                            <i class="bi bi-clock-history me-2"></i>
-                            Deduction History
-
+                            <i class="bi bi-cash-coin me-2"></i> Loans
                         </div>
-
-
                         <div class="table-responsive">
-
                             <table class="loan-history-table">
-
                                 <thead>
+                                    <tr>
+                                        <th>Lender</th>
+                                        <th>Reference No.</th>
+                                        <th class="text-end">Loan Amount</th>
+                                        <th>Payment Period</th>
+                                        <th class="text-end">Periods</th>
+                                        <th class="text-end">Per Payroll</th>
+                                        <th class="text-end">Paid</th>
+                                        <th class="text-end">Balance</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="empLoansBody"></tbody>
+                            </table>
+                            <div class="pp-empty-state d-none" id="empLoansEmpty">No loans yet. Click Add Loan to record one.</div>
+                        </div>
+                        <p class="pp-table-hint mt-2 mb-0">
+                            <i class="bi bi-hand-index" aria-hidden="true"></i>
+                            Click a loan to see its deduction history.
+                        </p>
+                    </section>
 
+                </section>
+            </div>
+
+
+            <!-- 3. ONE LOAN: details and deduction history -->
+            <div id="loanDetailsView" class="d-none">
+
+                <div class="loan-details-page-header">
+                    <div>
+                        <button type="button" class="loan-back-btn" id="backToEmployeeLoans">
+                            <span class="loan-back-icon" aria-hidden="true"><i class="bi bi-arrow-left"></i></span>
+                            <span id="backToEmployeeLoansLabel">Back</span>
+                        </button>
+                        <h1 class="pp-content-title mt-3">Loan Details</h1>
+                        <p class="pp-content-subtitle">Payroll deductions and remaining balance of this loan.</p>
+                    </div>
+                </div>
+
+                <section class="pp-section-card loan-details-page">
+
+                    <div class="loan-detail-header">
+                        <div class="loan-avatar" id="detailEmployeeInitials">--</div>
+                        <div class="loan-detail-employee">
+                            <h2 class="loan-detail-name" id="detailEmployeeName">—</h2>
+                            <p class="loan-detail-meta" id="detailEmployeeMeta">—</p>
+                        </div>
+                        <div class="loan-detail-status" id="detailLoanStatus"></div>
+                    </div>
+
+                    <div class="loan-details-overview">
+                        <section class="loan-detail-section">
+                            <div class="loan-detail-section-title">
+                                <i class="bi bi-file-earmark-text me-2"></i> Loan Information
+                            </div>
+                            <div class="loan-detail-grid">
+                                <div>
+                                    <span class="loan-detail-label">Lender</span>
+                                    <span class="loan-detail-value" id="detailLender">—</span>
+                                </div>
+                                <div>
+                                    <span class="loan-detail-label">Reference No.</span>
+                                    <span class="loan-detail-value" id="detailReference">—</span>
+                                </div>
+                                <div>
+                                    <span class="loan-detail-label">Payment Period</span>
+                                    <span class="loan-detail-value" id="detailPeriod">—</span>
+                                </div>
+                                <div>
+                                    <span class="loan-detail-label">Deduction / Payroll</span>
+                                    <span class="loan-detail-value" id="detailDeduction">₱0.00</span>
+                                </div>
+                                <div class="loan-detail-wide d-none" id="detailSkippedWrap">
+                                    <span class="loan-detail-label">Skipped Periods</span>
+                                    <span class="loan-detail-value text-danger" id="detailSkipped">—</span>
+                                </div>
+                                <div class="loan-detail-wide d-none" id="detailRemarksWrap">
+                                    <span class="loan-detail-label">Remarks</span>
+                                    <span class="loan-detail-value" id="detailRemarks">—</span>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="loan-detail-section">
+                            <div class="loan-detail-section-title">
+                                <i class="bi bi-wallet2 me-2"></i> Loan Balance
+                            </div>
+                            <div class="loan-balance-grid">
+                                <div class="loan-balance-card">
+                                    <span class="loan-balance-label">Original Loan Amount</span>
+                                    <span class="loan-balance-value" id="detailLoanAmount">₱0.00</span>
+                                </div>
+                                <div class="loan-balance-card">
+                                    <span class="loan-balance-label">Total Deducted</span>
+                                    <span class="loan-balance-value" id="detailTotalDeducted">₱0.00</span>
+                                </div>
+                                <div class="loan-balance-card">
+                                    <span class="loan-balance-label">Remaining Balance</span>
+                                    <span class="loan-balance-value remaining" id="detailRemainingBalance">₱0.00</span>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+
+                    <section class="loan-detail-section loan-history-section">
+                        <div class="loan-detail-section-title">
+                            <i class="bi bi-clock-history me-2"></i> Deduction History
+                        </div>
+                        <div class="table-responsive">
+                            <table class="loan-history-table">
+                                <thead>
                                     <tr>
                                         <th>Payroll Period</th>
                                         <th>Deduction Amount</th>
                                         <th>Remaining Balance</th>
                                         <th>Date Processed</th>
                                     </tr>
-
                                 </thead>
-
-
                                 <tbody id="loanDeductionHistoryBody"></tbody>
-
                             </table>
-
-
-                            <div
-                                class="pp-empty-state d-none"
-                                id="loanDeductionHistoryEmpty">
-
+                            <div class="pp-empty-state d-none" id="loanDeductionHistoryEmpty">
                                 No payroll deductions have been recorded for this loan yet.
-
                             </div>
-
                         </div>
-
                     </section>
 
-
                 </section>
-
             </div>
 
         </main>
-
     </div>
 
 
-    <!-- =====================================================
-         RECORD LOAN MODAL
-         THIS ONE STAYS AS A MODAL
-         ===================================================== -->
-
-    <div
-        class="modal fade pp-modal"
-        id="recordLoanModal"
-        tabindex="-1"
-        aria-labelledby="recordLoanTitle"
-        aria-hidden="true">
-
+    <!-- ADD LOAN -->
+    <div class="modal fade pp-modal" id="recordLoanModal" tabindex="-1" aria-labelledby="recordLoanTitle" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg">
-
             <div class="modal-content">
 
                 <div class="modal-header">
-
                     <div>
-
-                        <h2
-                            class="modal-title"
-                            id="recordLoanTitle">
-
-                            Record Employee Loan
-
-                        </h2>
-
+                        <h2 class="modal-title" id="recordLoanTitle">Add Loan</h2>
                         <p class="small text-muted mb-0 mt-1">
-                            Record a loan already approved by the lending institution.
+                            The deduction per payroll is worked out from the amount and the payment period.
                         </p>
-
                     </div>
-
-
-                    <button
-                        type="button"
-                        class="btn-close"
-                        data-bs-dismiss="modal"
-                        aria-label="Close">
-                    </button>
-
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
 
-
                 <form id="recordLoanForm" novalidate>
-
                     <div class="modal-body">
-
                         <div class="row g-3">
 
-
-                            <!-- EMPLOYEE -->
-
-                            <div class="col-md-6">
-
-                                <label
-                                    for="loanEmployee"
-                                    class="pp-form-label">
-
-                                    Employee
-                                    <span class="text-danger">*</span>
-
-                                </label>
-
-
-                                <select
-                                    class="form-select pp-form-select"
-                                    id="loanEmployee"
-                                    required>
-
-                                    <option value="" selected hidden data-hint>
-                                        Select employee
-                                    </option>
-
+                            <div class="col-12" id="loanEmployeeGroup">
+                                <label for="loanEmployee" class="pp-form-label">Employee <span class="text-danger">*</span></label>
+                                <select class="form-select pp-form-select" id="loanEmployee" required>
+                                    <option value="" selected hidden data-hint>Select employee</option>
                                 </select>
-
-
-                                <div class="invalid-feedback">
-                                    Please select an employee.
-                                </div>
-
+                                <div class="invalid-feedback">Please select an employee.</div>
                             </div>
 
-
-                            <!-- LOAN TYPE -->
-
                             <div class="col-md-6">
-
-                                <label
-                                    for="loanType"
-                                    class="pp-form-label">
-
-                                    Loan Type
-                                    <span class="text-danger">*</span>
-
-                                </label>
-
-
-                                <select
-                                    class="form-select pp-form-select"
-                                    id="loanType"
-                                    required>
-
-                                    <option value="" selected hidden data-hint>
-                                        Select loan type
-                                    </option>
-
-                                    <option value="SSS Salary Loan">
-                                        SSS Salary Loan
-                                    </option>
-
-                                    <option value="Pag-IBIG MPL">
-                                        Pag-IBIG MPL
-                                    </option>
-
-                                    <option value="Pag-IBIG Calamity Loan">
-                                        Pag-IBIG Calamity Loan
-                                    </option>
-
-                                    <option value="Other Loan">
-                                        Other Loan
-                                    </option>
-
+                                <label for="loanLender" class="pp-form-label">Lender <span class="text-danger">*</span></label>
+                                <select class="form-select pp-form-select" id="loanLender" required>
+                                    <option value="" selected hidden data-hint>Where the loan is from</option>
+                                    <option value="SSS">SSS</option>
+                                    <option value="Pag-IBIG">Pag-IBIG</option>
+                                    <option value="Bank">Bank</option>
+                                    <option value="Cooperative">Cooperative</option>
+                                    <option value="Other">Other</option>
                                 </select>
-
-
-                                <div class="invalid-feedback">
-                                    Please select a loan type.
-                                </div>
-
+                                <div class="invalid-feedback">Please choose the lender.</div>
                             </div>
 
-
-                            <!-- REFERENCE -->
-
-                            <div class="col-md-6">
-
-                                <label
-                                    for="loanReference"
-                                    class="pp-form-label">
-
-                                    Loan Reference No.
-                                    <span class="text-danger">*</span>
-
+                            <div class="col-md-6" id="loanLenderNameGroup">
+                                <label for="loanLenderName" class="pp-form-label">
+                                    <span id="loanLenderNameLabel">Lender Name</span> <span class="text-danger">*</span>
                                 </label>
-
-
-                                <input
-                                    type="text"
-                                    class="form-control pp-form-control"
-                                    id="loanReference"
-                                    placeholder="Enter reference number"
-                                    maxlength="30"
-                                    data-validate="text"
-                                    required>
-
-
-                                <div class="invalid-feedback">
-                                    Please enter the loan reference number.
-                                </div>
-
+                                <input type="text" class="form-control pp-form-control" id="loanLenderName" maxlength="100"
+                                    data-validate="text" data-label="Lender name" placeholder="e.g. BDO" required>
+                                <div class="invalid-feedback">Please enter the lender's name.</div>
                             </div>
 
-
-                            <!-- LOAN AMOUNT -->
+                            <div class="col-md-6">
+                                <label for="loanReference" class="pp-form-label">Reference No. <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control pp-form-control" id="loanReference" maxlength="30"
+                                    data-validate="text" placeholder="Lender's reference number" required>
+                                <div class="invalid-feedback">Please enter the loan reference number.</div>
+                            </div>
 
                             <div class="col-md-6">
-
-                                <label
-                                    for="loanAmount"
-                                    class="pp-form-label">
-
-                                    Total Loan Amount
-                                    <span class="text-danger">*</span>
-
-                                </label>
-
-
+                                <label for="loanAmount" class="pp-form-label">Loan Amount <span class="text-danger">*</span></label>
                                 <div class="input-group">
-
-                                    <span class="input-group-text">
-                                        ₱
-                                    </span>
-
-                                    <input
-                                        type="number"
-                                        class="form-control pp-form-control"
-                                        id="loanAmount"
-                                        min="0.01"
-                                        max="10000000"
-                                        step="0.01"
-                                        data-validate="number"
-                                        data-decimals="2"
-                                        inputmode="decimal"
-                                        placeholder="0.00"
-                                        required>
-
+                                    <span class="input-group-text">₱</span>
+                                    <input type="number" class="form-control pp-form-control" id="loanAmount" min="0.01" max="10000000"
+                                        step="0.01" data-validate="number" data-decimals="2" inputmode="decimal" placeholder="0.00" required>
                                 </div>
-
                             </div>
 
-
-                            <!-- DEDUCTION -->
-
                             <div class="col-md-6">
-
-                                <label
-                                    for="loanDeduction"
-                                    class="pp-form-label">
-
-                                    Deduction per Payroll
-                                    <span class="text-danger">*</span>
-
-                                </label>
-
-
-                                <div class="input-group">
-
-                                    <span class="input-group-text">
-                                        ₱
-                                    </span>
-
-                                    <input
-                                        type="number"
-                                        class="form-control pp-form-control"
-                                        id="loanDeduction"
-                                        min="0.01"
-                                        max="10000000"
-                                        step="0.01"
-                                        data-validate="number"
-                                        data-decimals="2"
-                                        inputmode="decimal"
-                                        placeholder="0.00"
-                                        required>
-
-                                </div>
-
-                            </div>
-
-
-                            <!-- START PERIOD -->
-
-                            <div class="col-md-6">
-
-                                <label
-                                    for="loanStartPeriod"
-                                    class="pp-form-label">
-
-                                    Deduction Start Period
-                                    <span class="text-danger">*</span>
-
-                                </label>
-
-
-                                <select
-                                    class="form-select pp-form-select"
-                                    id="loanStartPeriod"
-                                    required>
-
-                                    <option value="" selected hidden data-hint>
-                                        Select payroll period
-                                    </option>
-
-                                    <option value="2026-09-11_2026-09-25">
-                                        September 11 – September 25, 2026
-                                    </option>
-
-                                    <option value="2026-09-26_2026-10-10">
-                                        September 26 – October 10, 2026
-                                    </option>
-
-                                    <option value="2026-10-11_2026-10-25">
-                                        October 11 – October 25, 2026
-                                    </option>
-
+                                <label for="loanStartPeriod" class="pp-form-label">Payment From <span class="text-danger">*</span></label>
+                                <select class="form-select pp-form-select" id="loanStartPeriod" required>
+                                    <option value="" selected hidden data-hint>First payroll period</option>
                                 </select>
-
-
-                                <div class="invalid-feedback">
-                                    Please select the deduction start period.
-                                </div>
-
+                                <div class="invalid-feedback">Please choose the first payroll period.</div>
                             </div>
 
+                            <div class="col-md-6">
+                                <label for="loanEndPeriod" class="pp-form-label">Payment To <span class="text-danger">*</span></label>
+                                <select class="form-select pp-form-select" id="loanEndPeriod" required disabled>
+                                    <option value="" selected hidden data-hint>Last payroll period</option>
+                                </select>
+                                <div class="invalid-feedback">Please choose the last payroll period.</div>
+                            </div>
 
-                            <!-- REMARKS -->
+                            <div class="col-md-6">
+                                <label for="loanPeriods" class="pp-form-label">Number of Payroll Periods</label>
+                                <input type="text" class="form-control pp-form-control loan-computed" id="loanPeriods" value="—" readonly tabindex="-1">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="loanPerPayroll" class="pp-form-label">Deduction per Payroll</label>
+                                <input type="text" class="form-control pp-form-control loan-computed" id="loanPerPayroll" value="—" readonly tabindex="-1">
+                                <div class="form-text" id="loanPerPayrollHint"></div>
+                            </div>
 
                             <div class="col-12">
-
-                                <label
-                                    for="loanRemarks"
-                                    class="pp-form-label">
-
-                                    Remarks
-                                    <span class="text-muted">
-                                        (Optional)
-                                    </span>
-
-                                </label>
-
-
-                                <textarea
-                                    class="form-control pp-form-control"
-                                    id="loanRemarks"
-                                    rows="3"
-                                    maxlength="255"
-                                    data-validate="text"
-                                    placeholder="Enter remarks..."></textarea>
-
+                                <label for="loanRemarks" class="pp-form-label">Remarks <span class="text-muted">(Optional)</span></label>
+                                <textarea class="form-control pp-form-control" id="loanRemarks" rows="2" maxlength="255"
+                                    data-validate="text" placeholder="e.g. salary loan approved Oct 15"></textarea>
                             </div>
 
-
                         </div>
-
                     </div>
-
 
                     <div class="modal-footer">
-
-                        <button
-                            type="button"
-                            class="btn btn-pp-outline"
-                            data-bs-dismiss="modal">
-
-                            Cancel
-
-                        </button>
-
-
-                        <button
-                            type="submit"
-                            class="btn btn-pp-primary">
-
-                            <i class="bi bi-save me-1"></i>
-                            Record Loan
-
-                        </button>
-
+                        <button type="button" class="btn btn-pp-outline" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-pp-primary"><i class="bi bi-save me-1"></i> Save Loan</button>
                     </div>
-
                 </form>
 
             </div>
-
         </div>
-
     </div>
 
 
     <script src="vendor/bootstrap/bootstrap.bundle.min.js"></script>
-
     <script src="js/data-store.js"></script>
     <script src="js/confirm-modal.js"></script>
     <script src="js/toast.js"></script>
-    <script src="js/data-store.js"></script>
-
-    <script src="js/confirm-modal.js"></script>
-
-    <script src="js/toast.js"></script>
-
     <script src="js/payrollpro-layout.js"></script>
     <script src="js/select-hint.js"></script>
-
     <script src="js/form-validation.js"></script>
     <script src="js/leave-loan-approval.js"></script>
 

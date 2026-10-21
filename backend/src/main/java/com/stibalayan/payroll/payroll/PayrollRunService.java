@@ -174,8 +174,10 @@ public class PayrollRunService {
             for (Object item : list(b.get("loanItems"))) {
                 Map<?, ?> l = (Map<?, ?>) item;
                 BigDecimal amount = money(l.get("amount"));
-                if (l.get("loanId") != null && amount.signum() > 0) {
-                    payments.add(new LoanService.PaymentItem(((Number) l.get("loanId")).intValue(), amount));
+                boolean skipped = Boolean.TRUE.equals(l.get("skipped"));
+                // A skipped loan (pay not enough) is recorded too, so its history shows it.
+                if (l.get("loanId") != null && (amount.signum() > 0 || skipped)) {
+                    payments.add(new LoanService.PaymentItem(((Number) l.get("loanId")).intValue(), amount, skipped));
                 }
             }
             int payrollId = (Integer) r.get("payroll_id");
@@ -355,13 +357,20 @@ public class PayrollRunService {
         BigDecimal otherLoan = BigDecimal.ZERO;
         for (Object o : list(e.get("loanItems"))) {
             Map<?, ?> l = (Map<?, ?>) o;
-            BigDecimal amount = check(money(l.get("amount")), "loanItems");
+            // Skipped: the pay couldn't cover this loan, so nothing is deducted this period.
+            boolean skipped = Boolean.TRUE.equals(l.get("skipped"));
+            BigDecimal amount = skipped ? BigDecimal.ZERO : check(money(l.get("amount")), "loanItems");
             String type = String.valueOf(l.get("type"));
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("loanId", l.get("loanId") instanceof Number n ? n.intValue() : null);
             item.put("type", type);
+            item.put("lender", l.get("lender") == null ? null : String.valueOf(l.get("lender")));
             item.put("reference", l.get("reference") == null ? null : String.valueOf(l.get("reference")));
             item.put("amount", amount);
+            if (skipped) {
+                item.put("skipped", true);
+                item.put("scheduled", check(money(l.get("scheduled")), "loanItems"));
+            }
             loanItems.add(item);
             String t = type.toLowerCase();
             if (t.contains("sss")) sssLoan = sssLoan.add(amount);

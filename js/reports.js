@@ -400,7 +400,7 @@
 
     /* Loan Report (paper, 8.5): balances and deduction history, from the database via api/loans */
     function renderLoanReport() {
-        var columns = [col('EMP. ID'), col('EMPLOYEE', TEXT, true), col('LOAN TYPE'), col('REFERENCE'),
+        var columns = [col('EMP. ID'), col('EMPLOYEE', TEXT, true), col('LENDER'), col('REFERENCE'),
             col('LOAN AMOUNT', MONEY), col('PER PAYROLL', MONEY), col('TOTAL DEDUCTED', MONEY), col('BALANCE', MONEY, true)];
         showLoading(columns, 'Loading loans…');
 
@@ -417,7 +417,7 @@
                         String(l.employeeId || '').toLowerCase().includes(search);
                 });
                 var rows = loans.map(function (l) {
-                    return [l.employeeId, l.employeeName, l.type, l.reference || '',
+                    return [l.employeeId, l.employeeName, l.lenderLabel || l.type, l.reference || '',
                         number(l.amount), number(l.deductionPerPayroll), number(l.totalDeducted), number(l.remainingBalance)];
                 });
                 var totals = sumColumns(rows, columns);

@@ -165,19 +165,13 @@
     }
 
     /**
-     * loanItems: this employee's loan deductions for the period from
-     * api/payroll/loan-deductions ([{ loanId, amount, ... }]).
+     * Contributions and withholding tax for this gross pay. Loans are
+     * applied afterwards by applyLoans(), from what is left.
      */
-    function computeDeductions(loanItems, gross, year) {
-        // Active loans (Loan Management): the scheduled amount per payroll,
-        // never more than the balance — worked out by the server.
-        var loan = (loanItems || []).reduce(function (sum, l) { return sum + Number(l.amount || 0); }, 0);
-
+    function computeDeductions(gross, year) {
         if (gross <= 0) {
             return { sss: 0, philhealth: 0, pagibig: 0, bir: 0, loan: 0 };
         }
-        // A loan deduction can't take pay below zero.
-        loan = Math.min(loan, gross);
 
         var monthly = gross * PERIODS_PER_MONTH;
 
@@ -203,8 +197,83 @@
             philhealth: round2(phMonthly / PERIODS_PER_MONTH),
             pagibig: round2(pagMonthly / PERIODS_PER_MONTH),
             bir: round2(taxMonthly / PERIODS_PER_MONTH),
-            loan: round2(loan)
+            loan: 0
         };
+    }
+
+    /**
+     * Loans (Loan Management) from api/payroll/loan-deductions, already in
+     * order: government loans (SSS, Pag-IBIG) first, then the oldest. Each
+     * takes its scheduled amount from the pay left after contributions and
+     * tax; a loan the pay can't fully cover is skipped this period (nothing
+     * deducted, flagged) and runs one period longer. Net pay never goes
+     * below zero. Returns the items as stored with the payroll.
+     */
+    function applyLoans(loanItems, available) {
+        var left = round2(Math.max(0, available));
+        return (loanItems || []).map(function (l) {
+            var scheduled = round2(Number(l.amount) || 0);
+            var base = { loanId: l.loanId, type: l.type, lender: l.lender, reference: l.reference };
+            // A released period keeps what it recorded.
+            if (l.skipped || scheduled > left) {
+                base.amount = 0;
+                base.skipped = true;
+                base.scheduled = scheduled;
+                return base;
+            }
+            left = round2(left - scheduled);
+            base.amount = scheduled;
+            return base;
+        });
+    }
+
+    function skippedLoans(emp) {
+        return (emp.loanItems || []).filter(function (l) { return l.skipped; });
+    }
+
+    /** Pop-up after Run Payroll: the loans skipped because the pay wasn't enough. */
+    function showSkippedLoans(employees, periodLabel) {
+        var rows = [];
+        employees.forEach(function (emp) {
+            skippedLoans(emp).forEach(function (l) {
+                rows.push('<tr><td><strong>' + escapeHtml(emp.name) + '</strong><br><span class="text-muted small">' +
+                    escapeHtml(emp.employeeNumber) + '</span></td>' +
+                    '<td>' + escapeHtml(l.lender || l.type) + '<br><span class="text-muted small">' + escapeHtml(l.reference || '') + '</span></td>' +
+                    '<td class="text-end">' + peso(l.scheduled) + '</td>' +
+                    '<td class="text-end">' + peso(calcNet(emp)) + '</td></tr>');
+            });
+        });
+        if (!rows.length) return;
+
+        var el = document.getElementById('loanSkipModal');
+        if (!el) {
+            var wrap = document.createElement('div');
+            wrap.innerHTML =
+                '<div class="modal fade pp-modal" id="loanSkipModal" tabindex="-1" aria-labelledby="loanSkipTitle" aria-hidden="true">' +
+                    '<div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content">' +
+                        '<div class="modal-header">' +
+                            '<h2 class="modal-title" id="loanSkipTitle"><i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>Loan Deductions Skipped</h2>' +
+                            '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>' +
+                        '</div>' +
+                        '<div class="modal-body">' +
+                            '<p id="loanSkipIntro" class="mb-3"></p>' +
+                            '<div class="table-responsive"><table class="pp-table w-100">' +
+                                '<thead><tr><th>Employee</th><th>Loan</th><th class="text-end">Not Deducted</th><th class="text-end">Net Pay</th></tr></thead>' +
+                                '<tbody id="loanSkipBody"></tbody>' +
+                            '</table></div>' +
+                            '<p class="text-muted small mt-3 mb-0">Contributions and tax are taken first, then loans (SSS and Pag-IBIG first). ' +
+                            'A loan the remaining pay can\'t fully cover is skipped for this period, and the loan runs one period longer.</p>' +
+                        '</div>' +
+                        '<div class="modal-footer"><button type="button" class="btn btn-pp-primary" data-bs-dismiss="modal">OK</button></div>' +
+                    '</div></div>' +
+                '</div>';
+            document.body.appendChild(wrap.firstChild);
+            el = document.getElementById('loanSkipModal');
+        }
+        document.getElementById('loanSkipIntro').textContent = rows.length + ' loan deduction' + (rows.length === 1 ? ' was' : 's were') +
+            ' skipped in the ' + periodLabel + ' payroll because the employee\'s pay wasn\'t enough.';
+        document.getElementById('loanSkipBody').innerHTML = rows.join('');
+        bootstrap.Modal.getOrCreateInstance(el).show();
     }
 
     // Paper, Figures 3.1–3.2: Gross Pay = Rate per Hour × Number of Hours Worked,
@@ -365,16 +434,12 @@
                         }),
                         status: 'computed'
                     };
-                    var loanItems = loansById[e.id] || [];
-                    emp.deductions = computeDeductions(loanItems, calcGross(emp), year);
-                    // What is actually deducted per loan (less when pay can't cover it all);
-                    // recorded against each loan when the period is released.
-                    var left = emp.deductions.loan;
-                    emp.loanItems = loanItems.map(function (l) {
-                        var amount = round2(Math.min(Number(l.amount) || 0, left));
-                        left = round2(left - amount);
-                        return { loanId: l.loanId, type: l.type, reference: l.reference, amount: amount };
-                    });
+                    emp.deductions = computeDeductions(calcGross(emp), year);
+                    // Loans from what's left after contributions and tax; one the pay
+                    // can't cover is skipped (recorded against the loan on release).
+                    var available = calcGross(emp) + calcBenefitsTotal(emp.benefits) - calcDeductionsTotal(emp.deductions);
+                    emp.loanItems = applyLoans(loansById[e.id], available);
+                    emp.deductions.loan = round2(emp.loanItems.reduce(function (s, l) { return s + l.amount; }, 0));
                     return emp;
                 });
         });
@@ -422,6 +487,7 @@
                     ' not yet checked or approved in Faculty Teaching Hours and ' + (unapproved === 1 ? 'is' : 'are') +
                     ' not paid. Approve them, then click Recompute.');
             }
+            showSkippedLoans(employees, run.label);
         }).catch(function (error) {
             console.error('[Payroll]', error);
             PPToast.error(error.message || 'Could not compute payroll.');
@@ -510,7 +576,11 @@
                     '<tr class="pp-row-clickable" tabindex="0" role="button" data-idx="' + idx + '" ' +
                         'aria-label="View payroll breakdown for ' + escapeHtml(emp.name) + '">' +
                         '<td>' + escapeHtml(emp.employeeNumber) + '</td>' +
-                        '<td><strong>' + escapeHtml(emp.name) + '</strong></td>' +
+                        '<td><strong>' + escapeHtml(emp.name) + '</strong>' +
+                            (skippedLoans(emp).length
+                                ? ' <span class="pp-loan-skip-flag" title="Pay wasn\'t enough: loan not deducted this period">' +
+                                  '<i class="bi bi-exclamation-triangle-fill"></i> Loan skipped</span>'
+                                : '') + '</td>' +
                         '<td>' + typeBadge(emp.type) + '</td>' +
                         '<td class="col-units">' + emp.hours + ' hrs</td>' +
                         '<td class="col-money">' + peso(calcGross(emp)) + '</td>' +
@@ -642,6 +712,11 @@
                 ? '<p class="pp-payslip-note text-warning">' + emp.unapprovedClasses +
                   ' scheduled class(es) not yet approved in Faculty Teaching Hours — not paid.</p>'
                 : '') +
+            skippedLoans(emp).map(function (l) {
+                return '<p class="pp-payslip-note text-danger"><i class="bi bi-exclamation-triangle-fill me-1"></i>' +
+                    escapeHtml(l.lender || l.type) + ' loan' + (l.reference ? ' ' + escapeHtml(l.reference) : '') +
+                    ' (' + peso(l.scheduled) + ') skipped — pay wasn\'t enough. The loan runs one period longer.</p>';
+            }).join('') +
             (emp.status === 'computed'
                 ? '<button type="button" class="btn btn-pp-primary w-100 mt-3" id="btnMarkReviewed">Mark as Reviewed</button>'
                 : '');

@@ -116,6 +116,24 @@ public class NotificationController {
             }
         }
 
+        // Loan deductions skipped because the pay wasn't enough: payroll not yet
+        // released, or released in the last 14 days.
+        if (SystemModule.PAYROLL.allows(role)) {
+            jdbc.queryForList("SELECT r.payroll_run_id, r.period_label, r.status, COUNT(*) AS employees FROM payroll p "
+                    + "JOIN payroll_run r ON r.payroll_run_id = p.payroll_run_id "
+                    + "WHERE p.breakdown LIKE '%\"skipped\":true%' "
+                    + "AND (r.status <> 'Released' OR r.released_at >= NOW() - INTERVAL 14 DAY) "
+                    + "GROUP BY r.payroll_run_id, r.period_label, r.status ORDER BY r.pay_period_start DESC").forEach(r -> {
+                int n = ((Number) r.get("employees")).intValue();
+                boolean released = "Released".equals(r.get("status"));
+                items.add(item("loan-skipped-" + r.get("payroll_run_id") + "-" + n, "bi-exclamation-triangle", "danger",
+                        "Loan deduction skipped for " + n + " employee" + plural(n),
+                        r.get("period_label") + ": their pay wasn't enough to cover a loan, so it wasn't deducted"
+                                + (released ? " and the loan runs one period longer." : ". Check them before releasing."),
+                        "payroll-processing.html"));
+            });
+        }
+
         // Holidays in the next 7 days.
         if (SystemModule.DASHBOARD.allows(role)) {
             jdbc.queryForList("SELECT holiday_date, holiday_name, holiday_type, double_pay FROM holiday WHERE holiday_date BETWEEN ? AND ? ORDER BY holiday_date",

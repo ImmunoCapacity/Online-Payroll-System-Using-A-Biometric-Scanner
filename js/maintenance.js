@@ -869,7 +869,8 @@
             return;
         }
         body.innerHTML = holidays.map(function (h) {
-            return '<tr data-id="' + h.id + '">' +
+            return '<tr class="pp-row-clickable" tabindex="0" role="button" data-id="' + h.id + '" ' +
+                    'aria-label="Edit ' + escapeHtml(h.name) + '">' +
                 '<td>' + holidayDateText(h.date) + '</td>' +
                 '<td><strong>' + escapeHtml(h.name) + '</strong></td>' +
                 '<td>' + escapeHtml(h.type) + '</td>' +
@@ -903,13 +904,23 @@
         document.getElementById('holidayDoublePay').value = e.target.value === 'Regular Holiday' ? 'Yes' : 'No';
     });
 
+    // Clicking a row (or Enter on it) edits that holiday, like its Edit button.
+    document.getElementById('holidaysBody').addEventListener('keydown', function (e) {
+        var row = e.target.closest('tr[data-id]');
+        if (row && e.target === row && (e.key === 'Enter' || e.key === ' ')) {
+            e.preventDefault();
+            row.click();
+        }
+    });
+
     document.getElementById('holidaysBody').addEventListener('click', function (e) {
+        var row = e.target.closest('tr[data-id]');
+        if (!row) return;
         var btn = e.target.closest('[data-action]');
-        if (!btn) return;
-        var id = parseInt(btn.closest('tr').dataset.id, 10);
+        var id = parseInt(row.dataset.id, 10);
         var holiday = holidays.find(function (h) { return h.id === id; });
         if (!holiday) return;
-        if (btn.dataset.action === 'edit') {
+        if (!btn || btn.dataset.action === 'edit') {
             openHolidayForm(holiday);
             return;
         }

@@ -52,6 +52,16 @@ public class Loan {
     @Column(name = "deduction_per_payroll")
     private BigDecimal deductionPerPayroll;
 
+    /** SSS, Pag-IBIG, Bank, Cooperative or Other. */
+    private String lender;
+
+    @Column(name = "lender_name")
+    private String lenderName;
+
+    /** Start of the last payroll period scheduled to deduct it (null: older loans, worked out from the amounts). */
+    @Column(name = "end_date")
+    private LocalDate endDate;
+
     private String remarks;
 
     @Column(name = "recorded_by")
@@ -76,6 +86,12 @@ public class Loan {
     public void setReference(String reference) { this.reference = reference; }
     public BigDecimal getDeductionPerPayroll() { return deductionPerPayroll; }
     public void setDeductionPerPayroll(BigDecimal deductionPerPayroll) { this.deductionPerPayroll = deductionPerPayroll; }
+    public String getLender() { return lender; }
+    public void setLender(String lender) { this.lender = lender; }
+    public String getLenderName() { return lenderName; }
+    public void setLenderName(String lenderName) { this.lenderName = lenderName; }
+    public LocalDate getEndDate() { return endDate; }
+    public void setEndDate(LocalDate endDate) { this.endDate = endDate; }
     public String getRemarks() { return remarks; }
     public void setRemarks(String remarks) { this.remarks = remarks; }
     public Integer getRecordedBy() { return recordedBy; }

@@ -242,3 +242,17 @@
     color: var(--pp-text-muted);
     margin-bottom: 1rem;
 }
+/* Loan skipped this period (pay wasn't enough) */
+.pp-loan-skip-flag {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    margin-left: 6px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: #fef2f2;
+    color: #b91c1c;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+}

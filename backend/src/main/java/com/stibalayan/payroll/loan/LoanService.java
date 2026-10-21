@@ -11,8 +11,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -24,18 +24,25 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Loan Management: loans approved by their lender, repaid through payroll.
  *
+ * A loan is recorded with its lender, amount and payment period (first and
+ * last payroll period); the deduction per payroll is the amount spread evenly
+ * over those periods, the last one taking the leftover centavos.
+ *
  * Each released payroll period records one payment per active loan
- * (loan_payment); the balance is the loan amount minus its payments. Payroll
- * deducts the "deduction per payroll", or the remaining balance when that is
- * smaller, starting with the loan's start period.
+ * (loan_payment); the balance is the loan amount minus its payments. When an
+ * employee's pay can't cover a loan, Payroll Computation skips it for that
+ * period (recorded as a skipped payment of 0), so the loan simply runs one
+ * period longer. Government loans (SSS, Pag-IBIG) are deducted first.
  */
 @Service
 public class LoanService {
 
-    public static final Set<String> TYPES =
-            new LinkedHashSet<>(List.of("SSS Salary Loan", "Pag-IBIG MPL", "Pag-IBIG Calamity Loan", "Other Loan"));
+    public static final List<String> LENDERS = List.of("SSS", "Pag-IBIG", "Bank", "Cooperative", "Other");
+    private static final Set<String> NAMED_LENDERS = Set.of("Bank", "Cooperative", "Other");
     private static final Pattern REFERENCE = Pattern.compile("^[A-Za-z0-9][A-Za-z0-9/-]*$");
     private static final BigDecimal MAX_AMOUNT = new BigDecimal("10000000.00");
+    private static final BigDecimal ONE_PESO = BigDecimal.ONE;
+    private static final int MAX_PERIODS = 240;   // ten years of cut-offs
     private static final DateTimeFormatter MONTH_DAY = DateTimeFormatter.ofPattern("MMMM d");
 
     private final LoanRepository loans;
@@ -48,8 +55,9 @@ public class LoanService {
         this.employees = employees;
     }
 
-    public record LoanRequest(String employeeId, String type, String reference, BigDecimal amount,
-                              BigDecimal deductionPerPayroll, String startDate, String remarks) {
+    /** Add Loan: startDate and endDate are the starts of the first and last payroll periods. */
+    public record LoanRequest(String employeeId, String lender, String lenderName, String reference, BigDecimal amount,
+                              String startDate, String endDate, String remarks) {
     }
 
     @Transactional(readOnly = true)
@@ -63,9 +71,14 @@ public class LoanService {
     @Transactional
     public Map<String, Object> create(LoanRequest r, int userId) {
         StaffMember staff = employees.require(r.employeeId());
-        String type = r.type() == null ? "" : r.type().trim();
-        if (!TYPES.contains(type)) {
-            throw Validation.invalid("type", "Choose a loan type: " + String.join(", ", TYPES) + ".");
+        String lender = r.lender() == null ? "" : r.lender().trim();
+        if (!LENDERS.contains(lender)) {
+            throw Validation.invalid("lender", "Choose the lender: " + String.join(", ", LENDERS) + ".");
+        }
+        String lenderName = null;
+        if (NAMED_LENDERS.contains(lender)) {
+            lenderName = Validation.requiredText(r.lenderName(), "lenderName",
+                    lender.equals("Bank") ? "Bank name" : "Lender name", 100);
         }
         String reference = Validation.requiredText(r.reference(), "reference", "Reference number", 30);
         if (!REFERENCE.matcher(reference).matches()) {
@@ -78,19 +91,21 @@ public class LoanService {
         if (amount == null || amount.signum() <= 0) {
             throw Validation.invalid("amount", "Loan amount must be more than zero.");
         }
-        BigDecimal deduction = Validation.money(r.deductionPerPayroll(), "deductionPerPayroll", "Deduction per payroll", MAX_AMOUNT);
-        if (deduction == null || deduction.signum() <= 0) {
-            throw Validation.invalid("deductionPerPayroll", "Deduction per payroll must be more than zero.");
-        }
-        if (deduction.compareTo(amount) > 0) {
-            throw Validation.invalid("deductionPerPayroll", "Deduction per payroll can't be more than the loan amount.");
-        }
-        LocalDate start = Validation.date(r.startDate(), "startDate", "Deduction start period", true);
-        if (start.getDayOfMonth() != 11 && start.getDayOfMonth() != 26) {
-            throw Validation.invalid("startDate", "Choose a payroll period (they start on the 11th or the 26th).");
+        LocalDate start = period(r.startDate(), "startDate", "Payment From");
+        LocalDate end = period(r.endDate(), "endDate", "Payment To");
+        if (end.isBefore(start)) {
+            throw Validation.invalid("endDate", "Payment To can't be before Payment From.");
         }
         if (staff.getDateHired() != null && periodEnd(start).isBefore(staff.getDateHired())) {
             throw Validation.invalid("startDate", "That period is before this employee was hired.");
+        }
+        int periods = periodsBetween(start, end);
+        if (periods > MAX_PERIODS) {
+            throw Validation.invalid("endDate", "The payment period can be at most " + MAX_PERIODS + " payroll periods (10 years).");
+        }
+        BigDecimal perPayroll = perPayroll(amount, periods);
+        if (perPayroll.signum() <= 0) {
+            throw Validation.invalid("amount", "The loan amount is too small for that many payroll periods.");
         }
 
         Loan l = new Loan();
@@ -100,11 +115,15 @@ public class LoanService {
         } else {
             l.setAdminstaffId(eid.number());
         }
-        l.setType(type);
+        l.setLender(lender);
+        l.setLenderName(lenderName);
+        // The type decides the payslip line: SSS LOAN, PAG-IBIG LOAN or OTHER DEDUCTIONS.
+        l.setType(lender + " Loan");
         l.setReference(reference);
         l.setAmount(amount.setScale(2, RoundingMode.HALF_UP));
-        l.setDeductionPerPayroll(deduction.setScale(2, RoundingMode.HALF_UP));
+        l.setDeductionPerPayroll(perPayroll);
         l.setStartDate(start);
+        l.setEndDate(end);
         l.setRecordedOn(LocalDate.now());
         l.setRemarks(Validation.optionalText(r.remarks(), "remarks", "Remarks", 255));
         l.setRecordedBy(userId);
@@ -116,36 +135,44 @@ public class LoanService {
     // ---------------------------------------------------------------
 
     /**
-     * The loan deductions for a pay period, per employee id: each loan that
-     * has started and still has a balance. A period already released keeps
-     * the amount it recorded.
+     * The loan deductions for a pay period, per employee id, in the order
+     * Payroll Computation applies them (government loans first, then the
+     * oldest): each loan that has started and still has a balance. A period
+     * already released keeps what it recorded (including a skip).
      */
     @Transactional(readOnly = true)
     public Map<String, List<Map<String, Object>>> deductionsFor(LocalDate from, LocalDate to) {
         Map<String, List<Map<String, Object>>> result = new HashMap<>();
-        for (Loan l : loans.findAll()) {
+        List<Loan> all = new ArrayList<>(loans.findAll());
+        all.sort(Comparator.comparing((Loan l) -> isGovernment(l) ? 0 : 1).thenComparing(Loan::getId));
+        for (Loan l : all) {
             if (l.getStartDate() == null || l.getStartDate().isAfter(to)) continue;
             List<LoanPayment> paid = payments.findByLoanIdOrderByPeriodFromAsc(l.getId());
             LoanPayment thisPeriod = paid.stream().filter(p -> p.getPeriodFrom().equals(from)).findFirst().orElse(null);
             BigDecimal amount;
+            boolean skipped = false;
             if (thisPeriod != null) {
                 amount = thisPeriod.getAmount();
+                skipped = thisPeriod.isSkipped();
             } else {
                 BigDecimal balance = l.getAmount().subtract(sum(paid));
                 if (balance.signum() <= 0) continue;
-                amount = l.getDeductionPerPayroll().min(balance);
+                amount = scheduled(l, balance);
             }
             Map<String, Object> m = new HashMap<>();
             m.put("loanId", l.getId());
             m.put("type", l.getType());
+            m.put("lender", lenderLabel(l));
             m.put("reference", l.getReference());
             m.put("amount", amount);
+            m.put("skipped", skipped);
             result.computeIfAbsent(EmployeeDirectory.idOf(l.getFacultyId(), l.getAdminstaffId()), k -> new ArrayList<>()).add(m);
         }
         return result;
     }
 
-    public record PaymentItem(Integer loanId, BigDecimal amount) {
+    /** loanId and amount deducted, or skipped (pay not enough: nothing deducted). */
+    public record PaymentItem(Integer loanId, BigDecimal amount, boolean skipped) {
     }
 
     public record PaymentRequest(String periodFrom, String periodTo, String periodLabel, List<PaymentItem> payments) {
@@ -164,7 +191,7 @@ public class LoanService {
         for (PaymentItem item : r.payments() == null ? List.<PaymentItem>of() : r.payments()) {
             Loan l = loans.findById(item.loanId() == null ? -1 : item.loanId())
                     .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Loan not found."));
-            BigDecimal amount = Validation.money(item.amount(), "amount", "Loan deduction", MAX_AMOUNT);
+            BigDecimal amount = item.skipped() ? BigDecimal.ZERO : Validation.money(item.amount(), "amount", "Loan deduction", MAX_AMOUNT);
             if (amount == null) continue;
             List<LoanPayment> paid = payments.findByLoanIdOrderByPeriodFromAsc(l.getId());
             BigDecimal otherPeriods = sum(paid.stream().filter(p -> !p.getPeriodFrom().equals(from)).toList());
@@ -173,7 +200,7 @@ public class LoanService {
                 throw Validation.invalid("amount", "The deduction for " + l.getReference() + " is more than its remaining balance.");
             }
             LoanPayment p = payments.findByLoanIdAndPeriodFrom(l.getId(), from).orElseGet(LoanPayment::new);
-            if (amount.signum() == 0) {
+            if (amount.signum() == 0 && !item.skipped()) {
                 if (p.getId() != null) payments.delete(p);
                 continue;
             }
@@ -182,6 +209,7 @@ public class LoanService {
             p.setPeriodTo(to);
             p.setPeriodLabel(label);
             p.setAmount(amount.setScale(2, RoundingMode.HALF_UP));
+            p.setSkipped(item.skipped());
             p.setRemainingBalance(balance.subtract(amount).setScale(2, RoundingMode.HALF_UP));
             p.setDateProcessed(LocalDateTime.now());
             p.setRecordedBy(userId);
@@ -202,17 +230,21 @@ public class LoanService {
 
         List<Map<String, Object>> history = new ArrayList<>();
         BigDecimal running = l.getAmount();
+        int skips = 0;
         for (LoanPayment p : paid) {
             running = running.subtract(p.getAmount());
+            if (p.isSkipped()) skips++;
             Map<String, Object> h = new HashMap<>();
             h.put("period", p.getPeriodLabel() != null ? p.getPeriodLabel() : periodLabel(p.getPeriodFrom()));
             h.put("amount", p.getAmount());
+            h.put("skipped", p.isSkipped());
             h.put("remainingBalance", running.max(BigDecimal.ZERO));
             h.put("dateProcessed", p.getDateProcessed() == null ? null : p.getDateProcessed().toLocalDate().toString());
             history.add(h);
         }
         BigDecimal deducted = sum(paid);
         BigDecimal remaining = l.getAmount().subtract(deducted).max(BigDecimal.ZERO);
+        LocalDate end = scheduledEnd(l);
 
         Map<String, Object> m = new HashMap<>();
         m.put("id", l.getId());
@@ -220,19 +252,90 @@ public class LoanService {
         m.put("employeeId", s == null ? "" : s.getEmployeeNumber());
         m.put("employeeName", s == null ? "(removed employee)" : s.getFullName());
         m.put("employeeRole", s == null ? "" : roleOf(s.staffType()));
+        m.put("employeeType", s == null ? "" : s.staffType());
         m.put("type", l.getType());
+        m.put("lender", l.getLender() != null ? l.getLender() : lenderFromType(l.getType()));
+        m.put("lenderName", l.getLenderName());
+        m.put("lenderLabel", lenderLabel(l));
         m.put("reference", l.getReference());
         m.put("amount", l.getAmount());
         m.put("deductionPerPayroll", l.getDeductionPerPayroll());
         m.put("startDate", l.getStartDate() == null ? null : l.getStartDate().toString());
         m.put("startPeriodLabel", l.getStartDate() == null ? "—" : periodLabel(l.getStartDate()));
+        m.put("endDate", end == null ? null : end.toString());
+        m.put("endPeriodLabel", end == null ? "—" : periodLabel(end));
+        // Each skipped period moves the end one period later.
+        LocalDate expectedEnd = end;
+        for (int i = 0; i < skips && expectedEnd != null; i++) expectedEnd = nextPeriod(expectedEnd);
+        m.put("expectedEndPeriodLabel", expectedEnd == null ? "—" : periodLabel(expectedEnd));
+        m.put("periods", l.getStartDate() == null || end == null ? null : periodsBetween(l.getStartDate(), end));
+        m.put("skippedPeriods", skips);
         m.put("remarks", l.getRemarks());
         m.put("recordedOn", l.getRecordedOn() == null ? null : l.getRecordedOn().toString());
         m.put("totalDeducted", deducted);
         m.put("remainingBalance", remaining);
-        m.put("status", remaining.signum() == 0 ? "Paid" : "Active");
+        m.put("status", remaining.signum() == 0 ? "Paid"
+                : l.getStartDate() != null && l.getStartDate().isAfter(LocalDate.now()) ? "Upcoming" : "Active");
         m.put("deductionHistory", history);
         return m;
+    }
+
+    /** This period's deduction: the per-payroll amount, or the balance when less (or within a peso of it). */
+    private static BigDecimal scheduled(Loan l, BigDecimal balance) {
+        BigDecimal amount = l.getDeductionPerPayroll().min(balance);
+        BigDecimal left = balance.subtract(amount);
+        return left.signum() > 0 && left.compareTo(ONE_PESO) < 0 ? balance : amount;
+    }
+
+    /** Amount ÷ periods, rounded down to the centavo; the last period takes what's left. */
+    static BigDecimal perPayroll(BigDecimal amount, int periods) {
+        return amount.divide(BigDecimal.valueOf(periods), 2, RoundingMode.DOWN);
+    }
+
+    private static boolean isGovernment(Loan l) {
+        String t = (l.getLender() != null ? l.getLender() : String.valueOf(l.getType())).toLowerCase();
+        return t.contains("sss") || t.contains("pag-ibig") || t.contains("pagibig");
+    }
+
+    private static String lenderFromType(String type) {
+        String t = type == null ? "" : type.toLowerCase();
+        return t.startsWith("sss") ? "SSS" : t.startsWith("pag-ibig") ? "Pag-IBIG" : "Other";
+    }
+
+    /** e.g. "SSS", "BDO (Bank)", "Teachers' Coop (Cooperative)". */
+    private static String lenderLabel(Loan l) {
+        String lender = l.getLender() != null ? l.getLender() : lenderFromType(l.getType());
+        return l.getLenderName() == null || l.getLenderName().isBlank() ? lender : l.getLenderName() + " (" + lender + ")";
+    }
+
+    /** The last scheduled period; for loans recorded before payment periods, from amount ÷ deduction. */
+    private static LocalDate scheduledEnd(Loan l) {
+        if (l.getEndDate() != null || l.getStartDate() == null) return l.getEndDate();
+        BigDecimal per = l.getDeductionPerPayroll();
+        if (per == null || per.signum() <= 0) return null;
+        int n = l.getAmount().divide(per, 0, RoundingMode.CEILING).intValue();
+        LocalDate end = l.getStartDate();
+        for (int i = 1; i < Math.min(n, MAX_PERIODS); i++) end = nextPeriod(end);
+        return end;
+    }
+
+    private static LocalDate period(String text, String field, String label) {
+        LocalDate d = Validation.date(text, field, label, true);
+        if (d.getDayOfMonth() != 11 && d.getDayOfMonth() != 26) {
+            throw Validation.invalid(field, "Choose a payroll period for " + label + " (they start on the 11th or the 26th).");
+        }
+        return d;
+    }
+
+    /** Payroll periods from one period start to another, both included. */
+    static int periodsBetween(LocalDate start, LocalDate end) {
+        int n = 1;
+        for (LocalDate d = start; d.isBefore(end) && n <= MAX_PERIODS; d = nextPeriod(d)) n++;
+        return n;
+    }
+
+    static LocalDate nextPeriod(LocalDate start) {
+        return start.getDayOfMonth() == 11 ? start.withDayOfMonth(26) : start.plusMonths(1).withDayOfMonth(11);
     }
 
     private static String roleOf(String staffType) {

@@ -269,6 +269,9 @@ CREATE TABLE IF NOT EXISTS loan (
     date_to       DATE,                             -- when it was fully paid
     reference_no  VARCHAR(30)   UNIQUE,             -- lender's reference number
     deduction_per_payroll DECIMAL(10,2) NOT NULL DEFAULT 0,
+    lender        VARCHAR(30),                      -- SSS | Pag-IBIG | Bank | Cooperative | Other
+    lender_name   VARCHAR(100),                     -- e.g. the bank, for Bank / Cooperative / Other
+    end_date      DATE,                             -- last payroll period scheduled to deduct it
     remarks       VARCHAR(255),
     recorded_by   INT,
     CONSTRAINT fk_loan_faculty FOREIGN KEY (faculty_id)    REFERENCES faculty_staff (faculty_id)  ON DELETE CASCADE,
@@ -284,6 +287,7 @@ CREATE TABLE IF NOT EXISTS loan_payment (
     period_label      VARCHAR(60),
     amount            DECIMAL(10,2) NOT NULL,
     remaining_balance DECIMAL(10,2) NOT NULL,       -- balance after this deduction
+    skipped           TINYINT(1)    NOT NULL DEFAULT 0, -- pay wasn't enough: nothing deducted, the loan runs one period longer
     date_processed    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
     recorded_by       INT,
     UNIQUE KEY uq_loan_payment_period (loan_id, period_from),
@@ -689,3 +693,10 @@ CREATE TABLE IF NOT EXISTS payroll_adjustment (
     CONSTRAINT fk_adjust_run     FOREIGN KEY (payroll_run_id) REFERENCES payroll_run (payroll_run_id) ON DELETE SET NULL,
     CONSTRAINT fk_adjust_user    FOREIGN KEY (recorded_by)    REFERENCES users (user_id)             ON DELETE SET NULL
 ) ENGINE=InnoDB;
+
+-- Loans: lender and payment period (Loan Management), and payroll periods
+-- skipped because the pay wasn't enough (databases created before these).
+ALTER TABLE loan ADD COLUMN IF NOT EXISTS lender VARCHAR(30) AFTER deduction_per_payroll;
+ALTER TABLE loan ADD COLUMN IF NOT EXISTS lender_name VARCHAR(100) AFTER lender;
+ALTER TABLE loan ADD COLUMN IF NOT EXISTS end_date DATE AFTER lender_name;
+ALTER TABLE loan_payment ADD COLUMN IF NOT EXISTS skipped TINYINT(1) NOT NULL DEFAULT 0 AFTER remaining_balance;

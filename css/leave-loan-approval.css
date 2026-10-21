@@ -155,3 +155,40 @@
         margin: 0 12px 12px;
     }
 }
+/* Loan status badges added with payment periods and skipped deductions */
+.loan-status-upcoming {
+    background: var(--pp-warning-bg, #fffbeb);
+    color: var(--pp-warning, #b45309);
+}
+
+.loan-status-skipped {
+    background: var(--pp-error-bg, #fef2f2);
+    color: var(--pp-error, #b91c1c);
+    min-width: 0;
+    padding: 3px 8px;
+}
+
+.loan-history-skipped td {
+    background: #fffafa;
+}
+
+/* An employee's loans: four summary cards */
+.loan-summary-grid {
+    padding: 16px 20px 4px;
+}
+
+@media (min-width: 768px) {
+    .loan-summary-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+.loan-detail-grid > .loan-detail-wide {
+    grid-column: 1 / -1;
+}
+
+/* Add Loan: amounts worked out from the form */
+.loan-computed {
+    background: var(--pp-surface-alt, #f8f9fa) !important;
+    font-weight: 600;
+}
