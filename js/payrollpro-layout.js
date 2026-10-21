@@ -68,8 +68,25 @@
             { key: 'pagibig', label: 'Pag-IBIG Remittance', icon: 'bi-house-door' },
             { key: 'bir', label: 'BIR Remittance', icon: 'bi-journal-text' },
             { key: 'loans', label: 'Loan Report', icon: 'bi-cash-coin' },
+            { key: 'leave', label: 'Leave Report', icon: 'bi-calendar2-check' },
             { key: 'employees', label: 'Employee List', icon: 'bi-people' },
             { key: 'attendance', label: 'Attendance Report', icon: 'bi-clock-history', href: 'attendance-reports.html' }
+        ]
+    };
+
+
+    // Utility → Archive: archived employees and archived deduction tables.
+    var ARCHIVE_SUBMENU = {
+        groupClass: 'pp-archive-sidebar-group',
+        linkClass: 'pp-archive-sidebar-link',
+        dataKey: 'archive',
+        hrefFor: function (key) { return 'archive.html?view=' + key; },
+        items: [
+            { key: 'employees', label: 'Employee', icon: 'bi-people' },
+            { key: 'bir', label: 'BIR Table', icon: 'bi-journal-text' },
+            { key: 'pagibig', label: 'Pag-IBIG Table', icon: 'bi-house-door' },
+            { key: 'sss', label: 'SSS Table', icon: 'bi-bank' },
+            { key: 'philhealth', label: 'PhilHealth Table', icon: 'bi-heart-pulse' }
         ]
     };
 
@@ -194,7 +211,8 @@
             id: 'archive',
             label: 'Archive',
             icon: 'bi-archive',
-            href: 'archive.html'
+            href: 'archive.html',
+            submenu: ARCHIVE_SUBMENU
         },
 
         {

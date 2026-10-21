@@ -5,6 +5,7 @@ import com.stibalayan.payroll.auth.AuthInterceptor;
 import com.stibalayan.payroll.auth.RequireModule;
 import com.stibalayan.payroll.auth.SystemModule;
 import com.stibalayan.payroll.common.ApiException;
+import com.stibalayan.payroll.contribution.ContributionTableService;
 import com.stibalayan.payroll.employee.EmployeeDirectory;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
@@ -40,6 +41,7 @@ import org.springframework.web.multipart.MultipartFile;
  * POST   /api/utility/backups/{name}/restore     { confirm: "RESTORE" }  replace the database (a backup is made first)
  * DELETE /api/utility/backups/{name}
  * GET    /api/utility/archive                    archived employees (read-only)
+ * GET    /api/utility/archive/tables/{table}     archived BIR, PhilHealth, Pag-IBIG or SSS brackets (read-only)
  */
 @RestController
 @RequestMapping("/api/utility")
@@ -49,11 +51,14 @@ public class UtilityController {
     private final BackupService backups;
     private final EmployeeDirectory employees;
     private final AuditService audit;
+    private final ContributionTableService tables;
 
-    public UtilityController(BackupService backups, EmployeeDirectory employees, AuditService audit) {
+    public UtilityController(BackupService backups, EmployeeDirectory employees, AuditService audit,
+                             ContributionTableService tables) {
         this.backups = backups;
         this.employees = employees;
         this.audit = audit;
+        this.tables = tables;
     }
 
     @GetMapping("/backups")
@@ -108,6 +113,12 @@ public class UtilityController {
         backups.delete(name);
         audit.log(AuthInterceptor.currentUser(http).id(), "Backup & Restore", "Backup deleted", name);
         return Map.of("success", true, "backups", backups.list());
+    }
+
+    /** Archived deduction table brackets (bir, philhealth, pagibig, sss), read-only. */
+    @GetMapping("/archive/tables/{table}")
+    public Map<String, Object> archivedTable(@PathVariable String table) {
+        return Map.of("success", true, "archives", tables.archived(table));
     }
 
     /** Archived employees, read-only (restoring them is done by the Payroll Master in Employee Records). */

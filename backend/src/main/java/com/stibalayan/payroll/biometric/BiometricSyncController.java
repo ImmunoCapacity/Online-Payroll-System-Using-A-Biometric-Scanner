@@ -11,9 +11,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * POST /api/biometric/sync — pull attendance from the K40 into the DTR.
- * Part of the Daily Time Record module; called by the "Sync Device" button on dtr.html.
+ * Utility (System Administrator); called by the "Sync Device" button on biometric-devices.html.
  *
- * GET /api/biometric/status — live sync state; dtr.html polls it and reloads
+ * GET /api/biometric/status — live sync state; dtr.html and biometric-devices.html poll it; dtr.html reloads
  * the table when "changes" goes up.
  */
 @RestController
@@ -29,13 +29,13 @@ public class BiometricSyncController {
     }
 
     @PostMapping("/sync")
-    @RequireModule(SystemModule.DAILY_TIME_RECORD)
+    @RequireModule(SystemModule.UTILITY)
     public Map<String, Object> sync() {
         return liveSync.syncNow();
     }
 
     @GetMapping("/status")
-    @RequireModule(SystemModule.DAILY_TIME_RECORD)
+    @RequireModule(SystemModule.SCANNER_STATUS)
     public Map<String, Object> status() {
         Map<String, Object> status = new LinkedHashMap<>();
         status.put("live", liveSync.isEnabled());

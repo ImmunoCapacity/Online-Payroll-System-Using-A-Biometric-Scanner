@@ -58,6 +58,13 @@ public class AuditController {
         return result;
     }
 
+    /** Dashboard → Recent Activity: the latest payroll, attendance, leave, loan and employee record changes. */
+    @GetMapping("/activity")
+    @RequireModule(SystemModule.DASHBOARD)
+    public Map<String, Object> activity(@RequestParam(defaultValue = "8") int limit) {
+        return Map.of("success", true, "entries", audit.activity(Math.max(1, Math.min(limit, 50))));
+    }
+
     @GetMapping("/latest")
     @RequireModule(SystemModule.MAINTENANCE)
     public Map<String, Object> latest(@RequestParam String modules) {

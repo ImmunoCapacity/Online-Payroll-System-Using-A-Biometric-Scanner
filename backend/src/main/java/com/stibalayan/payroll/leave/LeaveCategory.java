@@ -7,7 +7,11 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
-/** Leave Category Maintenance (paper 5.3): a kind of leave and its rules. */
+/**
+ * Leave Category Maintenance (paper 5.3): a kind of leave, paid or unpaid,
+ * and for paid leave how many days a year each employee is paid for (their
+ * leave credits of this type).
+ */
 @Entity
 @Table(name = "leave_category")
 public class LeaveCategory {
@@ -26,13 +30,9 @@ public class LeaveCategory {
     @Column(name = "is_active", nullable = false)
     private boolean active = true;
 
-    /** Most working days one request may cover; null = no limit. */
-    @Column(name = "max_days")
-    private Integer maxDays;
-
-    /** Whether approved days count against the employee's yearly leave credits. */
-    @Column(name = "uses_credits", nullable = false)
-    private boolean usesCredits;
+    /** Paid leave: days a year each employee is paid for; null for unpaid leave. */
+    @Column(name = "paid_days")
+    private Integer paidDays;
 
     public Integer getId() { return id; }
     public String getName() { return name; }
@@ -41,8 +41,6 @@ public class LeaveCategory {
     public void setPaid(boolean paid) { this.paid = paid; }
     public boolean isActive() { return active; }
     public void setActive(boolean active) { this.active = active; }
-    public Integer getMaxDays() { return maxDays; }
-    public void setMaxDays(Integer maxDays) { this.maxDays = maxDays; }
-    public boolean isUsesCredits() { return usesCredits; }
-    public void setUsesCredits(boolean usesCredits) { this.usesCredits = usesCredits; }
+    public Integer getPaidDays() { return paidDays; }
+    public void setPaidDays(Integer paidDays) { this.paidDays = paidDays; }
 }

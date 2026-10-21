@@ -60,6 +60,10 @@
             title: 'Loan Report', breadcrumb: 'Loan Report', parent: 'Payroll',
             description: 'Loan balances and deduction history of admin and faculty staff.'
         },
+        leave: {
+            title: 'Leave Report', breadcrumb: 'Leave Report', parent: 'Employees',
+            description: 'Leave taken by each employee per leave type: the dates, paid and unpaid days, and the paid days left for the year.'
+        },
         employees: {
             title: 'Employee List Report', breadcrumb: 'Employee List', parent: 'Employees',
             description: 'Complete list of admin and faculty staff and their employment details.'
@@ -401,7 +405,7 @@
     /* Loan Report (paper, 8.5): balances and deduction history, from the database via api/loans */
     function renderLoanReport() {
         var columns = [col('EMP. ID'), col('EMPLOYEE', TEXT, true), col('LENDER'), col('REFERENCE'),
-            col('LOAN AMOUNT', MONEY), col('PER PAYROLL', MONEY), col('TOTAL DEDUCTED', MONEY), col('BALANCE', MONEY, true)];
+            col('LOAN AMOUNT', MONEY), col('INTEREST', MONEY), col('MONTHLY', MONEY), col('TOTAL DEDUCTED', MONEY), col('BALANCE', MONEY, true)];
         showLoading(columns, 'Loading loans…');
 
         fetch('api/loans')
@@ -418,10 +422,10 @@
                 });
                 var rows = loans.map(function (l) {
                     return [l.employeeId, l.employeeName, l.lenderLabel || l.type, l.reference || '',
-                        number(l.amount), number(l.deductionPerPayroll), number(l.totalDeducted), number(l.remainingBalance)];
+                        number(l.amount), number(l.interestAmount), number(l.deductionPerPayroll), number(l.totalDeducted), number(l.remainingBalance)];
                 });
                 var totals = sumColumns(rows, columns);
-                totals[5] = null; // a sum of per-payroll amounts means nothing
+                totals[6] = null; // a sum of monthly amounts means nothing
                 show(columns, rows, totals);
             })
             .catch(function () {
@@ -466,6 +470,88 @@
     }
 
 
+    /* Leave Report: recorded leave (api/leave/requests) for the chosen year,
+       one row per employee and leave type, with the paid days left of that
+       type (Maintenance → Leave Categories). Read live, so leave recorded in
+       Leave Management shows here right away. */
+    var leaveYear = $('leaveYear');
+
+    (function fillLeaveYears() {
+        var now = new Date().getFullYear();
+        for (var y = now + 1; y >= now - 4; y--) {
+            leaveYear.add(new Option(String(y), String(y), false, y === now));
+        }
+    })();
+
+    function shortDate(iso) {
+        var p = iso.split('-').map(Number);
+        return new Date(p[0], p[1] - 1, p[2]).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+
+    function leaveDates(l) {
+        return l.dateFrom === l.dateTo ? shortDate(l.dateFrom) : shortDate(l.dateFrom) + '–' + shortDate(l.dateTo);
+    }
+
+    function renderLeaveReport() {
+        var columns = [col('EMP. ID'), col('EMPLOYEE', TEXT, true), col('TYPE'), col('LEAVE TYPE'), col('DATES'),
+            col('PAID DAYS', NUM), col('UNPAID DAYS', NUM), col('PAID DAYS LEFT')];
+        showLoading(columns, 'Loading leave…');
+        var year = leaveYear.value;
+
+        Promise.all([
+            fetch('api/leave/requests').then(function (r) { return r.json(); }),
+            fetch('api/leave/categories').then(function (r) { return r.json(); })
+        ]).then(function (results) {
+            if (currentReport !== 'leave' || leaveYear.value !== year) return;
+            if (!results[0].success) throw new Error(results[0].message);
+            if (!results[1].success) throw new Error(results[1].message);
+            var categories = {};
+            results[1].categories.forEach(function (c) { categories[c.id] = c; });
+
+            var selectedType = employeeType.value;
+            var search = reportSearch.value.trim().toLowerCase();
+            var groups = {};
+            results[0].requests
+                .filter(function (l) {
+                    var typeMatch = selectedType === 'all' ||
+                        (selectedType === 'both' && l.employeeType === 'Faculty/Admin') ||
+                        String(l.employeeType).toLowerCase() === selectedType;
+                    var searchMatch = !search ||
+                        String(l.employeeName).toLowerCase().includes(search) ||
+                        String(l.employeeNumber).toLowerCase().includes(search);
+                    return l.dateFrom.slice(0, 4) === year && typeMatch && searchMatch;
+                })
+                .sort(function (a, b) { return a.dateFrom.localeCompare(b.dateFrom); })
+                .forEach(function (l) {
+                    var key = l.employeeId + '|' + l.categoryId;
+                    var g = groups[key] || (groups[key] = {
+                        id: l.employeeNumber, name: l.employeeName, type: l.employeeType, category: l.category,
+                        categoryId: l.categoryId, dates: [], paid: 0, unpaid: 0
+                    });
+                    g.dates.push(leaveDates(l) + (l.paid ? '' : ' (unpaid)'));
+                    if (l.paid) g.paid += Number(l.days) || 0; else g.unpaid += Number(l.days) || 0;
+                });
+
+            var rows = Object.keys(groups).map(function (k) { return groups[k]; })
+                .sort(function (a, b) { return a.name.localeCompare(b.name) || a.category.localeCompare(b.category); })
+                .map(function (g) {
+                    var c = categories[g.categoryId];
+                    var left = c && c.paid && c.paidDays != null
+                        ? Math.max(0, c.paidDays - g.paid) + ' of ' + c.paidDays : '—';
+                    return [g.id, g.name, g.type, g.category, g.dates.join(', '), g.paid, g.unpaid, left];
+                });
+            var totals = sumColumns(rows, columns);
+            show(columns, rows, totals, 'No leave recorded for ' + year + ' with the selected filters.');
+        }).catch(function (error) {
+            console.error('[Reports] Leave report failed:', error);
+            if (currentReport !== 'leave') return;
+            showLoading(columns, 'Could not load leave from the server.');
+        });
+    }
+
+    leaveYear.addEventListener('change', function () { selectReport(currentReport); });
+
+
     /* Select report */
     function selectReport(reportKey) {
         var def = reportDefinitions[reportKey];
@@ -478,7 +564,13 @@
         reportBreadcrumb.textContent = def.breadcrumb;
         reportDescription.textContent = def.description;
 
-        if (reportKey === 'loans') {
+        // Leave is by year; the payroll period filter doesn't apply to it.
+        $('leaveYearFilter').classList.toggle('d-none', reportKey !== 'leave');
+        $('payrollPeriodFilter').classList.toggle('d-none', reportKey === 'leave');
+
+        if (reportKey === 'leave') {
+            renderLeaveReport();
+        } else if (reportKey === 'loans') {
             renderLoanReport();
         } else if (reportKey === 'employees') {
             renderEmployeeListReport();
@@ -518,6 +610,8 @@
             var p = payrollPeriod.value;
             var match = p === 'all' ? null : payrollRecords.find(function (r) { return r.periodLabel === p; });
             lines.push('Year: ' + (match ? match.periodEnd.slice(0, 4) : 'All years'));
+        } else if (currentReport === 'leave') {
+            lines.push('Year: ' + leaveYear.value);
         } else if (currentReport !== 'loans' && currentReport !== 'employees') {
             lines.push(payrollPeriod.value === 'all'
                 ? 'All released payroll periods' : 'Payroll period: ' + payrollPeriod.selectedOptions[0].textContent.trim());

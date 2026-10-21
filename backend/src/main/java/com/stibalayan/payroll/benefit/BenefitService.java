@@ -60,9 +60,9 @@ public class BenefitService {
         if (taken) {
             throw Validation.invalid("name", "A benefit with this name already exists.");
         }
-        BigDecimal amount = Validation.money(r.defaultAmount(), "defaultAmount", "Default amount", MAX_AMOUNT);
+        BigDecimal amount = Validation.money(r.defaultAmount(), "defaultAmount", "Amount", MAX_AMOUNT);
         if (amount == null) {
-            throw Validation.invalid("defaultAmount", "Default amount is required.");
+            throw Validation.invalid("defaultAmount", "Amount is required.");
         }
         b.setName(name);
         b.setDefaultAmount(amount.setScale(2, RoundingMode.HALF_UP));

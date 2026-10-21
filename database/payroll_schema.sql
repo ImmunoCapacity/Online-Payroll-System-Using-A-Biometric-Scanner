@@ -265,13 +265,15 @@ CREATE TABLE IF NOT EXISTS loan (
     loan_type     VARCHAR(50)   NOT NULL,           -- SSS Loan | Pag-IBIG Loan | Personal Loan
     loan_amount   DECIMAL(10,2) NOT NULL,
     `current_date` DATE         NOT NULL,           -- date the loan was recorded/approved
-    date_from     DATE,                             -- first payroll period that deducts it
+    date_from     DATE,                             -- Payment From: first month deducted
     date_to       DATE,                             -- when it was fully paid
     reference_no  VARCHAR(30)   UNIQUE,             -- lender's reference number
     deduction_per_payroll DECIMAL(10,2) NOT NULL DEFAULT 0,
-    lender        VARCHAR(30),                      -- SSS | Pag-IBIG | Bank | Cooperative | Other
+    lender        VARCHAR(100),                     -- who lent it, as typed (SSS, Pag-IBIG, BDO, ...)
     lender_name   VARCHAR(100),                     -- e.g. the bank, for Bank / Cooperative / Other
-    end_date      DATE,                             -- last payroll period scheduled to deduct it
+    end_date      DATE,                             -- Payment To: last month deducted
+    interest_rate DECIMAL(5,2)  NOT NULL DEFAULT 0, -- percent of the amount, for the whole loan
+    total_payable DECIMAL(10,2),                    -- amount plus interest (deducted once a month, 11th-25th payroll)
     remarks       VARCHAR(255),
     recorded_by   INT,
     CONSTRAINT fk_loan_faculty FOREIGN KEY (faculty_id)    REFERENCES faculty_staff (faculty_id)  ON DELETE CASCADE,
@@ -404,16 +406,15 @@ CREATE TABLE IF NOT EXISTS leave_category (
     category_name     VARCHAR(50) NOT NULL UNIQUE,  -- sick, vacation, maternity, paternity, ...
     is_paid           TINYINT(1)  NOT NULL DEFAULT 1,
     is_active         TINYINT(1)  NOT NULL DEFAULT 1,
-    max_days          INT,                          -- most working days one request may cover
-    uses_credits      TINYINT(1)  NOT NULL DEFAULT 0 -- counts against the yearly leave credits
+    paid_days         INT                           -- paid leave: days a year each employee is paid for (their credits)
 ) ENGINE=InnoDB;
 
-INSERT IGNORE INTO leave_category (category_name, is_paid, is_active, max_days, uses_credits) VALUES
-    ('Sick Leave', 1, 1, 15, 1),
-    ('Vacation Leave', 1, 1, 15, 1),
-    ('Maternity Leave', 1, 1, 105, 0),
-    ('Paternity Leave', 1, 1, 7, 0),
-    ('Leave Without Pay', 0, 1, 30, 0);
+INSERT IGNORE INTO leave_category (category_name, is_paid, is_active, paid_days) VALUES
+    ('Sick Leave', 1, 1, 15),
+    ('Vacation Leave', 1, 1, 15),
+    ('Maternity Leave', 1, 1, 105),
+    ('Paternity Leave', 1, 1, 7),
+    ('Leave Without Pay', 0, 1, NULL);
 
 -- 13. Leave credits per employee (Employee Records Management: "manage the
 --     number of leave credits allocated per employee"; interview: 15 days).
@@ -700,3 +701,13 @@ ALTER TABLE loan ADD COLUMN IF NOT EXISTS lender VARCHAR(30) AFTER deduction_per
 ALTER TABLE loan ADD COLUMN IF NOT EXISTS lender_name VARCHAR(100) AFTER lender;
 ALTER TABLE loan ADD COLUMN IF NOT EXISTS end_date DATE AFTER lender_name;
 ALTER TABLE loan_payment ADD COLUMN IF NOT EXISTS skipped TINYINT(1) NOT NULL DEFAULT 0 AFTER remaining_balance;
+ALTER TABLE loan MODIFY COLUMN lender VARCHAR(100);
+ALTER TABLE loan ADD COLUMN IF NOT EXISTS interest_rate DECIMAL(5,2) NOT NULL DEFAULT 0 AFTER end_date;
+ALTER TABLE loan ADD COLUMN IF NOT EXISTS total_payable DECIMAL(10,2) AFTER interest_rate;
+-- Leave categories: paid leave has its own paid days a year (replaces max days per request and the shared credits).
+ALTER TABLE leave_category ADD COLUMN IF NOT EXISTS paid_days INT AFTER is_active;
+-- Deduction tables: a year's brackets are archived (archived_at set) when the government changes them.
+ALTER TABLE bir_table ADD COLUMN IF NOT EXISTS archived_at DATETIME NULL;
+ALTER TABLE philhealth_table ADD COLUMN IF NOT EXISTS archived_at DATETIME NULL;
+ALTER TABLE pagibig_table ADD COLUMN IF NOT EXISTS archived_at DATETIME NULL;
+ALTER TABLE sss_table ADD COLUMN IF NOT EXISTS archived_at DATETIME NULL;

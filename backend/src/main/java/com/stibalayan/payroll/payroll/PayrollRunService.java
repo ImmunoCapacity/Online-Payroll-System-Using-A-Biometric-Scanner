@@ -322,7 +322,9 @@ public class PayrollRunService {
         BigDecimal hours = BigDecimal.ZERO;
         for (Object o : list(e.get("earnings"))) {
             Map<?, ?> l = (Map<?, ?>) o;
-            BigDecimal h = check(money(l.get("hours")), "hours");
+            // A Payroll Adjustment that deducts hours is a negative line.
+            boolean adjustment = String.valueOf(l.get("label")).startsWith("Adjustment:");
+            BigDecimal h = adjustment ? checkSigned(money(l.get("hours")), "hours") : check(money(l.get("hours")), "hours");
             BigDecimal rate = check(money(l.get("rate")), "rate");
             BigDecimal amount = h.multiply(rate).setScale(2, RoundingMode.HALF_UP);
             Map<String, Object> line = new LinkedHashMap<>();
@@ -336,6 +338,9 @@ public class PayrollRunService {
             if (!String.valueOf(line.get("label")).toLowerCase().startsWith("holiday")) {
                 hours = hours.add(h);
             }
+        }
+        if (gross.signum() < 0) {
+            throw Validation.invalid("earnings", s.getFullName() + ": the payroll adjustment deducts more than the pay for this cut-off.");
         }
         List<Map<String, Object>> benefits = new ArrayList<>();
         BigDecimal benefitTotal = BigDecimal.ZERO;
@@ -507,6 +512,14 @@ public class PayrollRunService {
         } catch (NumberFormatException e) {
             throw Validation.invalid("employees", "A payroll amount is not a number.");
         }
+    }
+
+    /** Like check(), but may be negative (a Payroll Adjustment that deducts hours). */
+    private static BigDecimal checkSigned(BigDecimal value, String field) {
+        if (value.abs().compareTo(MAX) > 0) {
+            throw Validation.invalid(field, "A payroll amount is out of range.");
+        }
+        return value;
     }
 
     private static BigDecimal check(BigDecimal value, String field) {

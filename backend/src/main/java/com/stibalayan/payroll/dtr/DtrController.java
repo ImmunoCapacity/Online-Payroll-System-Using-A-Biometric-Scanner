@@ -1,5 +1,6 @@
 package com.stibalayan.payroll.dtr;
 
+import com.stibalayan.payroll.audit.AuditService;
 import com.stibalayan.payroll.auth.AuthInterceptor;
 import com.stibalayan.payroll.auth.RequireModule;
 import com.stibalayan.payroll.auth.SystemModule;
@@ -26,8 +27,10 @@ public class DtrController {
 
     private final DtrService dtrService;
     private final AttendanceSummaryService summaries;
+    private final AuditService audit;
 
-    public DtrController(DtrService dtrService, AttendanceSummaryService summaries) {
+    public DtrController(DtrService dtrService, AttendanceSummaryService summaries, AuditService audit) {
+        this.audit = audit;
         this.dtrService = dtrService;
         this.summaries = summaries;
     }
@@ -78,6 +81,9 @@ public class DtrController {
     @RequireModule(SystemModule.ATTENDANCE_RECORDING)
     public Map<String, Object> manualEntry(@RequestBody ManualEntryRequest request, HttpServletRequest http) {
         int userId = AuthInterceptor.currentUser(http).id();
-        return Map.of("success", true, "record", dtrService.saveManualEntry(request, userId));
+        DtrRow row = dtrService.saveManualEntry(request, userId);
+        audit.log(userId, "Attendance Recording", "Manual entry", row.employeeName() + " · " + row.date() + " · "
+                + (row.timeIn() == null ? "—" : row.timeIn()) + " to " + (row.timeOut() == null ? "—" : row.timeOut()));
+        return Map.of("success", true, "record", row);
     }
 }

@@ -1,5 +1,6 @@
 package com.stibalayan.payroll.loan;
 
+import com.stibalayan.payroll.audit.AuditService;
 import com.stibalayan.payroll.auth.AuthInterceptor;
 import com.stibalayan.payroll.auth.RequireModule;
 import com.stibalayan.payroll.auth.SystemModule;
@@ -25,8 +26,10 @@ import org.springframework.web.bind.annotation.RestController;
 public class LoanController {
 
     private final LoanService loans;
+    private final AuditService audit;
 
-    public LoanController(LoanService loans) {
+    public LoanController(LoanService loans, AuditService audit) {
+        this.audit = audit;
         this.loans = loans;
     }
 
@@ -37,6 +40,10 @@ public class LoanController {
 
     @PostMapping
     public Map<String, Object> create(@RequestBody LoanService.LoanRequest request, HttpServletRequest http) {
-        return Map.of("success", true, "loan", loans.create(request, AuthInterceptor.currentUser(http).id()));
+        int userId = AuthInterceptor.currentUser(http).id();
+        Map<String, Object> loan = loans.create(request, userId);
+        audit.log(userId, "Loan Management", "Added loan", loan.get("employeeName") + " · " + loan.get("lenderLabel")
+                + " · ₱" + String.format("%,.2f", (java.math.BigDecimal) loan.get("totalPayable")));
+        return Map.of("success", true, "loan", loan);
     }
 }

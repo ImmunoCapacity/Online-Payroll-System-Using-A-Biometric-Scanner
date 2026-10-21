@@ -2,15 +2,16 @@
  * Loan Management (api/employees, api/loans).
  *
  *   1. Employees: one row per employee with their active loans, what is
- *      deducted every payroll and the remaining balance.
+ *      deducted every month and the remaining balance.
  *   2. Click an employee: their loans, with Add Loan.
- *   3. Click a loan: its details and deduction history (skipped periods too).
+ *   3. Click a loan: its details and deduction history (skipped months too).
  *
- * Add Loan takes the lender, reference, amount and payment period (first and
- * last payroll period); the deduction per payroll is the amount spread over
- * those periods, the last one taking the leftover centavos (worked out again
- * by the server). Payroll Computation deducts it every period; when the pay
- * isn't enough, it is skipped and flagged, and the loan runs one period longer.
+ * Add Loan takes the lender, reference, amount, interest and payment period
+ * (Payment From and Payment To dates); the amount plus interest is divided
+ * by the months in between, the last month taking the leftover centavos
+ * (worked out again by the server). Payroll Computation deducts it once a
+ * month, in the 11th–25th payroll; when the pay isn't enough, it is skipped
+ * and flagged, and the loan runs one month longer.
  */
 (function () {
     'use strict';
@@ -59,35 +60,10 @@
         return (parts[0].charAt(0) + (parts.length > 1 ? parts[parts.length - 1].charAt(0) : '')).toUpperCase();
     }
 
-    function iso(d) {
-        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-    }
 
     function parseIso(text) {
         var p = text.split('-').map(Number);
         return new Date(p[0], p[1] - 1, p[2]);
-    }
-
-    /** Payroll periods start on the 11th (to the 25th) or the 26th (to the 10th). */
-    function periodStartOn(date) {
-        return date.getDate() >= 26 ? new Date(date.getFullYear(), date.getMonth(), 26)
-            : date.getDate() >= 11 ? new Date(date.getFullYear(), date.getMonth(), 11)
-            : new Date(date.getFullYear(), date.getMonth() - 1, 26);
-    }
-
-    function nextPeriod(start) {
-        return start.getDate() === 11
-            ? new Date(start.getFullYear(), start.getMonth(), 26)
-            : new Date(start.getFullYear(), start.getMonth() + 1, 11);
-    }
-
-    function periodLabel(start) {
-        var end = start.getDate() === 11
-            ? new Date(start.getFullYear(), start.getMonth(), 25)
-            : new Date(start.getFullYear(), start.getMonth() + 1, 10);
-        return MONTHS[start.getMonth()].slice(0, 3) + ' ' + start.getDate() +
-            (start.getFullYear() === end.getFullYear() ? '' : ', ' + start.getFullYear()) +
-            ' – ' + MONTHS[end.getMonth()].slice(0, 3) + ' ' + end.getDate() + ', ' + end.getFullYear();
     }
 
     function isOpen(loan) {
@@ -106,7 +82,7 @@
                 : '<span class="loan-status loan-status-active">Active</span>';
         if (loan.skippedPeriods) {
             badge += ' <span class="loan-status loan-status-skipped" title="Pay wasn\'t enough in ' + loan.skippedPeriods +
-                ' period' + (loan.skippedPeriods === 1 ? '' : 's') + '">Skipped ' + loan.skippedPeriods + '×</span>';
+                ' month' + (loan.skippedPeriods === 1 ? '' : 's') + '">Skipped ' + loan.skippedPeriods + '×</span>';
         }
         return badge;
     }
@@ -231,7 +207,7 @@
             return '<tr class="pp-row-clickable" tabindex="0" role="button" data-loan-id="' + l.id + '" aria-label="Loan ' + escapeHtml(l.reference) + '">' +
                 '<td><strong>' + escapeHtml(l.lenderLabel || l.type) + '</strong></td>' +
                 '<td>' + escapeHtml(l.reference) + '</td>' +
-                '<td class="text-end loan-money">' + peso(l.amount) + '</td>' +
+                '<td class="text-end loan-money">' + peso(l.totalPayable) + '</td>' +
                 '<td>' + escapeHtml(l.startPeriodLabel) + '<br><span class="text-muted small">to ' + escapeHtml(l.endPeriodLabel) + '</span></td>' +
                 '<td class="text-end">' + (l.periods || '—') + '</td>' +
                 '<td class="text-end loan-money">' + peso(l.deductionPerPayroll) + '</td>' +
@@ -270,15 +246,14 @@
         el('detailLender').textContent = loan.lenderLabel || loan.type;
         el('detailReference').textContent = loan.reference;
         el('detailPeriod').textContent = loan.startPeriodLabel + ' to ' + loan.endPeriodLabel +
-            (loan.periods ? ' (' + loan.periods + ' periods)' : '');
+            (loan.periods ? ' (' + loan.periods + ' month' + (loan.periods === 1 ? '' : 's') + ')' : '');
         el('detailDeduction').textContent = peso(loan.deductionPerPayroll);
         el('detailSkippedWrap').classList.toggle('d-none', !loan.skippedPeriods);
         el('detailSkipped').textContent = loan.skippedPeriods
             ? loan.skippedPeriods + ' (pay wasn\'t enough) — now expected to end ' + loan.expectedEndPeriodLabel
             : '';
-        el('detailRemarksWrap').classList.toggle('d-none', !loan.remarks);
-        el('detailRemarks').textContent = loan.remarks || '';
-        el('detailLoanAmount').textContent = peso(loan.amount);
+        el('detailInterest').textContent = Number(loan.interestRate) ? Number(loan.interestRate) + '% of ' + peso(loan.amount) + ' = ' + peso(loan.interestAmount) : 'None';
+        el('detailLoanAmount').textContent = peso(loan.totalPayable);
         el('detailTotalDeducted').textContent = peso(loan.totalDeducted);
         el('detailRemainingBalance').textContent = peso(loan.remainingBalance);
 
@@ -328,67 +303,40 @@
                 }).join('');
     }
 
-    /** Payment From: two periods back (a loan already running) to two years ahead. */
-    function populateStartPeriods() {
-        var start = periodStartOn(new Date());
-        for (var i = 0; i < 2; i++) start = periodStartOn(new Date(start.getFullYear(), start.getMonth(), start.getDate() - 1));
-        var current = iso(periodStartOn(new Date()));
-        var options = '<option value="" selected hidden data-hint>First payroll period</option>';
-        for (var n = 0; n < 50; n++) {
-            options += '<option value="' + iso(start) + '">' + periodLabel(start) + (iso(start) === current ? ' (current)' : '') + '</option>';
-            start = nextPeriod(start);
-        }
-        el('loanStartPeriod').innerHTML = options;
+    /** Months from Payment From to Payment To, both included (Nov 1 – Apr 30 is 6). */
+    function monthsBetween(from, to) {
+        var a = parseIso(from), b = parseIso(to);
+        return (b.getFullYear() - a.getFullYear()) * 12 + b.getMonth() - a.getMonth() + 1;
     }
 
-    /** Payment To: from Payment From up to 10 years (240 periods). */
-    function populateEndPeriods() {
-        var select = el('loanEndPeriod');
-        var from = el('loanStartPeriod').value;
-        var keep = select.value;
-        if (!from) {
-            select.innerHTML = '<option value="" selected hidden data-hint>Last payroll period</option>';
-            select.disabled = true;
-            return;
-        }
-        var start = parseIso(from);
-        var options = '<option value="" hidden data-hint>Last payroll period</option>';
-        for (var n = 1; n <= 240; n++) {
-            options += '<option value="' + iso(start) + '" data-periods="' + n + '">' + periodLabel(start) +
-                ' · ' + n + ' period' + (n === 1 ? '' : 's') + '</option>';
-            start = nextPeriod(start);
-        }
-        select.innerHTML = options;
-        select.disabled = false;
-        select.value = keep && keep >= from ? keep : '';
+    function monthLabel(isoDate) {
+        var d = parseIso(isoDate);
+        return MONTHS[d.getMonth()] + ' ' + d.getFullYear();
     }
 
-    /** Number of periods and the deduction per payroll, as the server works them out. */
+    /** The deduction per payroll, as the server works it out: (amount + interest) ÷ months. */
     function updateComputed() {
         var amount = parseFloat(el('loanAmount').value);
-        var option = el('loanEndPeriod').selectedOptions[0];
-        var periods = option && option.dataset.periods ? parseInt(option.dataset.periods, 10) : 0;
-        el('loanPeriods').value = periods || '—';
-        if (!(amount > 0) || !periods) {
+        var rate = parseFloat(el('loanInterest').value) || 0;
+        var from = el('loanStartDate').value;
+        var to = el('loanEndDate').value;
+        el('loanEndDate').min = from || '';
+        var months = from && to && to >= from ? monthsBetween(from, to) : 0;
+        if (!(amount > 0) || !months || rate < 0) {
             el('loanPerPayroll').value = '—';
             el('loanPerPayrollHint').textContent = '';
             return;
         }
         var cents = Math.round(amount * 100);
-        var per = Math.floor(cents / periods);
-        var last = cents - per * (periods - 1);
+        var total = cents + Math.round(cents * rate / 100);
+        var per = Math.floor(total / months);
+        var last = total - per * (months - 1);
         el('loanPerPayroll').value = peso(per / 100);
-        el('loanPerPayrollHint').textContent = periods > 1 && last !== per
-            ? peso(amount) + ' ÷ ' + periods + '; the last period deducts ' + peso(last / 100) + '.'
-            : peso(amount) + ' ÷ ' + periods + '.';
-    }
-
-    function updateLenderName() {
-        var lender = el('loanLender').value;
-        var named = lender === 'Bank' || lender === 'Cooperative' || lender === 'Other';
-        el('loanLenderNameGroup').classList.toggle('d-none', !named);
-        el('loanLenderNameLabel').textContent = lender === 'Bank' ? 'Bank Name' : lender === 'Cooperative' ? 'Cooperative Name' : 'Lender Name';
-        el('loanLenderName').placeholder = lender === 'Bank' ? 'e.g. BDO' : lender === 'Cooperative' ? 'e.g. STI Employees Cooperative' : 'e.g. company cash advance';
+        el('loanPerPayrollHint').textContent =
+            (rate ? peso(amount) + ' + ' + rate + '% interest = ' + peso(total / 100) : peso(total / 100)) +
+            ' ÷ ' + months + ' month' + (months === 1 ? '' : 's') +
+            ' (' + monthLabel(from) + (months > 1 ? ' – ' + monthLabel(to) : '') + '), deducted in the 11th–25th payroll' +
+            (months > 1 && last !== per ? '; the last month deducts ' + peso(last / 100) + '.' : '.');
     }
 
     function openAddLoan(employeeId) {
@@ -398,18 +346,20 @@
         el('loanEmployee').value = employeeId || '';
         var e = employees.find(function (x) { return x.id === employeeId; });
         el('recordLoanTitle').textContent = e ? 'Add Loan — ' + e.name : 'Add Loan';
-        updateLenderName();
-        populateEndPeriods();
         updateComputed();
         modal.show();
     }
 
     el('btnAddLoan').addEventListener('click', function () { openAddLoan(currentEmployeeId); });
     el('btnAddLoanAny').addEventListener('click', function () { openAddLoan(null); });
-    el('loanLender').addEventListener('change', updateLenderName);
-    el('loanStartPeriod').addEventListener('change', function () { populateEndPeriods(); updateComputed(); });
-    el('loanEndPeriod').addEventListener('change', updateComputed);
-    el('loanAmount').addEventListener('input', updateComputed);
+    ['loanStartDate', 'loanEndDate'].forEach(function (id) { el(id).addEventListener('change', updateComputed); });
+    ['loanAmount', 'loanInterest'].forEach(function (id) { el(id).addEventListener('input', updateComputed); });
+
+    el('loanEndDate').ppValidator = function (value) {
+        var from = el('loanStartDate').value;
+        if (from && value < from) return 'Payment To can\'t be before Payment From.';
+        return from && monthsBetween(from, value) > 120 ? 'The payment period can be at most 120 months (10 years).' : '';
+    };
 
     el('loanReference').ppValidator = function (value) {
         if (!/^[A-Za-z0-9][A-Za-z0-9\/-]*$/.test(value)) {
@@ -426,7 +376,7 @@
         var employeeId = el('loanEmployee').value;
         var employee = employees.find(function (e) { return e.id === employeeId; });
         if (!employee) return;
-        var lender = el('loanLender').value;
+        var lender = el('loanLender').value.trim();
         var submit = form.querySelector('button[type="submit"]');
         submit.disabled = true;
 
@@ -436,25 +386,24 @@
             body: JSON.stringify({
                 employeeId: employeeId,
                 lender: lender,
-                lenderName: el('loanLenderNameGroup').classList.contains('d-none') ? null : el('loanLenderName').value.trim(),
                 reference: el('loanReference').value.trim(),
                 amount: parseFloat(el('loanAmount').value),
-                startDate: el('loanStartPeriod').value,
-                endDate: el('loanEndPeriod').value,
-                remarks: el('loanRemarks').value.trim()
+                interestRate: parseFloat(el('loanInterest').value) || 0,
+                startDate: el('loanStartDate').value,
+                endDate: el('loanEndDate').value
             })
         }).then(function (data) {
             submit.disabled = false;
             if (!data.success) {
                 var fields = {
-                    employeeId: 'loanEmployee', lender: 'loanLender', lenderName: 'loanLenderName', reference: 'loanReference',
-                    amount: 'loanAmount', startDate: 'loanStartPeriod', endDate: 'loanEndPeriod', remarks: 'loanRemarks'
+                    employeeId: 'loanEmployee', lender: 'loanLender', reference: 'loanReference', interestRate: 'loanInterest',
+                    amount: 'loanAmount', startDate: 'loanStartDate', endDate: 'loanEndDate'
                 };
                 if (!PPValidate.showServerError(form, data, fields)) PPToast.error(data.message || 'Could not save the loan.');
                 return;
             }
             modal.hide();
-            PPToast.success('Loan saved for ' + employee.name + ': ' + peso(data.loan.deductionPerPayroll) + ' per payroll.');
+            PPToast.success('Loan saved for ' + employee.name + ': ' + peso(data.loan.deductionPerPayroll) + ' a month.');
             currentEmployeeId = employeeId;
             loadData().then(function () { showEmployee(employeeId); });
         }).catch(function () {
@@ -463,7 +412,6 @@
         });
     });
 
-    populateStartPeriods();
     showView('loanManagementView');
     loadData();
 })();

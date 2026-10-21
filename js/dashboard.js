@@ -72,11 +72,8 @@
 
     var holidaysByYear = {};
 
-    var HOLIDAY_CLASS = {
-        'Regular Holiday': 'payroll-calendar-day-holiday-regular',
-        'Special Non-Working Day': 'payroll-calendar-day-holiday-special',
-        'Special Working Day': 'payroll-calendar-day-holiday-working'
-    };
+    // Every holiday is marked the same way (the type shows in its tooltip).
+    var HOLIDAY_CLASS = 'payroll-holiday-mark';
 
     function isoDate(year, month, day) {
         return year + '-' + String(month + 1).padStart(2, '0') + '-' + String(day).padStart(2, '0');
@@ -118,7 +115,7 @@
             item.title = h.type;
 
             var dot = document.createElement('span');
-            dot.className = 'payroll-holiday-dot ' + (HOLIDAY_CLASS[h.type] || '');
+            dot.className = 'payroll-holiday-dot ' + HOLIDAY_CLASS;
 
             var day = document.createElement('strong');
             day.textContent = new Date(h.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -284,7 +281,7 @@
             if (holiday) {
                 dayElement.classList.add(
                     'payroll-calendar-day-holiday',
-                    HOLIDAY_CLASS[holiday.type] || 'payroll-calendar-day-holiday-special'
+                    HOLIDAY_CLASS
                 );
 
                 titles.push(holiday.name + ' (' + holiday.type + ')');
@@ -506,6 +503,74 @@
         statusEl.classList.toggle('pp-device-status-disconnected', !isOnline);
         statusEl.innerHTML = '<span class="pp-device-dot"></span>' + (isOnline ? 'Active' : 'Inactive');
         }
+    })();
+
+
+
+    /* ============================================================
+       RECENT ACTIVITY (api/audit/activity): the latest changes from
+       the audit trail — payroll, attendance, leave, loans and employee
+       records. Refreshed every minute.
+       ============================================================ */
+
+    (function recentActivity() {
+
+        var list = document.getElementById('recentActivityList');
+        if (!list) return;
+
+        // Module → icon and colour.
+        var KINDS = [
+            { match: /payroll|loan|rate|bir|sss|philhealth|pag-ibig|benefit/i, cls: 'pp-activity-icon-success', icon: 'bi-cash-stack' },
+            { match: /attendance|teaching|holiday|schedule/i, cls: 'pp-activity-icon-warning', icon: 'bi-clock-history' },
+            { match: /leave/i, cls: 'pp-activity-icon-info', icon: 'bi-calendar-check' },
+            { match: /.*/, cls: 'pp-activity-icon-primary', icon: 'bi-person' }
+        ];
+
+        function esc(value) {
+            return String(value == null ? '' : value)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+        }
+
+        function ago(iso) {
+            var then = new Date(iso);
+            var minutes = Math.round((Date.now() - then.getTime()) / 60000);
+            if (minutes < 1) return 'Just now';
+            if (minutes < 60) return minutes + ' min ago';
+            var hours = Math.round(minutes / 60);
+            if (hours < 24) return hours + ' hour' + (hours === 1 ? '' : 's') + ' ago';
+            return then.toLocaleString('en-PH', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+        }
+
+        function load() {
+            fetch('api/audit/activity?limit=8')
+                .then(function (response) { return response.json(); })
+                .then(function (data) {
+                    if (!data.success) throw new Error(data.message);
+                    if (!data.entries.length) {
+                        list.innerHTML = '<div class="pp-empty-state">No recent activity yet.</div>';
+                        return;
+                    }
+                    list.innerHTML = data.entries.map(function (a) {
+                        var kind = KINDS.find(function (k) { return k.match.test(a.module); });
+                        return '<div class="pp-activity-item">' +
+                            '<div class="pp-activity-icon ' + kind.cls + '"><i class="bi ' + kind.icon + '"></i></div>' +
+                            '<div class="pp-activity-content">' +
+                                '<div class="pp-activity-text"><strong>' + esc(a.action) + '</strong>' +
+                                    (a.detail ? ' — ' + esc(a.detail) : '') + '</div>' +
+                                '<div class="pp-activity-time">' + esc(a.module) + ' · by ' + esc(a.user) +
+                                    ' · <span title="' + esc(new Date(a.at).toLocaleString('en-PH')) + '">' + ago(a.at) + '</span></div>' +
+                            '</div>' +
+                        '</div>';
+                    }).join('');
+                })
+                .catch(function () {
+                    list.innerHTML = '<div class="pp-empty-state">Could not load recent activity.</div>';
+                });
+        }
+
+        load();
+        setInterval(function () { if (!document.hidden) load(); }, 60000);
     })();
 
 })();

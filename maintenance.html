@@ -95,21 +95,20 @@
                         <div class="pp-maint-section-header">
                             <div>
                                 <h2 class="pp-maint-section-title" id="leaveTitle">Leave Categories</h2>
-                                <p class="pp-maint-section-desc">Define paid/unpaid status and annual day allowances per leave type.</p>
+                                <p class="pp-maint-section-desc">Paid or unpaid, and for paid leave how many days a year each employee is paid for (their leave credits).</p>
                             </div>
                             <button type="button" class="btn btn-pp-maint-add" id="btnAddLeave">
                                 <i class="bi bi-plus-lg me-1"></i> Add Category
                             </button>
                         </div>
+                        <p class="pp-table-hint pp-maint-hint"><i class="bi bi-hand-index" aria-hidden="true"></i> <span>Click a row to edit it.</span></p>
                         <div class="pp-maint-table-wrap">
                             <table class="pp-table pp-table-maint w-100">
                                 <thead>
                                     <tr>
                                         <th>Category Name</th>
                                         <th>Paid / Unpaid</th>
-                                        <th class="col-num">Max Days / Request</th>
-                                        <th>Leave Credits</th>
-                                        <th class="col-actions">Actions</th>
+                                        <th class="col-num">Paid Days / Year</th>
                                     </tr>
                                 </thead>
                                 <tbody id="leaveBody"></tbody>
@@ -123,7 +122,7 @@
                         <div class="pp-maint-section-header">
                             <div>
                                 <h2 class="pp-maint-section-title" id="holidaysTitle">Holiday Calendar</h2>
-                                <p class="pp-maint-section-desc">Holidays shown on the Dashboard calendar. Hours worked on a double-pay holiday are paid twice.</p>
+                                <p class="pp-maint-section-desc">Holidays shown on the Dashboard calendar. Regular holidays are paid even when not worked; hours worked on a double-pay holiday are paid twice.</p>
                             </div>
                             <button type="button" class="btn btn-pp-maint-add" id="btnAddHoliday">
                                 <i class="bi bi-plus-lg me-1"></i> Add Holiday
@@ -133,6 +132,7 @@
                             <label for="holidayYear">Year</label>
                             <select class="form-select pp-form-select" id="holidayYear"></select>
                         </div>
+                        <p class="pp-table-hint pp-maint-hint"><i class="bi bi-hand-index" aria-hidden="true"></i> <span>Click a row to edit it.</span></p>
                         <div class="pp-maint-table-wrap">
                             <table class="pp-table pp-table-maint w-100">
                                 <thead>
@@ -141,7 +141,6 @@
                                         <th>Holiday Name</th>
                                         <th>Type</th>
                                         <th>Double Pay</th>
-                                        <th class="col-actions">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="holidaysBody"></tbody>
@@ -161,13 +160,13 @@
                                 <i class="bi bi-plus-lg me-1"></i> Add Rank
                             </button>
                         </div>
+                        <p class="pp-table-hint pp-maint-hint"><i class="bi bi-hand-index" aria-hidden="true"></i> <span>Click a row to edit it.</span></p>
                         <div class="pp-maint-table-wrap">
                             <table class="pp-table pp-table-maint w-100">
                                 <thead>
                                     <tr>
                                         <th>Rank Name</th>
                                         <th class="col-num">Employees</th>
-                                        <th class="col-actions">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="ranksBody"></tbody>
@@ -268,10 +267,14 @@
                         <div class="pp-maint-year-bar">
                             <label for="birYear">Effective Year</label>
                             <select class="form-select pp-form-select" id="birYear"></select>
-                            <button type="button" class="btn btn-pp-bracket-add ms-auto" id="btnAddBir">
+                            <button type="button" class="btn btn-pp-bracket-archive ms-auto" id="btnArchiveBir">
+                                <i class="bi bi-archive me-1"></i> Archive Table
+                            </button>
+                            <button type="button" class="btn btn-pp-bracket-add" id="btnAddBir">
                                 <i class="bi bi-plus-lg me-1"></i> Add Bracket
                             </button>
                         </div>
+                        <p class="pp-table-hint pp-maint-hint"><i class="bi bi-hand-index" aria-hidden="true"></i> <span>Click a row to edit it.</span></p>
                         <div class="pp-maint-table-wrap">
                             <table class="pp-table pp-table-maint pp-table-financial w-100">
                                 <thead>
@@ -280,7 +283,6 @@
                                         <th class="col-money">Bracket Max (₱)</th>
                                         <th class="col-money">Base Amount (₱)</th>
                                         <th class="col-num">Rate %</th>
-                                        <th class="col-actions">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="birBody"></tbody>
@@ -300,10 +302,14 @@
                         <div class="pp-maint-year-bar">
                             <label for="phYear">Effective Year</label>
                             <select class="form-select pp-form-select" id="phYear"></select>
-                            <button type="button" class="btn btn-pp-bracket-add ms-auto" id="btnAddPh">
+                            <button type="button" class="btn btn-pp-bracket-archive ms-auto" id="btnArchivePh">
+                                <i class="bi bi-archive me-1"></i> Archive Table
+                            </button>
+                            <button type="button" class="btn btn-pp-bracket-add" id="btnAddPh">
                                 <i class="bi bi-plus-lg me-1"></i> Add Bracket
                             </button>
                         </div>
+                        <p class="pp-table-hint pp-maint-hint"><i class="bi bi-hand-index" aria-hidden="true"></i> <span>Click a row to edit it.</span></p>
                         <div class="pp-maint-table-wrap">
                             <table class="pp-table pp-table-maint pp-table-financial w-100">
                                 <thead>
@@ -312,7 +318,6 @@
                                         <th class="col-money">Salary Max (₱)</th>
                                         <th class="col-money">Monthly Premium (₱)</th>
                                         <th class="col-num">Rate %</th>
-                                        <th class="col-actions">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="phBody"></tbody>
@@ -332,10 +337,14 @@
                         <div class="pp-maint-year-bar">
                             <label for="pagYear">Effective Year</label>
                             <select class="form-select pp-form-select" id="pagYear"></select>
-                            <button type="button" class="btn btn-pp-bracket-add ms-auto" id="btnAddPag">
+                            <button type="button" class="btn btn-pp-bracket-archive ms-auto" id="btnArchivePag">
+                                <i class="bi bi-archive me-1"></i> Archive Table
+                            </button>
+                            <button type="button" class="btn btn-pp-bracket-add" id="btnAddPag">
                                 <i class="bi bi-plus-lg me-1"></i> Add Bracket
                             </button>
                         </div>
+                        <p class="pp-table-hint pp-maint-hint"><i class="bi bi-hand-index" aria-hidden="true"></i> <span>Click a row to edit it.</span></p>
                         <div class="pp-maint-table-wrap">
                             <table class="pp-table pp-table-maint pp-table-financial w-100">
                                 <thead>
@@ -344,7 +353,6 @@
                                         <th class="col-money">Compensation Max (₱)</th>
                                         <th class="col-money">Employee Share (₱)</th>
                                         <th class="col-num">Rate %</th>
-                                        <th class="col-actions">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="pagBody"></tbody>
@@ -364,10 +372,14 @@
                         <div class="pp-maint-year-bar">
                             <label for="sssYear">Effective Year</label>
                             <select class="form-select pp-form-select" id="sssYear"></select>
-                            <button type="button" class="btn btn-pp-bracket-add ms-auto" id="btnAddSss">
+                            <button type="button" class="btn btn-pp-bracket-archive ms-auto" id="btnArchiveSss">
+                                <i class="bi bi-archive me-1"></i> Archive Table
+                            </button>
+                            <button type="button" class="btn btn-pp-bracket-add" id="btnAddSss">
                                 <i class="bi bi-plus-lg me-1"></i> Add Bracket
                             </button>
                         </div>
+                        <p class="pp-table-hint pp-maint-hint"><i class="bi bi-hand-index" aria-hidden="true"></i> <span>Click a row to edit it.</span></p>
                         <div class="pp-maint-table-wrap">
                             <table class="pp-table pp-table-maint pp-table-financial w-100">
                                 <thead>
@@ -376,7 +388,6 @@
                                         <th class="col-money">Compensation Max (₱)</th>
                                         <th class="col-money">Monthly Salary Credit (₱)</th>
                                         <th class="col-num">Employee Share %</th>
-                                        <th class="col-actions">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="sssBody"></tbody>
@@ -447,6 +458,7 @@
                         <input type="text" class="form-control pp-form-control" id="rankName" maxlength="20" data-validate="text" data-label="Rank name" placeholder="e.g. Assistant Professor" required>
                     </div>
                     <div class="modal-footer">
+                        <button type="button" class="btn btn-pp-modal-remove me-auto d-none" id="rankRemoveBtn">Remove</button>
                         <button type="button" class="btn btn-pp-outline" data-bs-dismiss="modal">Cancel</button>
                         <button type="submit" class="btn btn-pp-primary">Save Rank</button>
                     </div>
@@ -476,20 +488,17 @@
                                 <option value="Unpaid">Unpaid</option>
                             </select>
                         </div>
-                        <div class="mb-3">
-                            <label for="leaveMaxDays" class="pp-form-label">Max Days per Request</label>
-                            <input type="number" class="form-control pp-form-control" id="leaveMaxDays" min="1" max="366" step="1" data-validate="number" data-decimals="0" inputmode="numeric" required>
-                            <div class="invalid-feedback">Enter the maximum working days per request.</div>
-                        </div>
-                        <div class="mb-0">
-                            <label for="leaveUsesCredits" class="pp-form-label">Uses Leave Credits</label>
-                            <select class="form-select pp-form-select" id="leaveUsesCredits" required>
-                                <option value="Yes">Yes — counts against the yearly leave credits</option>
-                                <option value="No">No</option>
-                            </select>
+                        <div class="mb-0" id="leavePaidDaysGroup">
+                            <label for="leavePaidDays" class="pp-form-label">Paid for How Many Days</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control pp-form-control" id="leavePaidDays" min="1" max="366" step="1" data-validate="number" data-decimals="0" data-label="Paid days" inputmode="numeric" required>
+                                <span class="input-group-text">days a year</span>
+                            </div>
+                            <div class="invalid-feedback">Enter how many days a year this leave is paid.</div>
                         </div>
                     </div>
                     <div class="modal-footer">
+                        <button type="button" class="btn btn-pp-modal-remove me-auto d-none" id="leaveRemoveBtn">Deactivate</button>
                         <button type="button" class="btn btn-pp-outline" data-bs-dismiss="modal">Cancel</button>
                         <button type="submit" class="btn btn-pp-primary">Save Category</button>
                     </div>
@@ -535,6 +544,7 @@
                         </div>
                     </div>
                     <div class="modal-footer">
+                        <button type="button" class="btn btn-pp-modal-remove me-auto d-none" id="holidayRemoveBtn">Remove</button>
                         <button type="button" class="btn btn-pp-outline" data-bs-dismiss="modal">Cancel</button>
                         <button type="submit" class="btn btn-pp-primary">Save Holiday</button>
                     </div>
@@ -554,6 +564,7 @@
                 <form id="bracketForm" novalidate>
                     <div class="modal-body" id="bracketFormFields"></div>
                     <div class="modal-footer">
+                        <button type="button" class="btn btn-pp-modal-remove me-auto d-none" id="bracketRemoveBtn">Remove Bracket</button>
                         <button type="button" class="btn btn-pp-outline" data-bs-dismiss="modal">Cancel</button>
                         <button type="submit" class="btn btn-pp-primary">Review &amp; Save</button>
                     </div>
@@ -635,13 +646,13 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="fm-note mb-2">Renaming or deactivating a benefit applies to every employee who has it. Inactive benefits are not paid.</p>
+                    <p class="fm-note mb-2">Click a benefit to rename it or change its amount. Renaming applies to every employee who has it; the amount is used when the benefit is given to an employee.</p>
                     <div class="pp-table-wrap mb-3">
                         <table class="pp-table">
                             <thead>
                                 <tr>
                                     <th>Benefit</th>
-                                    <th class="text-end">Default Amount</th>
+                                    <th class="text-end">Amount</th>
                                     <th class="text-end">Employees</th>
                                 </tr>
                             </thead>
@@ -650,20 +661,13 @@
                     </div>
                     <form id="typeForm" class="row g-2 align-items-end" novalidate>
                         <input type="hidden" id="typeId">
-                        <div class="col-md-5">
+                        <div class="col-md-6">
                             <label for="typeName" class="pp-form-label" id="typeFormTitle">New Benefit</label>
                             <input type="text" class="form-control pp-form-control" id="typeName" maxlength="50" data-validate="text" data-label="Benefit name" placeholder="Benefit name" required>
                         </div>
-                        <div class="col-md-3">
-                            <label for="typeAmount" class="pp-form-label">Default (₱)</label>
-                            <input type="number" class="form-control pp-form-control" id="typeAmount" min="0" max="100000" step="0.01" data-validate="number" data-decimals="2" data-label="Default amount" inputmode="decimal" required>
-                        </div>
-                        <div class="col-md-2">
-                            <label for="typeActive" class="pp-form-label">Status</label>
-                            <select class="form-select pp-form-select" id="typeActive">
-                                <option value="true">Active</option>
-                                <option value="false">Inactive</option>
-                            </select>
+                        <div class="col-md-4">
+                            <label for="typeAmount" class="pp-form-label">Amount (₱)</label>
+                            <input type="number" class="form-control pp-form-control" id="typeAmount" min="0" max="100000" step="0.01" data-validate="number" data-decimals="2" data-label="Amount" inputmode="decimal" required>
                         </div>
                         <div class="col-md-2 d-flex gap-1">
                             <button type="submit" class="btn btn-pp-primary flex-grow-1" id="saveTypeBtn">Add</button>

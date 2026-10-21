@@ -334,3 +334,26 @@ body::before {
     border-color: #b7dfcd;
     color: var(--pp-accent);
 }
+
+/* Forgot Password: the email is fixed once the code is sent */
+.reset-fixed-email {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.55rem 0.75rem;
+    margin-bottom: 0.75rem;
+    border-radius: 8px;
+    background: #eef5f9;
+    color: #475569;
+    font-size: 0.85rem;
+}
+
+.reset-fixed-email i {
+    color: #1a5f7a;
+}
+
+.reset-fixed-email strong {
+    color: #1e293b;
+    word-break: break-all;
+}

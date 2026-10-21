@@ -1,7 +1,10 @@
 /**
  * Forgot Password (login page)
  * ---------------------------------------------------------------
- * 1. Email:  api/auth/forgot-password emails a 6-digit code (OTP).
+ * 1. Email:  the email typed on the login form, shown (not typed again).
+ *            api/auth/forgot-password emails a 6-digit code (OTP) to that
+ *            account's own address; the server keeps the email fixed for the
+ *            rest of the reset. To use another, close and start again.
  * 2. Code:   api/auth/verify-otp checks it and returns a reset token.
  * 3. New password + confirm: api/auth/reset-password saves it.
  * The new password replaces the account's password — the same one the
@@ -19,7 +22,6 @@
     var emailForm = document.getElementById('resetEmailForm');
     var codeForm = document.getElementById('resetCodeForm');
     var passwordForm = document.getElementById('resetPasswordForm');
-    var emailInput = document.getElementById('resetEmail');
     var codeInput = document.getElementById('resetCode');
     var newPassword = document.getElementById('resetNewPassword');
     var confirmPassword = document.getElementById('resetConfirmPassword');
@@ -27,7 +29,7 @@
     var resendLink = document.getElementById('resetResend');
 
     var EMAIL = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
-    var state = { email: '', token: '' };
+    var state = { email: '', token: '', started: false };
     var resendTimer = null;
 
     // ------------------------------------------------------------
@@ -56,7 +58,7 @@
             li.classList.toggle('done', n < step);
         });
         hideMessage();
-        var first = { 1: emailInput, 2: codeInput, 3: newPassword }[step];
+        var first = { 1: document.getElementById('resetSendBtn'), 2: codeInput, 3: newPassword }[step];
         setTimeout(function () { first.focus(); }, 50);
     }
 
@@ -67,7 +69,7 @@
     }
 
     function clearFieldErrors() {
-        [emailInput, codeInput, newPassword, confirmPassword].forEach(function (input) { setFieldError(input, ''); });
+        [codeInput, newPassword, confirmPassword].forEach(function (input) { setFieldError(input, ''); });
     }
 
     function showMessage(text, kind) {
@@ -114,9 +116,11 @@
 
     function sendCode(button) {
         busy(button, true, 'Sending…');
-        return post('api/auth/forgot-password', { email: state.email }).then(function (data) {
+        // The first send starts the reset for this email; a resend goes to the same
+        // email, which the server keeps for the rest of the reset.
+        return post('api/auth/forgot-password', state.started ? {} : { email: state.email }).then(function (data) {
             if (!data.success) {
-                if (data.field === 'email') setFieldError(emailInput, data.message);
+                if (data.field === 'email') showMessage(data.message);
                 else showMessage(data.message || 'Could not send the code.');
                 return false;
             }
@@ -134,20 +138,35 @@
     // Open
     // ------------------------------------------------------------
 
+    // The reset is for the email typed on the login form; it is shown, not
+    // typed again, and stays fixed for the whole reset.
     link.addEventListener('click', function (e) {
         e.preventDefault();
-        state = { email: '', token: '' };
-        [emailForm, codeForm, passwordForm].forEach(function (form) { form.reset(); });
-        clearFieldErrors();
-        // Start from the email typed on the login form, if any.
         var loginEmail = document.getElementById('email');
-        if (loginEmail && loginEmail.value.trim()) emailInput.value = loginEmail.value.trim();
+        var email = loginEmail ? loginEmail.value.trim() : '';
+        if (!EMAIL.test(email)) {
+            var status = document.getElementById('statusMessage');
+            if (status) {
+                status.textContent = email
+                    ? 'Enter a valid email address above, then click Forgot password.'
+                    : 'Enter your email address above, then click Forgot password.';
+                status.classList.remove('alert-success-note');
+                status.classList.add('show');
+            }
+            if (loginEmail) loginEmail.focus();
+            return;
+        }
+        state = { email: email, token: '', started: false };
+        [codeForm, passwordForm].forEach(function (form) { form.reset(); });
+        clearFieldErrors();
+        modalEl.querySelectorAll('.reset-email-value').forEach(function (el) { el.textContent = email; });
         showStep(1);
         modal.show();
     });
 
     modalEl.addEventListener('shown.bs.modal', function () {
-        var visible = modalEl.querySelector('.reset-step:not(.d-none) input');
+        var visible = modalEl.querySelector('.reset-step:not(.d-none) input') ||
+            modalEl.querySelector('.reset-step:not(.d-none) button[type="submit"]');
         if (visible) visible.focus();
     });
 
@@ -159,20 +178,16 @@
     });
 
     // ------------------------------------------------------------
-    // Step 1 — email
+    // Step 1 — send the code
     // ------------------------------------------------------------
 
     emailForm.addEventListener('submit', function (e) {
         e.preventDefault();
         clearFieldErrors();
         hideMessage();
-        var email = emailInput.value.trim();
-        if (!email) { setFieldError(emailInput, 'Email is required.'); return; }
-        if (!EMAIL.test(email)) { setFieldError(emailInput, 'Enter a valid email address (e.g. name@example.com).'); return; }
-        state.email = email;
-
         sendCode(document.getElementById('resetSendBtn')).then(function (result) {
             if (!result) return;
+            state.started = true;
             showStep(2);
             document.getElementById('resetCodeHelp').textContent = result;
             startResendTimer();
@@ -198,7 +213,7 @@
 
         var button = document.getElementById('resetVerifyBtn');
         busy(button, true, 'Checking…');
-        post('api/auth/verify-otp', { email: state.email, code: code }).then(function (data) {
+        post('api/auth/verify-otp', { code: code }).then(function (data) {
             if (!data.success) {
                 if (data.field === 'code') setFieldError(codeInput, data.message);
                 else showMessage(data.message || 'Could not verify the code.');
@@ -223,12 +238,6 @@
             showMessage('A new code has been sent. Earlier codes no longer work.', 'info');
             startResendTimer();
         });
-    });
-
-    document.getElementById('resetChangeEmail').addEventListener('click', function (e) {
-        e.preventDefault();
-        clearInterval(resendTimer);
-        showStep(1);
     });
 
     // ------------------------------------------------------------
@@ -264,7 +273,6 @@
         var button = document.getElementById('resetSaveBtn');
         busy(button, true, 'Saving…');
         post('api/auth/reset-password', {
-            email: state.email,
             resetToken: state.token,
             password: newPassword.value,
             confirmPassword: confirmPassword.value

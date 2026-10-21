@@ -24,6 +24,11 @@ import org.springframework.transaction.annotation.Transactional;
  * Each bracket is sent and returned as { id, min, max, <third>, rate } —
  * the third value is base (BIR), premium (PhilHealth), share (Pag-IBIG) or
  * msc (SSS). max, premium and share may be empty.
+ *
+ * When the government changes a table, the Payroll Master archives the
+ * year's brackets (archived_at is set) and enters the new ones. Archived
+ * brackets are no longer used by payroll or edited; the System
+ * Administrator sees them in Utility → Archive.
  */
 @Service
 public class ContributionTableService {
@@ -144,20 +149,68 @@ public class ContributionTableService {
     public Map<String, List<Map<String, Object>>> copyYear(String tableKey, Integer yearValue, int userId) {
         Table t = table(tableKey);
         int year = validYear(yearValue);
-        Integer exists = jdbc.queryForObject("SELECT COUNT(*) FROM " + t.sqlTable() + " WHERE effective_year = ?",
+        Integer exists = jdbc.queryForObject("SELECT COUNT(*) FROM " + t.sqlTable() + " WHERE effective_year = ? AND archived_at IS NULL",
                 Integer.class, year);
         if (exists != null && exists > 0) {
             throw Validation.invalid("year", "The " + t.label() + " already has brackets for " + year + ".");
         }
-        Integer source = jdbc.queryForObject("SELECT MAX(effective_year) FROM " + t.sqlTable(), Integer.class);
+        Integer source = jdbc.queryForObject("SELECT MAX(effective_year) FROM " + t.sqlTable() + " WHERE archived_at IS NULL", Integer.class);
         if (source != null) {
             jdbc.update("INSERT INTO " + t.sqlTable() + " (effective_year, " + t.minColumn() + ", " + t.maxColumn() + ", "
                     + t.thirdColumn() + ", " + t.rateColumn() + ") SELECT ?, " + t.minColumn() + ", " + t.maxColumn()
-                    + ", " + t.thirdColumn() + ", " + t.rateColumn() + " FROM " + t.sqlTable() + " WHERE effective_year = ?",
+                    + ", " + t.thirdColumn() + ", " + t.rateColumn() + " FROM " + t.sqlTable() + " WHERE effective_year = ? AND archived_at IS NULL",
                     year, source);
         }
         audit.log(userId, t.label(), "Added year", year + (source == null ? "" : " (copied from " + source + ")"));
         return byYear(t);
+    }
+
+    /**
+     * Archives every bracket of a year (the government changed the table);
+     * the Payroll Master then enters the new brackets for that year.
+     */
+    @Transactional
+    public Map<String, List<Map<String, Object>>> archiveYear(String tableKey, Integer yearValue, int userId) {
+        Table t = table(tableKey);
+        int year = validYear(yearValue);
+        int archived = jdbc.update("UPDATE " + t.sqlTable() + " SET archived_at = NOW() WHERE effective_year = ? AND archived_at IS NULL", year);
+        if (archived == 0) {
+            throw Validation.invalid("year", "The " + t.label() + " has no brackets for " + year + " to archive.");
+        }
+        audit.log(userId, t.label(), "Archived table", year + " (" + archived + " bracket" + (archived == 1 ? "" : "s") + ")");
+        return byYear(t);
+    }
+
+    /**
+     * Archived brackets, newest first, grouped by when they were archived:
+     * [{ year, archivedAt, brackets: [...] }]. Utility → Archive (read-only).
+     */
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> archived(String tableKey) {
+        Table t = table(tableKey);
+        Map<String, Map<String, Object>> groups = new LinkedHashMap<>();
+        jdbc.query("SELECT effective_year, archived_at, " + t.idColumn() + ", " + t.minColumn() + ", " + t.maxColumn() + ", "
+                + t.thirdColumn() + ", " + t.rateColumn() + " FROM " + t.sqlTable() + " WHERE archived_at IS NOT NULL "
+                + "ORDER BY archived_at DESC, effective_year DESC, " + t.minColumn(), (RowCallbackHandler) rs -> {
+            int year = rs.getInt(1);
+            String at = rs.getTimestamp(2).toLocalDateTime().toString();
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> brackets = (List<Map<String, Object>>) groups.computeIfAbsent(year + "|" + at, k -> {
+                Map<String, Object> g = new LinkedHashMap<>();
+                g.put("year", year);
+                g.put("archivedAt", at);
+                g.put("brackets", new ArrayList<Map<String, Object>>());
+                return g;
+            }).get("brackets");
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", rs.getInt(3));
+            m.put("min", rs.getBigDecimal(4));
+            m.put("max", rs.getBigDecimal(5));
+            m.put(t.thirdKey(), rs.getBigDecimal(6));
+            m.put("rate", rs.getBigDecimal(7));
+            brackets.add(m);
+        });
+        return new ArrayList<>(groups.values());
     }
 
     // ---------------------------------------------------------------
@@ -179,7 +232,7 @@ public class ContributionTableService {
 
     private int yearOf(Table t, int id) {
         List<Integer> years = jdbc.queryForList("SELECT effective_year FROM " + t.sqlTable() + " WHERE "
-                + t.idColumn() + " = ?", Integer.class, id);
+                + t.idColumn() + " = ? AND archived_at IS NULL", Integer.class, id);
         if (years.isEmpty()) {
             throw new ApiException(HttpStatus.NOT_FOUND, "Bracket not found.");
         }
@@ -188,7 +241,7 @@ public class ContributionTableService {
 
     private Map<String, List<Map<String, Object>>> byYear(Table t) {
         Map<String, List<Map<String, Object>>> years = new TreeMap<>();
-        List<Integer> list = jdbc.queryForList("SELECT DISTINCT effective_year FROM " + t.sqlTable(), Integer.class);
+        List<Integer> list = jdbc.queryForList("SELECT DISTINCT effective_year FROM " + t.sqlTable() + " WHERE archived_at IS NULL", Integer.class);
         list.forEach(y -> years.put(String.valueOf(y), rows(t, y)));
         return years;
     }
@@ -196,7 +249,7 @@ public class ContributionTableService {
     private List<Map<String, Object>> rows(Table t, int year) {
         List<Map<String, Object>> list = new ArrayList<>();
         jdbc.query("SELECT " + t.idColumn() + ", " + t.minColumn() + ", " + t.maxColumn() + ", " + t.thirdColumn() + ", "
-                + t.rateColumn() + " FROM " + t.sqlTable() + " WHERE effective_year = ? ORDER BY " + t.minColumn(), (RowCallbackHandler) rs -> {
+                + t.rateColumn() + " FROM " + t.sqlTable() + " WHERE effective_year = ? AND archived_at IS NULL ORDER BY " + t.minColumn(), (RowCallbackHandler) rs -> {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("id", rs.getInt(1));
             m.put("min", rs.getBigDecimal(2));

@@ -29,6 +29,32 @@ public class AuditService {
                 userId, cut(module, 50), cut(action, 100), cut(details, 255));
     }
 
+    /**
+     * Modules left out of the dashboard's Recent Activity: System Administrator
+     * work (accounts, devices, backups) and report exports.
+     */
+    private static final List<String> NOT_ACTIVITY = List.of("Reports", "User Accounts", "Biometric Devices", "Backup & Restore");
+
+    /** Recent Activity on the dashboards, newest first. */
+    public List<Map<String, Object>> activity(int limit) {
+        List<Map<String, Object>> result = new ArrayList<>();
+        jdbc.query("SELECT a.module, a.action, a.details, a.created_at, "
+                + "TRIM(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))) AS user_name "
+                + "FROM audit_trail a LEFT JOIN users u ON u.user_id = a.user_id "
+                + "WHERE a.module NOT IN (?, ?, ?, ?) ORDER BY a.created_at DESC, a.audit_id DESC LIMIT ?", (RowCallbackHandler) rs -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("module", rs.getString("module"));
+            m.put("action", rs.getString("action"));
+            m.put("detail", rs.getString("details"));
+            String name = rs.getString("user_name");
+            m.put("user", name == null || name.isBlank() ? "System" : name);
+            Timestamp at = rs.getTimestamp("created_at");
+            m.put("at", at == null ? null : at.toLocalDateTime().toString());
+            result.add(m);
+        }, NOT_ACTIVITY.get(0), NOT_ACTIVITY.get(1), NOT_ACTIVITY.get(2), NOT_ACTIVITY.get(3), limit);
+        return result;
+    }
+
     /** Most recent entries first; module null = every module. */
     public List<Map<String, Object>> recent(String module, int limit) {
         String sql = "SELECT a.module, a.action, a.details, a.created_at, "

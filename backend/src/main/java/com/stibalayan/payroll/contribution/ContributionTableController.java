@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
  * PUT    /api/contribution-tables/{table}/{id}      same body (the year can't change)
  * DELETE /api/contribution-tables/{table}/{id}
  * POST   /api/contribution-tables/{table}/years     { year }  start a year from a copy of the latest one
+ * POST   /api/contribution-tables/{table}/archive   { year }  archive the year's brackets (the government changed them)
  *
  * Payroll reads the same tables through GET /api/payroll/contribution-tables.
  */
@@ -60,6 +61,12 @@ public class ContributionTableController {
     }
 
     public record YearRequest(Integer year) {
+    }
+
+    /** The government changed the table: archive the year's brackets so new ones can be entered. */
+    @PostMapping("/{table}/archive")
+    public Map<String, Object> archive(@PathVariable String table, @RequestBody YearRequest request, HttpServletRequest http) {
+        return Map.of("success", true, "years", tables.archiveYear(table, request.year(), AuthInterceptor.currentUser(http).id()));
     }
 
     @PostMapping("/{table}/years")

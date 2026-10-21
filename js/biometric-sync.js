@@ -1,10 +1,11 @@
 /**
- * Biometric Device Sync (Daily Time Record module)
+ * Biometric Device Sync (Utility module) and the scanner's live status
  * ---------------------------------------------------------------
- * The "Sync Device" button on dtr.html pulls attendance logs from the
+ * The "Sync Device" button on biometric-devices.html pulls attendance logs from the
  * ZKTeco K40 into daily_time_record (POST api/biometric/sync).
- * Available to Payroll Master and Payroll Staff — the server refuses
- * any other role.
+ * Available to the System Administrator — the server refuses
+ * any other role. The live badge (dtr.html and biometric-devices.html)
+ * shows whether the scanner is connected.
  * ---------------------------------------------------------------
  */
 (function () {
@@ -13,7 +14,7 @@
 
     var syncButton = document.getElementById('syncDeviceBtn');
 
-    if (!syncButton) return;
+    if (!syncButton && !document.getElementById('liveSyncBadge')) return;
 
     // Live sync: the server records scans from the K40 within seconds
     // (BiometricLiveSync). Check api/biometric/status every few seconds and
@@ -54,7 +55,7 @@
     checkStatus();
     setInterval(checkStatus, 3000);
 
-    syncButton.addEventListener('click', function () {
+    if (syncButton) syncButton.addEventListener('click', function () {
 
         var originalText = syncButton.innerHTML;
 

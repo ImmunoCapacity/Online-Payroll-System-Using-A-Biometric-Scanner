@@ -21,8 +21,8 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * GET  /api/leave/categories                 POST /api/leave/categories        PUT /api/leave/categories/{id}
  * GET  /api/leave/requests                   POST /api/leave/requests          PUT /api/leave/requests/{id}
- *      (records approved leave: { employeeId, categoryId, dateFrom, dateTo, reason, paid })
- * GET  /api/leave/balance?employeeId=&year=  PUT /api/leave/credits  { employeeId, year, totalCredits }
+ *      (records approved leave: { employeeId, categoryId, dateFrom, dateTo, paid })
+ * GET  /api/leave/balance?employeeId=&year=[&excludeLeaveId=]   leave credits left per paid leave type
  */
 @RestController
 @RequestMapping("/api/leave")
@@ -85,16 +85,9 @@ public class LeaveController {
     }
 
     @GetMapping("/balance")
-    public Map<String, Object> balance(@RequestParam String employeeId, @RequestParam int year) {
-        return Map.of("success", true, "balance", leave.balance(employeeId, year));
-    }
-
-    public record CreditRequest(String employeeId, Integer year, Integer totalCredits) {
-    }
-
-    @PutMapping("/credits")
-    public Map<String, Object> setCredits(@RequestBody CreditRequest request) {
-        return Map.of("success", true, "balance", leave.setCredits(request.employeeId(), request.year(), request.totalCredits()));
+    public Map<String, Object> balance(@RequestParam String employeeId, @RequestParam int year,
+                                       @RequestParam(required = false) Integer excludeLeaveId) {
+        return Map.of("success", true, "balance", leave.balance(employeeId, year, excludeLeaveId));
     }
 
     private static SessionUser user(HttpServletRequest http) {

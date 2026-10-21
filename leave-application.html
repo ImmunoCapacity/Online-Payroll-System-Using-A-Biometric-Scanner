@@ -22,7 +22,7 @@
             <header class="pp-content-header leave-page-header">
                 <div>
                     <h1 class="pp-content-title">Leave Management</h1>
-                    <p class="pp-content-subtitle">Record employee leave that has already been approved. Paid leave is included in payroll.</p>
+                    <p class="pp-content-subtitle">Record employee leave that has already been approved. Paid leave uses up the employee's leave credits.</p>
                 </div>
                 <button type="button" class="btn btn-pp-primary" id="recordLeaveBtn">
                     <i class="bi bi-plus-lg me-1"></i> Record Leave
@@ -81,7 +81,6 @@
                                 <th class="days-column">Days</th>
                                 <th class="pay-column">Pay</th>
                                 <th class="filed-column">Recorded</th>
-                                <th class="remarks-column">Reason</th>
                             </tr>
                         </thead>
                         <tbody id="leaveTableBody"></tbody>
@@ -130,16 +129,12 @@
                             </div>
                         </div>
                         <div class="row g-3 mb-3">
-                            <div class="col-md-4">
+                            <div class="col-md-6">
                                 <label for="leavePaid" class="pp-form-label">Pay</label>
                                 <select class="form-select pp-form-select" id="leavePaid" data-label="Pay" required>
                                     <option value="true">Paid</option>
                                     <option value="false">Unpaid</option>
                                 </select>
-                            </div>
-                            <div class="col-md-8">
-                                <label for="leaveReason" class="pp-form-label">Reason</label>
-                                <input type="text" class="form-control pp-form-control" id="leaveReason" maxlength="255" data-validate="text" placeholder="e.g. Flu, family event, medical procedure" required>
                             </div>
                         </div>
                         <div class="leave-summary" id="leaveSummary">Choose an employee, leave type and dates.</div>

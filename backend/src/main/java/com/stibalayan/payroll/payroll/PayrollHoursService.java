@@ -5,14 +5,18 @@ import com.stibalayan.payroll.dtr.DailyTimeRecord;
 import com.stibalayan.payroll.dtr.DailyTimeRecordRepository;
 import com.stibalayan.payroll.employee.AdminStaff;
 import com.stibalayan.payroll.employee.AdminStaffRepository;
+import com.stibalayan.payroll.employee.EmployeeDirectory;
 import com.stibalayan.payroll.employee.EmployeeId;
+import com.stibalayan.payroll.employee.StaffMember;
 import com.stibalayan.payroll.leave.LeaveService;
 import com.stibalayan.payroll.teaching.TeachingHoursService;
 import com.stibalayan.payroll.teaching.TeachingHoursService.ApprovedHours;
 import com.stibalayan.payroll.teaching.TeachingHoursService.ClassPeriod;
+import com.stibalayan.payroll.teaching.TeachingHoursService.UnpaidClass;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.Date;
+import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -32,12 +36,21 @@ import org.springframework.transaction.annotation.Transactional;
  * The hours payroll pays for, per employee, in one pay period:
  *
  *   officeHours   — from the biometric Daily Time Record (administrative work)
- *   paidLeaveDays — approved paid leave days not also worked (Leave Management)
+ *   paidLeaveDays — approved paid leave days not also worked (Leave Management),
+ *                   paid as office days (Admin, Faculty/Admin)
+ *   paidLeaveTeachingHours — scheduled classes on paid leave days that were
+ *                   not taught: paid leave pays them at the teaching rate
+ *                   (Faculty, Faculty/Admin)
  *   teachingHours — APPROVED payable hours from Faculty Teaching Hours, never
  *                   straight from the Faculty Schedule
  *   holidayOfficeHours / holidayTeachingHours — the part of those hours
  *                   worked on a double-pay holiday (Holiday Calendar); payroll
  *                   pays them once more as Holiday pay
+ *   regularHolidayDays / regularHolidayTeachingHours — regular holidays
+ *                   (Monday–Friday) the employee did not work and was not on
+ *                   paid leave: paid anyway, a normal office day (Admin,
+ *                   Faculty/Admin) and the classes scheduled that day, even
+ *                   if cancelled for the holiday (Faculty, Faculty/Admin)
  *
  * Faculty earnings = teachingHours × faculty rate; Admin earnings =
  * officeHours × rate; a Faculty/Admin employee gets both, each at its own
@@ -52,16 +65,18 @@ public class PayrollHoursService {
     private final TeachingHoursService teaching;
     private final LeaveService leave;
     private final JdbcTemplate jdbc;
+    private final EmployeeDirectory employees;
     private final boolean excludeOverlap;
 
     public PayrollHoursService(DailyTimeRecordRepository dtr, AdminStaffRepository admins, TeachingHoursService teaching,
-                               LeaveService leave, JdbcTemplate jdbc,
+                               LeaveService leave, JdbcTemplate jdbc, EmployeeDirectory employees,
                                @Value("${payroll.exclude-teaching-from-office-hours:true}") boolean excludeOverlap) {
         this.dtr = dtr;
         this.admins = admins;
         this.teaching = teaching;
         this.leave = leave;
         this.jdbc = jdbc;
+        this.employees = employees;
         this.excludeOverlap = excludeOverlap;
     }
 
@@ -119,9 +134,72 @@ public class PayrollHoursService {
             if (days > 0) paidLeaveDays.put(id, days);
         });
 
+        // Classes on paid leave days that weren't taught: paid leave pays their scheduled
+        // hours, and they no longer count as waiting for approval.
+        Map<String, BigDecimal> leaveTeachingHours = new HashMap<>();
+        Map<String, Integer> leaveClasses = new HashMap<>();
+        Map<String, Integer> pendingOnLeave = new HashMap<>();
+        leaveDates.forEach((id, dates) -> {
+            ApprovedHours h = taught.get(id);
+            if (h == null) return;
+            for (UnpaidClass c : h.notPaid) {
+                if (!dates.contains(c.date())) continue;
+                leaveTeachingHours.merge(id, c.scheduledHours(), BigDecimal::add);
+                leaveClasses.merge(id, 1, Integer::sum);
+                if (c.pending()) pendingOnLeave.merge(id, 1, Integer::sum);
+            }
+        });
+
+        // Regular holidays on weekdays are paid even when not worked (unless already
+        // paid as worked hours or paid leave). employeeId -> {office days, classes}
+        Map<String, int[]> regular = new HashMap<>();
+        Map<String, BigDecimal> regularTeaching = new HashMap<>();
+        Map<String, Integer> pendingOnHoliday = new HashMap<>();
+        List<LocalDate> regularDays = jdbc.query(
+                "SELECT holiday_date FROM holiday WHERE holiday_type = 'Regular Holiday' AND holiday_date BETWEEN ? AND ?",
+                (rs, i) -> rs.getDate(1).toLocalDate(), Date.valueOf(from), Date.valueOf(to)).stream()
+                .filter(d -> d.getDayOfWeek() != DayOfWeek.SATURDAY && d.getDayOfWeek() != DayOfWeek.SUNDAY).toList();
+        if (!regularDays.isEmpty()) {
+            Map<String, StaffMember> people = employees.all();
+            // Admin side: a normal office day for each regular holiday not worked and not on paid leave.
+            people.forEach((id, s) -> {
+                if (s.isArchived() || !"Active".equals(s.getEmploymentStatus()) || "Faculty".equals(s.staffType())) return;
+                Set<LocalDate> worked = workedDates.getOrDefault(id, Set.of());
+                Set<LocalDate> onLeave = leaveDates.getOrDefault(id, Set.of());
+                for (LocalDate d : regularDays) {
+                    if (s.getDateHired() != null && s.getDateHired().isAfter(d)) continue;
+                    if (!worked.contains(d) && !onLeave.contains(d)) regular.computeIfAbsent(id, k -> new int[2])[0]++;
+                }
+            });
+            // Faculty side: the classes scheduled on the holiday (cancelled for it, or not
+            // taught), at their scheduled hours; not on paid leave days (paid there).
+            for (LocalDate d : regularDays) {
+                jdbc.queryForList("SELECT s.faculty_id, s.adminstaff_id, s.scheduled_start, s.scheduled_end, s.schedule_status, "
+                        + "a.approval_status, a.payable_hours FROM faculty_class_schedule s "
+                        + "LEFT JOIN faculty_teaching_attendance a ON a.class_schedule_id = s.class_schedule_id "
+                        + "WHERE s.class_date = ?", Date.valueOf(d)).forEach(c -> {
+                    String id = EmployeeDirectory.idOf((Integer) c.get("faculty_id"), (Integer) c.get("adminstaff_id"));
+                    StaffMember s = people.get(id);
+                    if (s == null || s.isArchived() || !"Active".equals(s.getEmploymentStatus())) return;
+                    if (leaveDates.getOrDefault(id, Set.of()).contains(d)) return;
+                    BigDecimal paidAsTaught = (BigDecimal) c.get("payable_hours");
+                    if ("Approved".equals(c.get("approval_status")) && paidAsTaught != null && paidAsTaught.signum() > 0) return;
+                    LocalTime start = ((java.sql.Time) c.get("scheduled_start")).toLocalTime();
+                    LocalTime end = ((java.sql.Time) c.get("scheduled_end")).toLocalTime();
+                    regular.computeIfAbsent(id, k -> new int[2])[1]++;
+                    regularTeaching.merge(id, hours(Duration.between(start, end).toMinutes()), BigDecimal::add);
+                    boolean cancelled = "Cancelled".equals(c.get("schedule_status"));
+                    if (!cancelled && !"Rejected".equals(c.get("approval_status")) && !"Approved".equals(c.get("approval_status"))) {
+                        pendingOnHoliday.merge(id, 1, Integer::sum);
+                    }
+                });
+            }
+        }
+
         Set<String> ids = new LinkedHashSet<>(office.keySet());
         ids.addAll(taught.keySet());
         ids.addAll(paidLeaveDays.keySet());
+        ids.addAll(regular.keySet());
         List<Map<String, Object>> result = new ArrayList<>();
         for (String id : ids) {
             long[] t = office.getOrDefault(id, new long[4]);
@@ -141,7 +219,14 @@ public class PayrollHoursService {
             row.put("officeHours", hours(Math.max(0, t[0] - t[2])));
             row.put("teachingHours", h == null ? BigDecimal.ZERO.setScale(2) : h.hours.setScale(2, RoundingMode.HALF_UP));
             row.put("approvedClasses", h == null ? 0 : h.approvedClasses);
-            row.put("unapprovedClasses", h == null ? 0 : h.unapprovedClasses);
+            row.put("unapprovedClasses", Math.max(0, h == null ? 0 : h.unapprovedClasses - pendingOnLeave.getOrDefault(id, 0)
+                    - pendingOnHoliday.getOrDefault(id, 0)));
+            row.put("paidLeaveTeachingHours", leaveTeachingHours.getOrDefault(id, BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP));
+            row.put("paidLeaveClasses", leaveClasses.getOrDefault(id, 0));
+            int[] reg = regular.getOrDefault(id, new int[2]);
+            row.put("regularHolidayDays", reg[0]);
+            row.put("regularHolidayClasses", reg[1]);
+            row.put("regularHolidayTeachingHours", regularTeaching.getOrDefault(id, BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP));
             result.add(row);
         }
         return result;

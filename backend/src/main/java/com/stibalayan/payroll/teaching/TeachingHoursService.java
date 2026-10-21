@@ -298,9 +298,13 @@ public class TeachingHoursService {
                 h.approvedClasses++;
                 if (hours.signum() > 0) {
                     h.periods.add(new ClassPeriod(c.getClassDate(), c.getScheduledStart(), c.getScheduledEnd()));
+                } else {
+                    h.notPaid.add(new UnpaidClass(c.getClassDate(), hours(c.durationMinutes()), false));
                 }
-            } else if (!TeachingAttendance.REJECTED.equals(status)) {
-                h.unapprovedClasses++;
+            } else {
+                boolean pending = !TeachingAttendance.REJECTED.equals(status);
+                if (pending) h.unapprovedClasses++;
+                h.notPaid.add(new UnpaidClass(c.getClassDate(), hours(c.durationMinutes()), pending));
             }
         }
         return result;
@@ -314,9 +318,15 @@ public class TeachingHoursService {
         public int approvedClasses;
         public int unapprovedClasses;
         public final List<ClassPeriod> periods = new ArrayList<>();
+        /** Scheduled classes not paid as taught (not approved, or approved with 0 hours): paid leave covers them. */
+        public final List<UnpaidClass> notPaid = new ArrayList<>();
     }
 
     public record ClassPeriod(LocalDate date, LocalTime start, LocalTime end) {
+    }
+
+    /** A scheduled class that wasn't paid as taught; pending = counted in unapprovedClasses. */
+    public record UnpaidClass(LocalDate date, BigDecimal scheduledHours, boolean pending) {
     }
 
     // ---------------------------------------------------------------

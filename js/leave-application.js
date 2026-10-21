@@ -2,11 +2,11 @@
  * Leave Management — recorded leave in the database (api/leave).
  *
  * Leave is approved outside the system; the Payroll Master only records
- * approved leave: employee, leave type, dates, paid or unpaid, and reason.
+ * approved leave: employee, leave type, dates, and paid or unpaid.
  * Clicking a row opens it for correction. Days are working days
- * (Monday–Friday). Paid leave of a type that uses credits draws on the
- * employee's yearly leave credits (15 by default, editable here); the server
- * refuses leave beyond the remaining balance. Paid leave is included in payroll.
+ * (Monday–Friday). Each paid leave type gives every employee a number of
+ * paid days a year (their leave credits of that type); recorded paid leave
+ * uses them up, and the server refuses paid leave beyond what is left.
  */
 (function () {
     'use strict';
@@ -36,7 +36,6 @@
         categoryId: 'leaveCategory',
         dateFrom: 'leaveFrom',
         dateTo: 'leaveTo',
-        reason: 'leaveReason',
         paid: 'leavePaid'
     };
 
@@ -171,7 +170,6 @@
                 '<td class="leave-days-cell">' + r.days + ' day' + (r.days === 1 ? '' : 's') + '</td>' +
                 '<td>' + payBadge(r.paid) + '</td>' +
                 '<td class="leave-filed-date">' + formatDate(r.reviewedAt || r.dateFiled) + '</td>' +
-                '<td class="leave-reason-cell" title="' + escapeHtml(r.reason) + '">' + escapeHtml(r.reason) + '</td>' +
             '</tr>';
         }).join('');
     }
@@ -214,15 +212,23 @@
             el('leaveFrom').value = request.dateFrom;
             el('leaveTo').value = request.dateTo;
             el('leavePaid').value = request.paid ? 'true' : 'false';
-            el('leaveReason').value = request.reason || '';
         }
+        syncPaid();
         updateSummary();
         leaveModal.show();
     }
 
     var summaryToken = 0;
 
-    /** Working days, pay and — for paid credit-based leave — the employee's balance. */
+    /** Unpaid leave types can only be recorded as unpaid. */
+    function syncPaid() {
+        var category = categoryById(el('leaveCategory').value);
+        var unpaidType = !!category && !category.paid;
+        if (unpaidType) el('leavePaid').value = 'false';
+        el('leavePaid').disabled = unpaidType;
+    }
+
+    /** Working days, pay and — for paid leave — the employee's credits of that type. */
     function updateSummary() {
         var box = el('leaveSummary');
         var employeeId = el('leaveEmployee').value;
@@ -232,71 +238,37 @@
         var paid = el('leavePaid').value === 'true';
         box.classList.remove('is-warning');
         el('creditBox').classList.add('d-none');
+        summaryToken++;
 
         if (!employeeId || !category || !from || !to || to < from) {
             box.textContent = 'Choose an employee, leave type and dates.';
             return;
         }
         var days = workdays(from, to);
-        var text = days + ' working day' + (days === 1 ? '' : 's') + ' (Monday–Friday) · ' +
-            (paid ? 'Paid — included in payroll' : 'Unpaid — not paid in payroll');
-        var warn = days === 0 || (category.maxDays && days > category.maxDays);
-        if (category.maxDays && days > category.maxDays) {
-            text += ' · more than the ' + category.maxDays + '-day maximum for ' + category.name;
-        }
-        box.textContent = text;
-        box.classList.toggle('is-warning', !!warn);
+        box.textContent = days + ' working day' + (days === 1 ? '' : 's') + ' (Monday–Friday) · ' + (paid ? 'Paid' : 'Unpaid');
+        box.classList.toggle('is-warning', days === 0);
 
-        if (category.usesCredits && paid) {
-            loadCredits(employeeId, Number(from.slice(0, 4)), days, ++summaryToken);
-        }
+        if (category.paid && paid) loadCredits(employeeId, category, Number(from.slice(0, 4)), days, summaryToken);
     }
 
-    /** Leave credits for the year, with an editor for the yearly total. */
-    function loadCredits(employeeId, year, days, token) {
+    /** The employee's paid days of this leave type for the year, after this leave. */
+    function loadCredits(employeeId, category, year, days, token) {
         var box = el('creditBox');
         box.classList.remove('d-none', 'is-warning');
         box.textContent = 'Checking leave credits…';
-        api('api/leave/balance?employeeId=' + encodeURIComponent(employeeId) + '&year=' + year).then(function (data) {
+        api('api/leave/balance?employeeId=' + encodeURIComponent(employeeId) + '&year=' + year +
+            (editingId ? '&excludeLeaveId=' + editingId : '')).then(function (data) {
             if (token !== summaryToken || !data.success) return;
-            var b = data.balance;
-            // When editing, this leave's own days are already counted as used.
-            var own = 0;
-            if (editingId) {
-                var r = requests.find(function (x) { return x.id === editingId; });
-                if (r && r.paid && r.usesCredits && Number(r.dateFrom.slice(0, 4)) === year) own = r.days;
-            }
-            var remaining = b.remaining + own;
-            var short = days > remaining;
-            box.classList.toggle('is-warning', short);
-            box.innerHTML =
-                '<div class="d-flex flex-wrap align-items-end gap-3">' +
-                    '<div>Leave credits ' + year + ': ' + remaining + ' of ' + b.total + ' left' +
-                        (short ? '<br><strong class="text-danger">Not enough credits. Record it as unpaid, or raise the credits.</strong>' : '') +
-                    '</div>' +
-                    '<div class="d-flex align-items-end gap-2 ms-auto">' +
-                        '<div><label for="creditTotal" class="pp-form-label mb-1">Credits for ' + year + '</label>' +
-                        '<input type="number" class="form-control pp-form-control" id="creditTotal" style="width:7rem" ' +
-                            'min="0" max="365" step="1" value="' + b.total + '"></div>' +
-                        '<button type="button" class="btn btn-pp-outline" id="saveCreditsBtn">Save</button>' +
-                    '</div>' +
-                '</div>';
-            el('saveCreditsBtn').addEventListener('click', function () {
-                var total = el('creditTotal').value.trim();
-                if (!/^\d+$/.test(total)) {
-                    PPValidate.setError(el('creditTotal'), 'Enter a whole number of days.');
-                    return;
-                }
-                api('api/leave/credits', 'PUT', { employeeId: employeeId, year: year, totalCredits: Number(total) })
-                    .then(function (res) {
-                        if (!res.success) {
-                            PPValidate.setError(el('creditTotal'), res.message || 'Could not save the credits.');
-                            return;
-                        }
-                        PPToast.success('Leave credits for ' + year + ' set to ' + res.balance.total + '.');
-                        updateSummary();
-                    });
-            });
+            var b = data.balance.find(function (x) { return x.categoryId === category.id; });
+            if (!b) { box.classList.add('d-none'); return; }
+            var left = b.remaining - days;
+            box.classList.toggle('is-warning', left < 0);
+            box.innerHTML = left < 0
+                ? escapeHtml(category.name) + ' credits ' + year + ': only <strong>' + b.remaining + ' of ' + b.total +
+                    '</strong> left — not enough for ' + days + ' day' + (days === 1 ? '' : 's') +
+                    '.<br><strong class="text-danger">Record it as unpaid, or split it into a paid and an unpaid leave.</strong>'
+                : escapeHtml(category.name) + ' credits ' + year + ': <strong>' + left + ' of ' + b.total + '</strong> left after this leave' +
+                    (b.used ? ' (' + b.used + ' already used)' : '') + '.';
         });
     }
 
@@ -304,6 +276,7 @@
         // Default Paid/Unpaid from the leave type until the user picks one.
         var category = categoryById(el('leaveCategory').value);
         if (category && !paidChosen) el('leavePaid').value = category.paid ? 'true' : 'false';
+        syncPaid();
     });
     el('leavePaid').addEventListener('change', function () { paidChosen = true; });
 
@@ -319,8 +292,7 @@
             categoryId: Number(el('leaveCategory').value),
             dateFrom: el('leaveFrom').value,
             dateTo: el('leaveTo').value,
-            paid: el('leavePaid').value === 'true',
-            reason: el('leaveReason').value.trim()
+            paid: el('leavePaid').value === 'true'
         };
         var btn = el('saveLeaveBtn');
         btn.disabled = true;

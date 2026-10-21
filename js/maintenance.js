@@ -45,16 +45,32 @@
         return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
     }
 
-    function rowActions(canDeactivate) {
-        var deactivate = canDeactivate !== false
-            ? '<button type="button" class="pp-btn-row deactivate" data-action="deactivate">Deactivate</button>'
-            : '';
-        return (
-            '<span class="pp-maint-row-actions">' +
-                '<button type="button" class="pp-btn-row" data-action="edit">Edit</button>' +
-                deactivate +
-            '</span>'
-        );
+    /** Rows open their edit form on click, or Enter/Space when focused. */
+    function clickableRows(bodyId, open) {
+        var body = document.getElementById(bodyId);
+        body.addEventListener('click', function (e) {
+            var row = e.target.closest('tr[data-id]');
+            if (row) open(parseInt(row.dataset.id, 10));
+        });
+        body.addEventListener('keydown', function (e) {
+            var row = e.target.closest('tr[data-id]');
+            if (row && e.target === row && (e.key === 'Enter' || e.key === ' ')) {
+                e.preventDefault();
+                open(parseInt(row.dataset.id, 10));
+            }
+        });
+    }
+
+    function rowAttrs(id, label) {
+        return 'class="pp-row-clickable" tabindex="0" role="button" data-id="' + id + '" aria-label="' + escapeHtml(label) + '"';
+    }
+
+    /** The Remove/Deactivate button of an edit modal: shown only when editing. */
+    function setRemoveButton(id, text, show, restore) {
+        var btn = document.getElementById(id);
+        btn.textContent = text;
+        btn.classList.toggle('d-none', !show);
+        btn.classList.toggle('is-restore', !!restore);
     }
 
     // ================================================================
@@ -277,7 +293,7 @@
             renderLeave();
         }).catch(function () {
             document.getElementById('leaveBody').innerHTML =
-                '<tr><td colspan="5" class="text-center text-muted py-4">Could not load leave categories from the server.</td></tr>';
+                '<tr><td colspan="3" class="text-center text-muted py-4">Could not load leave categories from the server.</td></tr>';
         });
     }
 
@@ -289,80 +305,79 @@
     function renderLeave() {
         document.getElementById('leaveBody').innerHTML = leaveCategories.map(function (c) {
             return (
-                '<tr class="' + (c.active ? '' : 'inactive') + '" data-id="' + c.id + '">' +
-                    '<td><strong>' + escapeHtml(c.name) + '</strong></td>' +
+                '<tr ' + rowAttrs(c.id, 'Edit ' + c.name) + (c.active ? '' : ' data-inactive="1"') + '>' +
+                    '<td><strong>' + escapeHtml(c.name) + '</strong>' +
+                        (c.active ? '' : ' <span class="pp-badge-inactive">Inactive</span>') + '</td>' +
                     '<td>' + (c.paid ? '<span class="pp-badge-leave-paid">Paid</span>' : '<span class="pp-badge-leave-unpaid">Unpaid</span>') + '</td>' +
-                    '<td class="col-num">' + (c.maxDays == null ? '—' : c.maxDays) + '</td>' +
-                    '<td>' + (c.usesCredits ? 'Uses credits' : '<span class="text-muted">—</span>') + '</td>' +
-                    '<td class="col-actions">' + (c.active ? rowActions()
-                        : '<button type="button" class="btn btn-sm btn-pp-outline" data-action="reactivate">Reactivate</button>') + '</td>' +
+                    '<td class="col-num">' + (c.paid && c.paidDays != null ? c.paidDays : '—') + '</td>' +
                 '</tr>'
             );
         }).join('');
+    }
 
-        function categoryOf(btn) {
-            var row = btn.closest('tr');
-            return leaveCategories.find(function (c) { return c.id === parseInt(row.dataset.id, 10); });
+    /** Paid for how many days only applies to paid leave. */
+    function syncLeavePaidDays() {
+        var paid = document.getElementById('leavePaid').value === 'Paid';
+        var input = document.getElementById('leavePaidDays');
+        document.getElementById('leavePaidDaysGroup').classList.toggle('d-none', !paid);
+        input.required = paid;
+        if (!paid) {
+            input.value = '';
+            PPValidate.clear(input.closest('.mb-0'));
         }
+    }
 
-        document.getElementById('leaveBody').querySelectorAll('[data-action="edit"]').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                var cat = categoryOf(btn);
-                if (!cat) return;
-                leaveEditId = cat.id;
-                document.getElementById('leaveModalTitle').textContent = 'Edit Leave Category';
-                document.getElementById('leaveName').value = cat.name;
-                document.getElementById('leavePaid').value = cat.paid ? 'Paid' : 'Unpaid';
-                document.getElementById('leaveMaxDays').value = cat.maxDays == null ? '' : cat.maxDays;
-                document.getElementById('leaveUsesCredits').value = cat.usesCredits ? 'Yes' : 'No';
-                PPValidate.clear(document.getElementById('leaveForm'));
-                bootstrap.Modal.getOrCreateInstance(document.getElementById('leaveModal')).show();
-            });
-        });
-
-        function setActive(cat, active) {
-            saveLeaveCategory(cat.id, {
-                name: cat.name, paid: cat.paid, maxDays: cat.maxDays, usesCredits: cat.usesCredits, active: active
-            }).then(function (data) {
-                if (!data.success) { PPToast.error(data.message); return; }
-                PPToast.success('"' + cat.name + '" ' + (active ? 'reactivated.' : 'deactivated.'));
-                loadLeaveCategories();
-                loadAudit();
-            }).catch(function () {
-                PPToast.error('Could not reach the server.');
-            });
+    function openLeaveForm(cat) {
+        leaveEditId = cat ? cat.id : null;
+        var form = document.getElementById('leaveForm');
+        form.reset();
+        document.getElementById('leaveModalTitle').textContent = cat ? 'Edit Leave Category' : 'Add Leave Category';
+        if (cat) {
+            document.getElementById('leaveName').value = cat.name;
+            document.getElementById('leavePaid').value = cat.paid ? 'Paid' : 'Unpaid';
+            document.getElementById('leavePaidDays').value = cat.paidDays == null ? '' : cat.paidDays;
         }
+        syncLeavePaidDays();
+        setRemoveButton('leaveRemoveBtn', cat && !cat.active ? 'Reactivate' : 'Deactivate', !!cat, cat && !cat.active);
+        PPValidate.clear(form);
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('leaveModal')).show();
+    }
 
-        document.getElementById('leaveBody').querySelectorAll('[data-action="deactivate"]').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                var cat = categoryOf(btn);
-                if (!cat) return;
-                ConfirmModal.show({
-                    title: 'Deactivate Leave Category',
-                    message: 'Deactivate "' + cat.name + '"? It can no longer be chosen for new leave requests. Existing requests are kept.',
-                    confirmText: 'Deactivate',
-                    tone: 'danger'
-                }).then(function (confirmed) {
-                    if (confirmed) setActive(cat, false);
-                });
-            });
-        });
+    clickableRows('leaveBody', function (id) {
+        var cat = leaveCategories.find(function (c) { return c.id === id; });
+        if (cat) openLeaveForm(cat);
+    });
 
-        document.getElementById('leaveBody').querySelectorAll('[data-action="reactivate"]').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                var cat = categoryOf(btn);
-                if (cat) setActive(cat, true);
-            });
+    document.getElementById('btnAddLeave').addEventListener('click', function () { openLeaveForm(null); });
+    document.getElementById('leavePaid').addEventListener('change', syncLeavePaidDays);
+
+    function setLeaveActive(cat, active) {
+        saveLeaveCategory(cat.id, { name: cat.name, paid: cat.paid, paidDays: cat.paidDays, active: active }).then(function (data) {
+            if (!data.success) { PPToast.error(data.message); return; }
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('leaveModal')).hide();
+            PPToast.success('"' + cat.name + '" ' + (active ? 'reactivated.' : 'deactivated.'));
+            loadLeaveCategories();
+            loadAudit();
+        }).catch(function () {
+            PPToast.error('Could not reach the server.');
         });
     }
 
-    document.getElementById('btnAddLeave').addEventListener('click', function () {
-        leaveEditId = null;
-        document.getElementById('leaveModalTitle').textContent = 'Add Leave Category';
-        document.getElementById('leaveForm').reset();
-        document.getElementById('leaveUsesCredits').value = 'No';
-        PPValidate.clear(document.getElementById('leaveForm'));
-        bootstrap.Modal.getOrCreateInstance(document.getElementById('leaveModal')).show();
+    document.getElementById('leaveRemoveBtn').addEventListener('click', function () {
+        var cat = leaveCategories.find(function (c) { return c.id === leaveEditId; });
+        if (!cat) return;
+        if (!cat.active) {
+            setLeaveActive(cat, true);
+            return;
+        }
+        ConfirmModal.show({
+            title: 'Deactivate Leave Category',
+            message: 'Deactivate "' + cat.name + '"? It can no longer be chosen for new leave. Leave already recorded is kept.',
+            confirmText: 'Deactivate',
+            tone: 'danger'
+        }).then(function (confirmed) {
+            if (confirmed) setLeaveActive(cat, false);
+        });
     });
 
     // Leave category names must be unique.
@@ -373,12 +388,6 @@
         return taken ? 'A leave category with this name already exists.' : '';
     };
 
-    // Only paid leave can draw on leave credits.
-    document.getElementById('leaveUsesCredits').ppValidator = function (value) {
-        return value === 'Yes' && document.getElementById('leavePaid').value !== 'Paid'
-            ? 'Only paid leave can use leave credits.' : '';
-    };
-
     document.getElementById('leaveForm').addEventListener('submit', function (e) {
         e.preventDefault();
         var form = e.target;
@@ -386,16 +395,16 @@
             return;
         }
         var existing = leaveEditId && leaveCategories.find(function (c) { return c.id === leaveEditId; });
+        var paid = document.getElementById('leavePaid').value === 'Paid';
         var data = {
             name: document.getElementById('leaveName').value.trim(),
-            paid: document.getElementById('leavePaid').value === 'Paid',
-            maxDays: parseInt(document.getElementById('leaveMaxDays').value, 10),
-            usesCredits: document.getElementById('leaveUsesCredits').value === 'Yes',
+            paid: paid,
+            paidDays: paid ? parseInt(document.getElementById('leavePaidDays').value, 10) : null,
             active: existing ? existing.active : true
         };
         saveLeaveCategory(leaveEditId, data).then(function (result) {
             if (!result.success) {
-                var fields = { name: 'leaveName', maxDays: 'leaveMaxDays', usesCredits: 'leaveUsesCredits' };
+                var fields = { name: 'leaveName', paidDays: 'leavePaidDays' };
                 if (!PPValidate.showServerError(form, result, fields)) PPToast.error(result.message);
                 return;
             }
@@ -420,6 +429,7 @@
             body: 'birBody',
             label: 'BIR Table',
             addBtn: 'btnAddBir',
+            archiveBtn: 'btnArchiveBir',
             fields: [
                 { id: 'min', label: 'Bracket Min (₱)', type: 'number', key: 'min' },
                 { id: 'max', label: 'Bracket Max (₱)', type: 'number', key: 'max', optional: true },
@@ -428,12 +438,11 @@
             ],
             renderRow: function (b) {
                 return (
-                    '<tr data-id="' + b.id + '">' +
+                    '<tr ' + rowAttrs(b.id, 'Edit bracket ' + peso(b.min)) + '>' +
                         '<td class="col-money">' + peso(b.min) + '</td>' +
                         '<td class="col-money">' + (b.max != null ? peso(b.max) : 'Above') + '</td>' +
                         '<td class="col-money">' + peso(b.base) + '</td>' +
                         '<td class="col-num">' + Number(b.rate) + '%</td>' +
-                        '<td class="col-actions">' + rowActions(true) + '</td>' +
                     '</tr>'
                 );
             },
@@ -446,6 +455,7 @@
             body: 'phBody',
             label: 'PhilHealth Table',
             addBtn: 'btnAddPh',
+            archiveBtn: 'btnArchivePh',
             fields: [
                 { id: 'min', label: 'Salary Min (₱)', type: 'number', key: 'min' },
                 { id: 'max', label: 'Salary Max (₱)', type: 'number', key: 'max', optional: true },
@@ -454,12 +464,11 @@
             ],
             renderRow: function (b) {
                 return (
-                    '<tr data-id="' + b.id + '">' +
+                    '<tr ' + rowAttrs(b.id, 'Edit bracket ' + peso(b.min)) + '>' +
                         '<td class="col-money">' + peso(b.min) + '</td>' +
                         '<td class="col-money">' + (b.max != null ? peso(b.max) : 'Above') + '</td>' +
                         '<td class="col-money">' + (b.premium != null ? peso(b.premium) : '—') + '</td>' +
                         '<td class="col-num">' + Number(b.rate) + '%</td>' +
-                        '<td class="col-actions">' + rowActions(true) + '</td>' +
                     '</tr>'
                 );
             },
@@ -472,6 +481,7 @@
             body: 'pagBody',
             label: 'Pag-IBIG Table',
             addBtn: 'btnAddPag',
+            archiveBtn: 'btnArchivePag',
             fields: [
                 { id: 'min', label: 'Compensation Min (₱)', type: 'number', key: 'min' },
                 { id: 'max', label: 'Compensation Max (₱)', type: 'number', key: 'max', optional: true },
@@ -480,12 +490,11 @@
             ],
             renderRow: function (b) {
                 return (
-                    '<tr data-id="' + b.id + '">' +
+                    '<tr ' + rowAttrs(b.id, 'Edit bracket ' + peso(b.min)) + '>' +
                         '<td class="col-money">' + peso(b.min) + '</td>' +
                         '<td class="col-money">' + (b.max != null ? peso(b.max) : 'Above') + '</td>' +
                         '<td class="col-money">' + (b.share != null ? peso(b.share) : '—') + '</td>' +
                         '<td class="col-num">' + Number(b.rate) + '%</td>' +
-                        '<td class="col-actions">' + rowActions(true) + '</td>' +
                     '</tr>'
                 );
             },
@@ -498,6 +507,7 @@
             body: 'sssBody',
             label: 'SSS Table',
             addBtn: 'btnAddSss',
+            archiveBtn: 'btnArchiveSss',
             fields: [
                 { id: 'min', label: 'Compensation Min (₱)', type: 'number', key: 'min' },
                 { id: 'max', label: 'Compensation Max (₱)', type: 'number', key: 'max', optional: true },
@@ -506,12 +516,11 @@
             ],
             renderRow: function (b) {
                 return (
-                    '<tr data-id="' + b.id + '">' +
+                    '<tr ' + rowAttrs(b.id, 'Edit bracket ' + peso(b.min)) + '>' +
                         '<td class="col-money">' + peso(b.min) + '</td>' +
                         '<td class="col-money">' + (b.max != null ? peso(b.max) : 'Above') + '</td>' +
                         '<td class="col-money">' + peso(b.msc) + '</td>' +
                         '<td class="col-num">' + Number(b.rate) + '%</td>' +
-                        '<td class="col-actions">' + rowActions(true) + '</td>' +
                     '</tr>'
                 );
             },
@@ -525,14 +534,19 @@
     var bracketModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('bracketModal'));
     var highStakesModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('highStakesModal'));
 
+    /** Years with brackets, plus this year and next (so new brackets can be entered after archiving). */
     function populateYearSelect(configKey) {
         var select = document.getElementById(bracketConfigs[configKey].yearSelect);
         var previous = select.value;
-        var years = Object.keys(TABLES[configKey] || {}).sort(function (a, b) { return b - a; });
-        select.innerHTML = years.length
-            ? years.map(function (y) { return '<option value="' + y + '">' + y + '</option>'; }).join('')
-            : '<option value="' + new Date().getFullYear() + '">' + new Date().getFullYear() + '</option>';
-        if (previous && years.indexOf(previous) !== -1) select.value = previous;
+        var now = new Date().getFullYear();
+        var years = Object.keys(TABLES[configKey] || {});
+        [String(now), String(now + 1)].forEach(function (y) { if (years.indexOf(y) === -1) years.push(y); });
+        years.sort(function (a, b) { return b - a; });
+        select.innerHTML = years.map(function (y) {
+            var has = ((TABLES[configKey] || {})[y] || []).length > 0;
+            return '<option value="' + y + '">' + y + (has ? '' : ' (no brackets)') + '</option>';
+        }).join('');
+        select.value = previous && years.indexOf(previous) !== -1 ? previous : String(now);
     }
 
     function getYearBrackets(configKey) {
@@ -546,38 +560,65 @@
         var brackets = getYearBrackets(configKey).slice().sort(function (a, b) { return a.min - b.min; });
         body.innerHTML = brackets.length
             ? brackets.map(function (b) { return config.renderRow(b); }).join('')
-            : '<tr><td colspan="5" class="text-center text-muted py-4">No brackets for this year.</td></tr>';
+            : '<tr><td colspan="4" class="text-center text-muted py-4">No brackets for this year. Click Add Bracket to enter them.</td></tr>';
+        document.getElementById(config.archiveBtn).disabled = !brackets.length;
+    }
 
-        body.querySelectorAll('[data-action="edit"]').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                openBracketForm(configKey, parseInt(btn.closest('tr').dataset.id, 10), false);
-            });
-        });
-
-        body.querySelectorAll('[data-action="deactivate"]').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                var id = parseInt(btn.closest('tr').dataset.id, 10);
-                ConfirmModal.show({
-                    title: 'Remove Bracket Row',
-                    message: 'Remove this bracket row? Ensure remaining brackets still cover all salary ranges.',
-                    confirmText: 'Remove Row',
-                    tone: 'danger'
-                }).then(function (confirmed) {
-                    if (!confirmed) return;
-                    api('api/contribution-tables/' + configKey + '/' + id, 'DELETE').then(function (data) {
-                        if (!data.success) { PPToast.error(data.message || 'Could not remove the row.'); return; }
-                        TABLES[configKey] = data.years;
-                        populateYearSelect(configKey);
-                        renderBracketTable(configKey);
-                        loadAudit();
-                        PPToast.success('Bracket row removed.');
-                    }).catch(function () {
-                        PPToast.error('Could not reach the server.');
-                    });
-                });
+    /** Archive Table: the government changed it; the year's brackets go to the Archive and new ones are entered. */
+    function archiveTable(configKey) {
+        var config = bracketConfigs[configKey];
+        var year = document.getElementById(config.yearSelect).value;
+        var count = getYearBrackets(configKey).length;
+        if (!count) return;
+        ConfirmModal.show({
+            title: 'Archive ' + config.label,
+            message: 'Archive the ' + year + ' ' + config.label + ' (' + count + ' bracket' + (count === 1 ? '' : 's') + ')? ' +
+                'Use this when the government changes the table. The brackets move to the Archive and are no longer used ' +
+                'by payroll, so enter the new brackets for ' + year + ' right after. Released payroll is not changed.',
+            confirmText: 'Archive Table',
+            tone: 'danger'
+        }).then(function (confirmed) {
+            if (!confirmed) return;
+            api('api/contribution-tables/' + configKey + '/archive', 'POST', { year: parseInt(year, 10) }).then(function (data) {
+                if (!data.success) { PPToast.error(data.message || 'Could not archive the table.'); return; }
+                TABLES[configKey] = data.years;
+                populateYearSelect(configKey);
+                document.getElementById(config.yearSelect).value = year;
+                renderBracketTable(configKey);
+                loadAudit();
+                PPToast.success('The ' + year + ' ' + config.label + ' was archived. Click Add Bracket to enter the new brackets.');
+            }).catch(function () {
+                PPToast.error('Could not reach the server.');
             });
         });
     }
+
+    // Remove Bracket (in the edit form): removes one row of the table.
+    document.getElementById('bracketRemoveBtn').addEventListener('click', function () {
+        var form = document.getElementById('bracketForm');
+        var configKey = form.dataset.config;
+        var id = parseInt(form.dataset.id, 10);
+        if (!configKey || !id) return;
+        bracketModal.hide();
+        ConfirmModal.show({
+            title: 'Remove Bracket Row',
+            message: 'Remove this bracket row? Ensure remaining brackets still cover all salary ranges.',
+            confirmText: 'Remove Row',
+            tone: 'danger'
+        }).then(function (confirmed) {
+            if (!confirmed) { bracketModal.show(); return; }
+            api('api/contribution-tables/' + configKey + '/' + id, 'DELETE').then(function (data) {
+                if (!data.success) { PPToast.error(data.message || 'Could not remove the row.'); return; }
+                TABLES[configKey] = data.years;
+                populateYearSelect(configKey);
+                renderBracketTable(configKey);
+                loadAudit();
+                PPToast.success('Bracket row removed.');
+            }).catch(function () {
+                PPToast.error('Could not reach the server.');
+            });
+        });
+    });
 
     function buildBracketFormFields(config, values) {
         return config.fields.map(function (f) {
@@ -611,6 +652,7 @@
         document.getElementById('bracketForm').dataset.config = configKey;
         document.getElementById('bracketForm').dataset.id = isNew ? '' : id;
         document.getElementById('bracketForm').dataset.isNew = isNew ? '1' : '0';
+        setRemoveButton('bracketRemoveBtn', 'Remove Bracket', !isNew);
         PPValidate.clear(document.getElementById('bracketForm'));
         bracketModal.show();
     }
@@ -706,7 +748,7 @@
         }).catch(function () {
             Object.keys(bracketConfigs).forEach(function (key) {
                 document.getElementById(bracketConfigs[key].body).innerHTML =
-                    '<tr><td colspan="5" class="text-center text-muted py-4">Could not load the table from the server.</td></tr>';
+                    '<tr><td colspan="4" class="text-center text-muted py-4">Could not load the table from the server.</td></tr>';
             });
         });
     }
@@ -718,6 +760,12 @@
         });
         document.getElementById(config.addBtn).addEventListener('click', function () {
             openBracketForm(key, null, true);
+        });
+        document.getElementById(config.archiveBtn).addEventListener('click', function () {
+            archiveTable(key);
+        });
+        clickableRows(config.body, function (id) {
+            openBracketForm(key, id, false);
         });
     });
 
@@ -737,33 +785,22 @@
             renderRanks();
         }).catch(function () {
             document.getElementById('ranksBody').innerHTML =
-                '<tr><td colspan="3" class="text-center text-muted py-4">Could not load instructor ranks from the server.</td></tr>';
+                '<tr><td colspan="2" class="text-center text-muted py-4">Could not load instructor ranks from the server.</td></tr>';
         });
     }
 
     function renderRanks() {
         var body = document.getElementById('ranksBody');
         if (!ranks.length) {
-            body.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-4">No ranks yet. Click Add Rank.</td></tr>';
+            body.innerHTML = '<tr><td colspan="2" class="text-center text-muted py-4">No ranks yet. Click Add Rank.</td></tr>';
             return;
         }
         body.innerHTML = ranks.map(function (r) {
-            var remove = r.employees
-                ? '<button type="button" class="pp-btn-row" disabled title="' + r.employees + ' employee(s) have this rank">Remove</button>'
-                : '<button type="button" class="pp-btn-row deactivate" data-action="remove">Remove</button>';
-            return '<tr data-id="' + r.id + '">' +
+            return '<tr ' + rowAttrs(r.id, 'Edit ' + r.name) + '>' +
                 '<td><strong>' + escapeHtml(r.name) + '</strong></td>' +
                 '<td class="col-num">' + r.employees + '</td>' +
-                '<td class="col-actions"><span class="pp-maint-row-actions">' +
-                    '<button type="button" class="pp-btn-row" data-action="edit">Edit</button>' + remove +
-                '</span></td>' +
             '</tr>';
         }).join('');
-    }
-
-    function rankOf(btn) {
-        var id = parseInt(btn.closest('tr').dataset.id, 10);
-        return ranks.find(function (r) { return r.id === id; });
     }
 
     function openRankForm(rank) {
@@ -771,6 +808,11 @@
         document.getElementById('rankModalTitle').textContent = rank ? 'Rename Instructor Rank' : 'Add Instructor Rank';
         document.getElementById('rankForm').reset();
         document.getElementById('rankName').value = rank ? rank.name : '';
+        setRemoveButton('rankRemoveBtn', 'Remove', !!rank);
+        // A rank can only be removed when nobody has it.
+        var removeBtn = document.getElementById('rankRemoveBtn');
+        removeBtn.disabled = !!(rank && rank.employees);
+        removeBtn.title = rank && rank.employees ? rank.employees + ' employee(s) have this rank' : '';
         PPValidate.clear(document.getElementById('rankForm'));
         bootstrap.Modal.getOrCreateInstance(document.getElementById('rankModal')).show();
     }
@@ -784,15 +826,14 @@
         return taken ? 'This rank already exists.' : '';
     };
 
-    document.getElementById('ranksBody').addEventListener('click', function (e) {
-        var btn = e.target.closest('[data-action]');
-        if (!btn) return;
-        var rank = rankOf(btn);
+    clickableRows('ranksBody', function (id) {
+        var rank = ranks.find(function (r) { return r.id === id; });
+        if (rank) openRankForm(rank);
+    });
+
+    document.getElementById('rankRemoveBtn').addEventListener('click', function () {
+        var rank = ranks.find(function (r) { return r.id === rankEditId; });
         if (!rank) return;
-        if (btn.dataset.action === 'edit') {
-            openRankForm(rank);
-            return;
-        }
         ConfirmModal.show({
             title: 'Remove Instructor Rank',
             message: 'Remove "' + rank.name + '"? It will no longer be offered in Employee Records.',
@@ -802,6 +843,7 @@
             if (!confirmed) return;
             api('api/ranks/' + rank.id, 'DELETE').then(function (data) {
                 if (!data.success) { PPToast.error(data.message); return; }
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('rankModal')).hide();
                 ranks = data.ranks;
                 renderRanks();
                 PPToast.success('"' + rank.name + '" removed.');
@@ -852,7 +894,7 @@
             renderHolidays();
         }).catch(function () {
             document.getElementById('holidaysBody').innerHTML =
-                '<tr><td colspan="5" class="text-center text-muted py-4">Could not load holidays from the server.</td></tr>';
+                '<tr><td colspan="4" class="text-center text-muted py-4">Could not load holidays from the server.</td></tr>';
         });
     }
 
@@ -864,21 +906,16 @@
     function renderHolidays() {
         var body = document.getElementById('holidaysBody');
         if (!holidays.length) {
-            body.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">No holidays for ' +
+            body.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4">No holidays for ' +
                 escapeHtml(holidayYear.value) + ' yet. Click Add Holiday.</td></tr>';
             return;
         }
         body.innerHTML = holidays.map(function (h) {
-            return '<tr class="pp-row-clickable" tabindex="0" role="button" data-id="' + h.id + '" ' +
-                    'aria-label="Edit ' + escapeHtml(h.name) + '">' +
+            return '<tr ' + rowAttrs(h.id, 'Edit ' + h.name) + '>' +
                 '<td>' + holidayDateText(h.date) + '</td>' +
                 '<td><strong>' + escapeHtml(h.name) + '</strong></td>' +
                 '<td>' + escapeHtml(h.type) + '</td>' +
                 '<td>' + (h.doublePay ? '<span class="pp-badge-leave-paid">Yes</span>' : '<span class="pp-badge-inactive">No</span>') + '</td>' +
-                '<td class="col-actions"><span class="pp-maint-row-actions">' +
-                    '<button type="button" class="pp-btn-row" data-action="edit">Edit</button>' +
-                    '<button type="button" class="pp-btn-row deactivate" data-action="remove">Remove</button>' +
-                '</span></td>' +
             '</tr>';
         }).join('');
     }
@@ -892,6 +929,7 @@
         document.getElementById('holidayName').value = holiday ? holiday.name : '';
         document.getElementById('holidayType').value = holiday ? holiday.type : 'Regular Holiday';
         document.getElementById('holidayDoublePay').value = holiday ? (holiday.doublePay ? 'Yes' : 'No') : 'Yes';
+        setRemoveButton('holidayRemoveBtn', 'Remove', !!holiday);
         PPValidate.clear(form);
         bootstrap.Modal.getOrCreateInstance(document.getElementById('holidayModal')).show();
     }
@@ -904,26 +942,14 @@
         document.getElementById('holidayDoublePay').value = e.target.value === 'Regular Holiday' ? 'Yes' : 'No';
     });
 
-    // Clicking a row (or Enter on it) edits that holiday, like its Edit button.
-    document.getElementById('holidaysBody').addEventListener('keydown', function (e) {
-        var row = e.target.closest('tr[data-id]');
-        if (row && e.target === row && (e.key === 'Enter' || e.key === ' ')) {
-            e.preventDefault();
-            row.click();
-        }
+    clickableRows('holidaysBody', function (id) {
+        var holiday = holidays.find(function (h) { return h.id === id; });
+        if (holiday) openHolidayForm(holiday);
     });
 
-    document.getElementById('holidaysBody').addEventListener('click', function (e) {
-        var row = e.target.closest('tr[data-id]');
-        if (!row) return;
-        var btn = e.target.closest('[data-action]');
-        var id = parseInt(row.dataset.id, 10);
-        var holiday = holidays.find(function (h) { return h.id === id; });
+    document.getElementById('holidayRemoveBtn').addEventListener('click', function () {
+        var holiday = holidays.find(function (h) { return h.id === holidayEditId; });
         if (!holiday) return;
-        if (!btn || btn.dataset.action === 'edit') {
-            openHolidayForm(holiday);
-            return;
-        }
         ConfirmModal.show({
             title: 'Remove Holiday',
             message: 'Remove "' + holiday.name + '" (' + holidayDateText(holiday.date) + ')? It will no longer be marked on the calendar or paid as a holiday.',
@@ -933,6 +959,7 @@
             if (!confirmed) return;
             api('api/holidays/' + holiday.id, 'DELETE').then(function (data) {
                 if (!data.success) { PPToast.error(data.message); return; }
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('holidayModal')).hide();
                 holidays = data.holidays;
                 renderHolidays();
                 PPToast.success('"' + holiday.name + '" removed.');

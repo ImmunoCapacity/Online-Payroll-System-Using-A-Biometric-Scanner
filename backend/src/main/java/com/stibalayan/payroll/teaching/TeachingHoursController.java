@@ -1,5 +1,6 @@
 package com.stibalayan.payroll.teaching;
 
+import com.stibalayan.payroll.audit.AuditService;
 import com.stibalayan.payroll.auth.AuthInterceptor;
 import com.stibalayan.payroll.auth.RequireModule;
 import com.stibalayan.payroll.auth.SystemModule;
@@ -27,8 +28,10 @@ import org.springframework.web.bind.annotation.RestController;
 public class TeachingHoursController {
 
     private final TeachingHoursService teaching;
+    private final AuditService audit;
 
-    public TeachingHoursController(TeachingHoursService teaching) {
+    public TeachingHoursController(TeachingHoursService teaching, AuditService audit) {
+        this.audit = audit;
         this.teaching = teaching;
     }
 
@@ -55,13 +58,21 @@ public class TeachingHoursController {
     @PostMapping("/classes/{classId}/approve")
     @RequireModule(SystemModule.FACULTY_TEACHING_APPROVAL)
     public Map<String, Object> approve(@PathVariable int classId, @RequestBody Map<String, String> body, HttpServletRequest http) {
-        return Map.of("success", true, "class", teaching.approve(classId, body.get("note"), userId(http)));
+        TeachingRow row = teaching.approve(classId, body.get("note"), userId(http));
+        audit.log(userId(http), "Faculty Teaching Hours", "Approved class", describe(row));
+        return Map.of("success", true, "class", row);
     }
 
     @PostMapping("/classes/{classId}/reject")
     @RequireModule(SystemModule.FACULTY_TEACHING_APPROVAL)
     public Map<String, Object> reject(@PathVariable int classId, @RequestBody Map<String, String> body, HttpServletRequest http) {
-        return Map.of("success", true, "class", teaching.reject(classId, body.get("note"), userId(http)));
+        TeachingRow row = teaching.reject(classId, body.get("note"), userId(http));
+        audit.log(userId(http), "Faculty Teaching Hours", "Rejected class", describe(row));
+        return Map.of("success", true, "class", row);
+    }
+
+    private static String describe(TeachingRow r) {
+        return r.employeeName() + " · " + r.subject() + " · " + r.classDate();
     }
 
     private static int userId(HttpServletRequest http) {

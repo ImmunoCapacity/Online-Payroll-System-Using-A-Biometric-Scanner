@@ -120,9 +120,7 @@
                                 </div>
 
                                 <div class="payroll-calendar-legend" aria-hidden="true">
-                                    <span><i class="payroll-holiday-dot payroll-calendar-day-holiday-regular"></i>Regular holiday</span>
-                                    <span><i class="payroll-holiday-dot payroll-calendar-day-holiday-special"></i>Special non-working</span>
-                                    <span><i class="payroll-holiday-dot payroll-calendar-day-holiday-working"></i>Special working</span>
+                                    <span><i class="payroll-holiday-dot payroll-holiday-mark"></i>Holiday</span>
                                 </div>
 
                                 <div
@@ -204,27 +202,6 @@
 
                                             <span id="payrollPeriodEndDate">
                                                 September 25, 2026
-                                            </span>
-
-                                        </div>
-
-                                    </div>
-
-
-                                    <!-- Payroll period legend -->
-
-                                    <div class="payroll-period-legend">
-
-                                        <span class="payroll-period-legend-box"></span>
-
-                                        <div>
-
-                                            <strong>
-                                                Payroll Period
-                                            </strong>
-
-                                            <span id="payrollPeriodLegendDates">
-                                                September 11 – September 25, 2026
                                             </span>
 
                                         </div>
@@ -401,8 +378,8 @@
                         class="pp-activity-feed"
                         id="recentActivityList">
 
-                        <!-- Demo entries removed; activity will be listed here once it is recorded. -->
-                        <div class="pp-empty-state">No recent activity yet.</div>
+                        <!-- Filled from the audit trail by js/dashboard.js -->
+                        <div class="pp-empty-state">Loading…</div>
 
                     </div>
 

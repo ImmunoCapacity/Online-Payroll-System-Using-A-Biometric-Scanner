@@ -24,9 +24,15 @@
                     <h1 class="pp-content-title">Biometric Devices</h1>
                     <p class="pp-content-subtitle">Register and manage the fingerprint scanners used for attendance.</p>
                 </div>
-                <button type="button" class="btn btn-pp-primary" id="addDeviceBtn">
-                    <i class="bi bi-plus-lg me-1"></i> Add Device
-                </button>
+                <div class="pp-sync-actions">
+                    <span class="pp-live-badge" id="liveSyncBadge" hidden><span class="pp-live-dot"></span><span>Live</span></span>
+                    <button type="button" class="btn btn-pp-outline" id="syncDeviceBtn">
+                        <i class="bi bi-arrow-repeat me-1"></i> Sync Device
+                    </button>
+                    <button type="button" class="btn btn-pp-primary" id="addDeviceBtn">
+                        <i class="bi bi-plus-lg me-1"></i> Add Device
+                    </button>
+                </div>
             </header>
 
             <div class="pp-widget">
@@ -105,5 +111,6 @@
     <script src="js/select-hint.js"></script>
     <script src="js/form-validation.js"></script>
     <script src="js/biometric-devices.js"></script>
+    <script src="js/biometric-sync.js"></script>
 </body>
 </html>

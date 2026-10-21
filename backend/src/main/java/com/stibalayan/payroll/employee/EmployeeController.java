@@ -55,6 +55,8 @@ public class EmployeeController {
     @PostMapping
     public Map<String, Object> create(@RequestBody EmployeeRequest request, HttpServletRequest http) {
         String id = employees.create(request);
+        audit.log(AuthInterceptor.currentUser(http).id(), "Employee Records", "Added employee",
+                request.firstName() + " " + request.lastName() + " · " + employees.employeeNumberOf(id));
         rates.syncEmployee(id, AuthInterceptor.currentUser(http).id());
         return Map.of("success", true, "id", id, "employeeNumber", employees.employeeNumberOf(id));
     }
@@ -62,6 +64,8 @@ public class EmployeeController {
     @PutMapping("/{id}")
     public Map<String, Object> update(@PathVariable String id, @RequestBody EmployeeRequest request, HttpServletRequest http) {
         employees.update(id, request);
+        audit.log(AuthInterceptor.currentUser(http).id(), "Employee Records", "Updated employee",
+                request.firstName() + " " + request.lastName() + " · " + employees.employeeNumberOf(id));
         rates.syncEmployee(id, AuthInterceptor.currentUser(http).id());
         return Map.of("success", true);
     }

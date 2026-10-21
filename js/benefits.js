@@ -204,7 +204,7 @@
                 return current ? t.id === current.id
                     : t.active && !have.some(function (b) { return b.id === t.id; });
             }).map(function (t) {
-                return '<option value="' + t.id + '">' + escapeHtml(t.name) + ' — default ' + peso(t.defaultAmount) + '</option>';
+                return '<option value="' + t.id + '">' + escapeHtml(t.name) + ' — ' + peso(t.defaultAmount) + '</option>';
             }).join('') +
             (current ? '' : '<option value="' + NEW_BENEFIT + '">+ New benefit…</option>');
 
@@ -223,7 +223,7 @@
         var isNew = el('assignBenefit').value === NEW_BENEFIT;
         el('newBenefitFields').classList.toggle('d-none', !isNew);
         el('newBenefitName').required = isNew;
-        el('assignNote').textContent = isNew ? 'The new benefit is added to Benefit Types with this amount as its default.' : el('assignNote').textContent;
+        el('assignNote').textContent = isNew ? 'The new benefit is added to Benefit Types with this amount.' : el('assignNote').textContent;
     }
 
     el('assignBenefit').addEventListener('change', function () {
@@ -322,7 +322,6 @@
         el('typeId').value = t.id;
         el('typeName').value = t.name;
         el('typeAmount').value = Number(t.defaultAmount).toFixed(2);
-        el('typeActive').value = t.active ? 'true' : 'false';
         el('typeFormTitle').textContent = 'Edit ' + t.name;
         el('saveTypeBtn').textContent = 'Save';
         el('cancelTypeBtn').classList.remove('d-none');
@@ -342,7 +341,8 @@
         api(id ? 'api/benefits/' + id : 'api/benefits', id ? 'PUT' : 'POST', {
             name: el('typeName').value.trim(),
             defaultAmount: Number(el('typeAmount').value),
-            active: el('typeActive').value === 'true'
+            // Status isn't edited here: a benefit keeps its state (new ones are active).
+            active: id ? types.find(function (t) { return t.id === Number(id); }).active : true
         }).then(function (data) {
             if (!data.success) {
                 if (!PPValidate.showServerError(typeForm, data, { name: 'typeName', defaultAmount: 'typeAmount' })) PPToast.error(data.message);

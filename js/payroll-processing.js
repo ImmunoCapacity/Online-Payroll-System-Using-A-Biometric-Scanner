@@ -159,6 +159,9 @@
     }
 
     function bracketFor(rows, amount) {
+        // Brackets are to the centavo (…20,833.00 / 20,833.01…); a half-centavo
+        // amount (e.g. after the PhilHealth half share) would fall between them.
+        amount = round2(amount);
         return rows.find(function (b) {
             return amount >= b.min && (b.max == null || amount <= b.max);
         }) || null;
@@ -206,7 +209,7 @@
      * order: government loans (SSS, Pag-IBIG) first, then the oldest. Each
      * takes its scheduled amount from the pay left after contributions and
      * tax; a loan the pay can't fully cover is skipped this period (nothing
-     * deducted, flagged) and runs one period longer. Net pay never goes
+     * deducted, flagged) and runs one month longer. Net pay never goes
      * below zero. Returns the items as stored with the payroll.
      */
     function applyLoans(loanItems, available) {
@@ -262,7 +265,7 @@
                                 '<tbody id="loanSkipBody"></tbody>' +
                             '</table></div>' +
                             '<p class="text-muted small mt-3 mb-0">Contributions and tax are taken first, then loans (SSS and Pag-IBIG first). ' +
-                            'A loan the remaining pay can\'t fully cover is skipped for this period, and the loan runs one period longer.</p>' +
+                            'A loan the remaining pay can\'t fully cover is skipped this month, and the loan runs one month longer.</p>' +
                         '</div>' +
                         '<div class="modal-footer"><button type="button" class="btn btn-pp-primary" data-bs-dismiss="modal">OK</button></div>' +
                     '</div></div>' +
@@ -316,6 +319,25 @@
         }
         if (e.department === 'Faculty/Admin') {
             add('Approved teaching hours', h.teachingHours, e.teachingRate);
+        }
+        // Approved paid leave on days with classes: the classes missed are paid
+        // at the teaching rate (their scheduled hours).
+        var leaveClasses = Number(h.paidLeaveClasses) || 0;
+        if (leaveClasses > 0 && (e.department === 'Faculty' || e.department === 'Faculty/Admin')) {
+            add('Paid leave (' + leaveClasses + ' class' + (leaveClasses === 1 ? '' : 'es') + ')', h.paidLeaveTeachingHours,
+                e.department === 'Faculty/Admin' ? e.teachingRate : e.rate);
+        }
+        // Regular holidays not worked (Monday–Friday) are still paid: a normal
+        // office day, and the classes scheduled that day at the teaching rate.
+        var regularDays = Number(h.regularHolidayDays) || 0;
+        if (regularDays > 0 && e.department !== 'Faculty') {
+            add('Regular holiday pay (' + regularDays + ' day' + (regularDays === 1 ? '' : 's') + ')',
+                regularDays * (Number(e.officeHours) || 8), e.rate);
+        }
+        var regularClasses = Number(h.regularHolidayClasses) || 0;
+        if (regularClasses > 0 && (e.department === 'Faculty' || e.department === 'Faculty/Admin')) {
+            add('Regular holiday pay (' + regularClasses + ' class' + (regularClasses === 1 ? '' : 'es') + ')',
+                h.regularHolidayTeachingHours, e.department === 'Faculty/Admin' ? e.teachingRate : e.rate);
         }
         // Double-pay holidays (Maintenance → Holiday Calendar): the hours worked
         // that day are already paid above, so these lines pay them once more.
@@ -715,7 +737,7 @@
             skippedLoans(emp).map(function (l) {
                 return '<p class="pp-payslip-note text-danger"><i class="bi bi-exclamation-triangle-fill me-1"></i>' +
                     escapeHtml(l.lender || l.type) + ' loan' + (l.reference ? ' ' + escapeHtml(l.reference) : '') +
-                    ' (' + peso(l.scheduled) + ') skipped — pay wasn\'t enough. The loan runs one period longer.</p>';
+                    ' (' + peso(l.scheduled) + ') skipped — pay wasn\'t enough. The loan runs one month longer.</p>';
             }).join('') +
             (emp.status === 'computed'
                 ? '<button type="button" class="btn btn-pp-primary w-100 mt-3" id="btnMarkReviewed">Mark as Reviewed</button>'

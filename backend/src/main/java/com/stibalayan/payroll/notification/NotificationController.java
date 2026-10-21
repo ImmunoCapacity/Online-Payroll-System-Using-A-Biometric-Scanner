@@ -129,7 +129,7 @@ public class NotificationController {
                 items.add(item("loan-skipped-" + r.get("payroll_run_id") + "-" + n, "bi-exclamation-triangle", "danger",
                         "Loan deduction skipped for " + n + " employee" + plural(n),
                         r.get("period_label") + ": their pay wasn't enough to cover a loan, so it wasn't deducted"
-                                + (released ? " and the loan runs one period longer." : ". Check them before releasing."),
+                                + (released ? " and the loan runs one month longer." : ". Check them before releasing."),
                         "payroll-processing.html"));
             });
         }

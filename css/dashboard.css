@@ -122,9 +122,7 @@
     background: currentColor;
 }
 
-.payroll-calendar-day.payroll-calendar-day-holiday-regular { color: #c0392b; }
-.payroll-calendar-day.payroll-calendar-day-holiday-special { color: #c26a06; }
-.payroll-calendar-day.payroll-calendar-day-holiday-working { color: #64748b; }
+.payroll-calendar-day.payroll-holiday-mark { color: #c0392b; }
 
 /* On the white-on-blue start/end circles, keep the number white. */
 .payroll-calendar-day-start.payroll-calendar-day-holiday,
@@ -140,9 +138,7 @@
     border-radius: 50%;
 }
 
-.payroll-holiday-dot.payroll-calendar-day-holiday-regular { background: #c0392b; }
-.payroll-holiday-dot.payroll-calendar-day-holiday-special { background: #c26a06; }
-.payroll-holiday-dot.payroll-calendar-day-holiday-working { background: #64748b; }
+.payroll-holiday-dot.payroll-holiday-mark { background: #c0392b; }
 
 .payroll-calendar-legend {
     display: flex;
@@ -258,13 +254,18 @@
     line-height: 1.35;
 }
 
-.payroll-period-legend-box {
+.payroll-period-legend .payroll-period-legend-box {
     width: 32px;
     height: 24px;
     flex: 0 0 32px;
     background: #dceef5;
     border: 1px solid #c9e0eb;
     border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #1a5f7a;
+    font-size: 13px;
 }
 
 .pp-activity-feed {
@@ -340,4 +341,14 @@
         width: 29px;
         flex-basis: 29px;
     }
+}
+/* Recent Activity rows (js/dashboard.js) */
+.pp-activity-feed .pp-activity-item,
+.pp-activity-feed .pp-activity-item:first-child,
+.pp-activity-feed .pp-activity-item:last-child {
+    padding: 0.875rem 1.25rem;
+}
+
+.pp-activity-feed .pp-activity-text strong {
+    color: var(--pp-primary-dark);
 }

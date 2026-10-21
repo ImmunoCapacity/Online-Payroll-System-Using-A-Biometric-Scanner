@@ -73,7 +73,12 @@
                     <!-- Filters -->
                     <div class="report-filter-card" id="reportFilters">
 
-                        <div class="report-filter">
+                        <div class="report-filter d-none" id="leaveYearFilter">
+                            <label for="leaveYear">Year</label>
+                            <select id="leaveYear" class="form-select"></select>
+                        </div>
+
+                        <div class="report-filter" id="payrollPeriodFilter">
                             <label for="payrollPeriod">Payroll period</label>
                             <select data-clearable id="payrollPeriod" class="form-select">
                                 <option value="all" hidden data-hint>All payroll periods</option>

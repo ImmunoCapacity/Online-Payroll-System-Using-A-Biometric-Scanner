@@ -42,9 +42,10 @@
                 <div class="loan-info-note">
                     <i class="bi bi-info-circle-fill"></i>
                     <div>
-                        Loans are approved by the lender (SSS, Pag-IBIG, a bank, etc.). Payroll deducts them every period
-                        from Payment From to Payment To. When an employee's pay isn't enough to cover a loan, it is
-                        <strong>skipped</strong> for that period and flagged, and the loan runs one period longer.
+                        Loans are approved by the lender (SSS, Pag-IBIG, a bank, etc.). The loan plus interest is divided by
+                        the months from Payment From to Payment To, and deducted once a month in the 11th–25th payroll. When an
+                        employee's pay isn't enough to cover a loan, it is <strong>skipped</strong> that month and flagged, and the
+                        loan runs one month longer.
                     </div>
                 </div>
 
@@ -137,7 +138,7 @@
                             <span class="loan-balance-value" id="empActiveCount">0</span>
                         </div>
                         <div class="loan-balance-card">
-                            <span class="loan-balance-label">Deducted Every Payroll</span>
+                            <span class="loan-balance-label">Deducted Every Month</span>
                             <span class="loan-balance-value" id="empPerPayroll">₱0.00</span>
                         </div>
                         <div class="loan-balance-card">
@@ -160,9 +161,9 @@
                                     <tr>
                                         <th>Lender</th>
                                         <th>Reference No.</th>
-                                        <th class="text-end">Loan Amount</th>
+                                        <th class="text-end">Loan + Interest</th>
                                         <th>Payment Period</th>
-                                        <th class="text-end">Periods</th>
+                                        <th class="text-end">Months</th>
                                         <th class="text-end">Per Payroll</th>
                                         <th class="text-end">Paid</th>
                                         <th class="text-end">Balance</th>
@@ -231,12 +232,12 @@
                                     <span class="loan-detail-value" id="detailDeduction">₱0.00</span>
                                 </div>
                                 <div class="loan-detail-wide d-none" id="detailSkippedWrap">
-                                    <span class="loan-detail-label">Skipped Periods</span>
+                                    <span class="loan-detail-label">Skipped Months</span>
                                     <span class="loan-detail-value text-danger" id="detailSkipped">—</span>
                                 </div>
-                                <div class="loan-detail-wide d-none" id="detailRemarksWrap">
-                                    <span class="loan-detail-label">Remarks</span>
-                                    <span class="loan-detail-value" id="detailRemarks">—</span>
+                                <div class="loan-detail-wide">
+                                    <span class="loan-detail-label">Interest</span>
+                                    <span class="loan-detail-value" id="detailInterest">—</span>
                                 </div>
                             </div>
                         </section>
@@ -247,7 +248,7 @@
                             </div>
                             <div class="loan-balance-grid">
                                 <div class="loan-balance-card">
-                                    <span class="loan-balance-label">Original Loan Amount</span>
+                                    <span class="loan-balance-label">Loan + Interest</span>
                                     <span class="loan-balance-value" id="detailLoanAmount">₱0.00</span>
                                 </div>
                                 <div class="loan-balance-card">
@@ -300,7 +301,7 @@
                     <div>
                         <h2 class="modal-title" id="recordLoanTitle">Add Loan</h2>
                         <p class="small text-muted mb-0 mt-1">
-                            The deduction per payroll is worked out from the amount and the payment period.
+                            The loan plus interest is divided by the months from Payment From to Payment To.
                         </p>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -320,24 +321,9 @@
 
                             <div class="col-md-6">
                                 <label for="loanLender" class="pp-form-label">Lender <span class="text-danger">*</span></label>
-                                <select class="form-select pp-form-select" id="loanLender" required>
-                                    <option value="" selected hidden data-hint>Where the loan is from</option>
-                                    <option value="SSS">SSS</option>
-                                    <option value="Pag-IBIG">Pag-IBIG</option>
-                                    <option value="Bank">Bank</option>
-                                    <option value="Cooperative">Cooperative</option>
-                                    <option value="Other">Other</option>
-                                </select>
-                                <div class="invalid-feedback">Please choose the lender.</div>
-                            </div>
-
-                            <div class="col-md-6" id="loanLenderNameGroup">
-                                <label for="loanLenderName" class="pp-form-label">
-                                    <span id="loanLenderNameLabel">Lender Name</span> <span class="text-danger">*</span>
-                                </label>
-                                <input type="text" class="form-control pp-form-control" id="loanLenderName" maxlength="100"
-                                    data-validate="text" data-label="Lender name" placeholder="e.g. BDO" required>
-                                <div class="invalid-feedback">Please enter the lender's name.</div>
+                                <input type="text" class="form-control pp-form-control" id="loanLender" maxlength="100"
+                                    data-validate="text" data-label="Lender" placeholder="e.g. SSS, Pag-IBIG, BDO" required>
+                                <div class="invalid-feedback">Please enter the lender.</div>
                             </div>
 
                             <div class="col-md-6">
@@ -357,36 +343,30 @@
                             </div>
 
                             <div class="col-md-6">
-                                <label for="loanStartPeriod" class="pp-form-label">Payment From <span class="text-danger">*</span></label>
-                                <select class="form-select pp-form-select" id="loanStartPeriod" required>
-                                    <option value="" selected hidden data-hint>First payroll period</option>
-                                </select>
-                                <div class="invalid-feedback">Please choose the first payroll period.</div>
+                                <label for="loanInterest" class="pp-form-label">Interest</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control pp-form-control" id="loanInterest" min="0" max="100"
+                                        step="0.01" data-validate="number" data-decimals="2" inputmode="decimal" placeholder="0.00">
+                                    <span class="input-group-text">%</span>
+                                </div>
                             </div>
 
                             <div class="col-md-6">
-                                <label for="loanEndPeriod" class="pp-form-label">Payment To <span class="text-danger">*</span></label>
-                                <select class="form-select pp-form-select" id="loanEndPeriod" required disabled>
-                                    <option value="" selected hidden data-hint>Last payroll period</option>
-                                </select>
-                                <div class="invalid-feedback">Please choose the last payroll period.</div>
+                                <label for="loanStartDate" class="pp-form-label">Payment From <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control pp-form-control" id="loanStartDate" required>
+                                <div class="invalid-feedback">Please choose when the payments start.</div>
                             </div>
 
                             <div class="col-md-6">
-                                <label for="loanPeriods" class="pp-form-label">Number of Payroll Periods</label>
-                                <input type="text" class="form-control pp-form-control loan-computed" id="loanPeriods" value="—" readonly tabindex="-1">
-                            </div>
-
-                            <div class="col-md-6">
-                                <label for="loanPerPayroll" class="pp-form-label">Deduction per Payroll</label>
-                                <input type="text" class="form-control pp-form-control loan-computed" id="loanPerPayroll" value="—" readonly tabindex="-1">
-                                <div class="form-text" id="loanPerPayrollHint"></div>
+                                <label for="loanEndDate" class="pp-form-label">Payment To <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control pp-form-control" id="loanEndDate" required>
+                                <div class="invalid-feedback">Please choose when the payments end.</div>
                             </div>
 
                             <div class="col-12">
-                                <label for="loanRemarks" class="pp-form-label">Remarks <span class="text-muted">(Optional)</span></label>
-                                <textarea class="form-control pp-form-control" id="loanRemarks" rows="2" maxlength="255"
-                                    data-validate="text" placeholder="e.g. salary loan approved Oct 15"></textarea>
+                                <label for="loanPerPayroll" class="pp-form-label">Deduction per Payroll</label>
+                                <input type="text" class="form-control pp-form-control loan-computed" id="loanPerPayroll" value="—" readonly tabindex="-1">
+                                <div class="form-text" id="loanPerPayrollHint"></div>
                             </div>
 
                         </div>

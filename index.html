@@ -106,28 +106,27 @@
 
                     <!-- Step 1 -->
                     <form id="resetEmailForm" class="reset-step" data-step="1" novalidate>
-                        <p class="reset-help">Enter the email address of your account. We'll send you a 6-digit code.</p>
-                        <label for="resetEmail" class="form-label">Email address</label>
-                        <input type="email" class="form-control" id="resetEmail" placeholder="name@institution.edu" autocomplete="username" maxlength="100" required>
-                        <div class="invalid-feedback" id="resetEmailError"></div>
+                        <p class="reset-help">A 6-digit code will be sent to the email of this account.</p>
+                        <div class="reset-fixed-email"><i class="bi bi-envelope-fill" aria-hidden="true"></i> <span>Account</span> <strong class="reset-email-value" id="resetEmail"></strong></div>
                         <button type="submit" class="btn btn-login mt-3" id="resetSendBtn">Send Code</button>
                     </form>
 
                     <!-- Step 2 -->
                     <form id="resetCodeForm" class="reset-step d-none" data-step="2" novalidate>
+                        <div class="reset-fixed-email"><i class="bi bi-envelope-fill" aria-hidden="true"></i> <span>Resetting the password of</span> <strong class="reset-email-value"></strong></div>
                         <p class="reset-help" id="resetCodeHelp">Enter the 6-digit code sent to your email. It expires in 10 minutes.</p>
                         <label for="resetCode" class="form-label">Code</label>
                         <input type="text" class="form-control reset-code-input" id="resetCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" required>
                         <div class="invalid-feedback" id="resetCodeError"></div>
                         <button type="submit" class="btn btn-login mt-3" id="resetVerifyBtn">Verify Code</button>
                         <div class="reset-links">
-                            <a href="#" class="forgot-link" id="resetChangeEmail">Use a different email</a>
                             <a href="#" class="forgot-link" id="resetResend">Resend code</a>
                         </div>
                     </form>
 
                     <!-- Step 3 -->
                     <form id="resetPasswordForm" class="reset-step d-none" data-step="3" novalidate>
+                        <div class="reset-fixed-email"><i class="bi bi-envelope-fill" aria-hidden="true"></i> <span>Resetting the password of</span> <strong class="reset-email-value"></strong></div>
                         <p class="reset-help">Code verified. Create your new password: 8–72 characters with at least one letter and one number.</p>
                         <label for="resetNewPassword" class="form-label">New password</label>
                         <input type="password" class="form-control" id="resetNewPassword" autocomplete="new-password" maxlength="72" required>

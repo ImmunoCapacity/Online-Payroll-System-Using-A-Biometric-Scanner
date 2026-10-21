@@ -272,20 +272,69 @@
     color: #fff;
 }
 
-.btn-pp-bracket-add {
-    background: #fff;
-    border: 1px dashed var(--pp-border);
-    color: var(--pp-text-muted);
+/* Add Bracket and Archive Table: blue with white text, like the other primary buttons. */
+.btn-pp-bracket-add,
+.btn-pp-bracket-archive {
+    background: var(--pp-primary);
+    border: 1px solid var(--pp-primary);
+    color: #fff;
     font-weight: 600;
     font-size: 0.75rem;
     border-radius: var(--pp-radius-sm);
     padding: 0.3rem 0.625rem;
 }
 
-.btn-pp-bracket-add:hover {
+.btn-pp-bracket-add:hover:not(:disabled),
+.btn-pp-bracket-archive:hover:not(:disabled),
+.btn-pp-bracket-add:focus-visible,
+.btn-pp-bracket-archive:focus-visible {
+    background: var(--pp-primary-dark);
+    border-color: var(--pp-primary-dark);
+    color: #fff;
+}
+
+.btn-pp-bracket-add:disabled,
+.btn-pp-bracket-archive:disabled {
+    background: var(--pp-primary);
+    border-color: var(--pp-primary);
+    color: #fff;
+    opacity: 0.5;
+}
+
+.btn-pp-bracket-archive + .btn-pp-bracket-add {
+    margin-left: 0.5rem;
+}
+
+/* Remove / Deactivate inside an edit modal (rows are clicked to edit). */
+.btn-pp-modal-remove {
+    background: transparent;
+    border: 1px solid var(--pp-border);
+    color: var(--pp-error);
+    font-weight: 600;
+    font-size: 0.875rem;
+    border-radius: var(--pp-radius-sm);
+    padding: 0.5rem 1rem;
+}
+
+.btn-pp-modal-remove:hover:not(:disabled) {
+    background: var(--pp-error-bg);
+    border-color: var(--pp-error);
+    color: var(--pp-error);
+}
+
+.btn-pp-modal-remove.is-restore {
+    color: var(--pp-primary);
+}
+
+.btn-pp-modal-remove.is-restore:hover:not(:disabled) {
+    background: var(--pp-primary-light);
     border-color: var(--pp-primary);
     color: var(--pp-primary);
-    background: var(--pp-primary-light);
+}
+
+.pp-maint-hint {
+    margin: 0;
+    padding: 0.5rem 1rem;
 }
 
 @media (max-width: 767px) {

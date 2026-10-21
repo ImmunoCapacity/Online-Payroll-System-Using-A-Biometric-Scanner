@@ -38,7 +38,7 @@ public class Loan {
     @Column(name = "`current_date`")
     private LocalDate recordedOn;
 
-    /** First day of the payroll period that starts the deductions. */
+    /** Payment From: deductions start in this month. */
     @Column(name = "date_from")
     private LocalDate startDate;
 
@@ -52,15 +52,23 @@ public class Loan {
     @Column(name = "deduction_per_payroll")
     private BigDecimal deductionPerPayroll;
 
-    /** SSS, Pag-IBIG, Bank, Cooperative or Other. */
+    /** Who lent it, as typed (e.g. SSS, Pag-IBIG, BDO). */
     private String lender;
 
     @Column(name = "lender_name")
     private String lenderName;
 
-    /** Start of the last payroll period scheduled to deduct it (null: older loans, worked out from the amounts). */
+    /** Payment To: the last month deducted (null: older loans, worked out from the amounts). */
     @Column(name = "end_date")
     private LocalDate endDate;
+
+    /** Interest in percent of the loan amount, for the whole loan. */
+    @Column(name = "interest_rate")
+    private BigDecimal interestRate;
+
+    /** Loan amount plus interest: what payroll deducts in total (null: older loans, the amount). */
+    @Column(name = "total_payable")
+    private BigDecimal totalPayable;
 
     private String remarks;
 
@@ -92,6 +100,10 @@ public class Loan {
     public void setLenderName(String lenderName) { this.lenderName = lenderName; }
     public LocalDate getEndDate() { return endDate; }
     public void setEndDate(LocalDate endDate) { this.endDate = endDate; }
+    public BigDecimal getInterestRate() { return interestRate; }
+    public void setInterestRate(BigDecimal interestRate) { this.interestRate = interestRate; }
+    public BigDecimal getTotalPayable() { return totalPayable; }
+    public void setTotalPayable(BigDecimal totalPayable) { this.totalPayable = totalPayable; }
     public String getRemarks() { return remarks; }
     public void setRemarks(String remarks) { this.remarks = remarks; }
     public Integer getRecordedBy() { return recordedBy; }

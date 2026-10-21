@@ -21,17 +21,18 @@
         <main class="pp-content">
             <header class="pp-content-header">
                 <div>
-                    <h1 class="pp-content-title">Archive</h1>
-                    <p class="pp-content-subtitle">Employees who no longer work here. Their payroll, attendance and leave history is kept.</p>
+                    <h1 class="pp-content-title" id="archiveTitle">Archive</h1>
+                    <p class="pp-content-subtitle" id="archiveSubtitle">Employees who no longer work here. Their payroll, attendance and leave history is kept.</p>
                 </div>
             </header>
 
             <div class="pp-util-note">
                 <i class="bi bi-info-circle"></i>
-                <div>This list is read-only. The Payroll Master archives and restores employees in Employee Records.</div>
+                <div id="archiveNote">This list is read-only. The Payroll Master archives and restores employees in Employee Records.</div>
             </div>
 
-            <div class="pp-widget">
+            <!-- Archived employees -->
+            <div class="pp-widget" id="employeesView">
                 <div class="pp-widget-body">
                     <div class="pp-filter-bar" role="search">
                         <div class="pp-filter-group search">
@@ -59,6 +60,16 @@
                         </table>
                     </div>
                     <div class="pp-empty-state d-none" id="archiveEmpty">No archived employees.</div>
+                </div>
+            </div>
+
+            <!-- Archived deduction tables (BIR, Pag-IBIG, SSS, PhilHealth) -->
+            <div id="tablesView" class="d-none">
+                <div id="tableArchives"></div>
+                <div class="pp-widget d-none" id="tablesEmptyWrap">
+                    <div class="pp-widget-body">
+                        <div class="pp-empty-state" id="tablesEmpty">No archived tables.</div>
+                    </div>
                 </div>
             </div>
         </main>
