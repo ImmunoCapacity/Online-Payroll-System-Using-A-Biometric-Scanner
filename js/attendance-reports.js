@@ -26,18 +26,59 @@
             .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
-    // The current pay period.
-    (function defaultRange() {
-        var today = new Date();
-        var start = today.getDate() >= 26 ? new Date(today.getFullYear(), today.getMonth(), 26)
-            : today.getDate() >= 11 ? new Date(today.getFullYear(), today.getMonth(), 11)
-            : new Date(today.getFullYear(), today.getMonth() - 1, 26);
+    /* Cut-off: the 11th–25th or the 26th–10th. Choosing one fills From and
+       To; changing a date by hand switches it to "Custom dates". */
+    var reportCutoff = document.getElementById('reportCutoff');
+
+    function cutoffContaining(date) {
+        var start = date.getDate() >= 26 ? new Date(date.getFullYear(), date.getMonth(), 26)
+            : date.getDate() >= 11 ? new Date(date.getFullYear(), date.getMonth(), 11)
+            : new Date(date.getFullYear(), date.getMonth() - 1, 26);
         var end = start.getDate() === 11
             ? new Date(start.getFullYear(), start.getMonth(), 25)
             : new Date(start.getFullYear(), start.getMonth() + 1, 10);
-        reportFrom.value = iso(start);
-        reportTo.value = iso(end);
+        return { start: iso(start), end: iso(end), startDate: start, endDate: end };
+    }
+
+    function cutoffLabel(c) {
+        return c.startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' – ' +
+            c.endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    function syncCutoff() {
+        var value = reportFrom.value + '|' + reportTo.value;
+        var match = Array.prototype.some.call(reportCutoff.options, function (o) { return o.value === value; });
+        reportCutoff.value = match ? value : 'custom';
+    }
+
+    // The current cut-off and the 24 before it (one year), newest first.
+    (function fillCutoffs() {
+        var c = cutoffContaining(new Date());
+        var options = [];
+        for (var i = 0; i < 25; i++) {
+            options.push('<option value="' + c.start + '|' + c.end + '">' + cutoffLabel(c) + (i === 0 ? ' (current)' : '') + '</option>');
+            var before = new Date(c.startDate);
+            before.setDate(before.getDate() - 1);
+            c = cutoffContaining(before);
+        }
+        options.push('<option value="custom">Custom dates</option>');
+        reportCutoff.innerHTML = options.join('');
+        var current = cutoffContaining(new Date());
+        reportFrom.value = current.start;
+        reportTo.value = current.end;
+        syncCutoff();
     })();
+
+    reportCutoff.addEventListener('change', function () {
+        if (reportCutoff.value === 'custom') {
+            reportFrom.focus();
+            return;
+        }
+        var range = reportCutoff.value.split('|');
+        reportFrom.value = range[0];
+        reportTo.value = range[1];
+        load();
+    });
 
     function load() {
         if (!reportFrom.value || !reportTo.value) return;
@@ -47,7 +88,7 @@
             reportEmpty.classList.remove('d-none');
             return;
         }
-        reportBody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">Loading…</td></tr>';
+        reportBody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">Loading…</td></tr>';
         reportEmpty.classList.add('d-none');
         fetch('api/dtr/summary?from=' + reportFrom.value + '&to=' + reportTo.value)
             .then(function (response) { return response.json(); })
@@ -80,7 +121,8 @@
             var badge = emp.type === 'Faculty' ? 'pp-badge-faculty' : emp.type === 'Faculty/Admin' ? 'pp-badge-faculty-admin' : 'pp-badge-admin';
             return (
                 '<tr>' +
-                    '<td><strong>' + escapeHtml(emp.employeeName) + '</strong><br><span class="text-muted" style="font-size:0.75rem;">' + escapeHtml(emp.employeeNumber) + '</span></td>' +
+                    '<td>' + escapeHtml(emp.employeeNumber) + '</td>' +
+                    '<td><strong>' + escapeHtml(emp.employeeName) + '</strong></td>' +
                     '<td><span class="pp-badge ' + badge + '">' + escapeHtml(emp.type) + '</span></td>' +
                     '<td class="col-num">' + emp.present + '</td>' +
                     '<td class="col-num">' + emp.late + '</td>' +
@@ -92,8 +134,82 @@
         }).join('');
     }
 
+    /* Export PDF / Excel: the server (api/reports/export) builds the file
+       from the rows on screen, with the school letterhead. */
+    function longDate(text) {
+        var p = text.split('-').map(Number);
+        return new Date(p[0], p[1] - 1, p[2]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    function exportReport(format, button) {
+        var type = reportType.value;
+        var rows = employees.filter(function (e) { return type === 'all' || e.type === type; });
+        if (!rows.length) {
+            PPToast.error('There is nothing to export for these dates.');
+            return;
+        }
+        var sum = function (k) { return rows.reduce(function (s, e) { return s + (Number(e[k]) || 0); }, 0); };
+        var subtitle = longDate(reportFrom.value) + ' – ' + longDate(reportTo.value) +
+            (type === 'all' ? '' : '   |   ' + reportType.selectedOptions[0].textContent.trim());
+        var label = button.innerHTML;
+        button.disabled = true;
+        button.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Exporting…';
+
+        fetch('api/reports/export', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                format: format,
+                title: 'Attendance Report',
+                subtitle: [subtitle],
+                columns: [
+                    { label: 'EMP. ID', kind: 'text' }, { label: 'EMPLOYEE', kind: 'text' }, { label: 'TYPE', kind: 'text' },
+                    { label: 'PRESENT', kind: 'number' }, { label: 'LATE', kind: 'number' }, { label: 'ABSENT', kind: 'number' },
+                    { label: 'ON LEAVE', kind: 'number' }, { label: 'ATTENDANCE RATE (%)', kind: 'number' }
+                ],
+                rows: rows.map(function (e) {
+                    return [e.employeeNumber, e.employeeName, e.type, e.present, e.late, e.absent, e.onLeave, e.attendanceRate];
+                }),
+                totals: [null, null, null, sum('present'), sum('late'), sum('absent'), sum('onLeave'), null]
+            })
+        })
+            .then(function (response) {
+                if (!response.ok) {
+                    return response.json().catch(function () { return {}; }).then(function (data) {
+                        throw new Error(data.message || 'The export failed.');
+                    });
+                }
+                var match = /filename="?([^";]+)"?/.exec(response.headers.get('Content-Disposition') || '');
+                return response.blob().then(function (blob) {
+                    var url = URL.createObjectURL(blob);
+                    var link = document.createElement('a');
+                    link.href = url;
+                    link.download = match ? match[1] : 'attendance-report.' + format;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+                });
+            })
+            .catch(function (error) { PPToast.error(error.message || 'The export failed.'); })
+            .then(function () {
+                button.disabled = false;
+                button.innerHTML = label;
+            });
+    }
+
+    /* Print: letterhead, title, dates and the table only (css/attendance-reports.css). */
+    window.addEventListener('beforeprint', function () {
+        document.getElementById('printSubtitle').textContent = longDate(reportFrom.value) + ' – ' + longDate(reportTo.value) +
+            (reportType.value === 'all' ? '' : '   |   ' + reportType.selectedOptions[0].textContent.trim());
+    });
+    document.getElementById('printReport').addEventListener('click', function () { window.print(); });
+
+    document.getElementById('exportPdf').addEventListener('click', function () { exportReport('pdf', this); });
+    document.getElementById('exportExcel').addEventListener('click', function () { exportReport('xlsx', this); });
+
     reportType.addEventListener('change', render);
-    reportFrom.addEventListener('change', load);
-    reportTo.addEventListener('change', load);
+    reportFrom.addEventListener('change', function () { syncCutoff(); load(); });
+    reportTo.addEventListener('change', function () { syncCutoff(); load(); });
     load();
 })();

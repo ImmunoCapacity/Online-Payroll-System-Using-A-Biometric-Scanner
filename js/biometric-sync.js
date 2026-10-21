@@ -15,13 +15,44 @@
 
     if (!syncButton) return;
 
-    // The server syncs the K40 by itself every minute (BiometricAutoSync), so
-    // reload the table regularly to show new scans. Skipped while the tab is
-    // hidden or a dialog is open, so nothing changes under the user.
-    setInterval(function () {
-        if (document.hidden || document.querySelector('.modal.show')) return;
-        document.dispatchEvent(new CustomEvent('pp:dtr-synced'));
-    }, 30000);
+    // Live sync: the server records scans from the K40 within seconds
+    // (BiometricLiveSync). Check api/biometric/status every few seconds and
+    // reload the table when its "changes" count goes up. Skipped while the
+    // tab is hidden or a dialog is open, so nothing changes under the user.
+    var liveBadge = document.getElementById('liveSyncBadge');
+    var lastChanges = null;
+    var pendingReload = false;
+
+    function showLive(status) {
+        if (!liveBadge) return;
+        liveBadge.hidden = !status || !status.live;
+        if (liveBadge.hidden) return;
+        liveBadge.classList.toggle('offline', !status.connected);
+        liveBadge.title = status.connected
+            ? 'Connected to the scanner. New scans appear here within seconds.'
+            : 'Cannot reach the scanner right now. Retrying automatically.';
+        liveBadge.lastElementChild.textContent = status.connected ? 'Live' : 'Scanner offline';
+    }
+
+    function checkStatus() {
+        if (document.hidden) return;
+        fetch('api/biometric/status')
+            .then(function (response) { return response.ok ? response.json() : null; })
+            .then(function (status) {
+                showLive(status);
+                if (!status) return;
+                if (lastChanges !== null && status.changes !== lastChanges) pendingReload = true;
+                lastChanges = status.changes;
+                if (pendingReload && !document.querySelector('.modal.show')) {
+                    pendingReload = false;
+                    document.dispatchEvent(new CustomEvent('pp:dtr-synced'));
+                }
+            })
+            .catch(function () { showLive(null); });
+    }
+
+    checkStatus();
+    setInterval(checkStatus, 3000);
 
     syncButton.addEventListener('click', function () {
 

@@ -8,3 +8,9 @@ backend/lib/
 .idea/
 *.iml
 .vscode/
+
+# Database backups (Utility -> Backup & Restore): full payroll data, never uploaded
+backups/
+
+# Server log (deploy/run-payroll-server.bat)
+logs/

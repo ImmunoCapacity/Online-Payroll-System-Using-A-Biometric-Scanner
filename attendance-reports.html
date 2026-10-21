@@ -27,9 +27,24 @@
             <div class="pp-widget">
                 <div class="pp-widget-header">
                     <h2 class="pp-widget-title">Employee Attendance Summary</h2>
+                    <div class="pp-attendance-export">
+                        <button type="button" class="report-action-button" id="printReport">
+                            <i class="bi bi-printer"></i> Print
+                        </button>
+                        <button type="button" class="report-action-button" id="exportExcel">
+                            <i class="bi bi-file-earmark-spreadsheet"></i> Export Excel
+                        </button>
+                        <button type="button" class="report-action-button" id="exportPdf">
+                            <i class="bi bi-file-earmark-pdf"></i> Export PDF
+                        </button>
+                    </div>
                 </div>
                 <div class="pp-widget-body">
                     <div class="pp-filter-bar" role="search">
+                        <div class="pp-filter-group">
+                            <label for="reportCutoff" class="pp-form-label">Cut-off</label>
+                            <select class="form-select pp-form-select" id="reportCutoff"></select>
+                        </div>
                         <div class="pp-filter-group">
                             <label for="reportFrom" class="pp-form-label">From</label>
                             <input type="date" class="form-control pp-form-control" id="reportFrom">
@@ -48,11 +63,25 @@
                             </select>
                         </div>
                     </div>
+                    <!-- Shown only when printing -->
+                    <div class="pp-attendance-print-header" aria-hidden="true">
+                        <div class="pp-attendance-letterhead">
+                            <img src="sti_logo.png" alt="">
+                            <div>
+                                <strong>STI College Balayan</strong>
+                                <span>PED Plaza Business Centre, Ermita St., Balayan, Batangas</span>
+                            </div>
+                        </div>
+                        <h2>Attendance Report</h2>
+                        <p id="printSubtitle"></p>
+                    </div>
+
                     <div class="pp-table-wrap">
                         <table class="pp-table w-100">
                             <thead>
                                 <tr>
-                                    <th>Employee</th>
+                                    <th>Employee ID</th>
+                                    <th>Employee Name</th>
                                     <th>Type</th>
                                     <th class="col-num">Present</th>
                                     <th class="col-num">Late</th>

@@ -163,8 +163,9 @@
         el('leaveTableBody').innerHTML = shown.map(function (r) {
             return '<tr class="pp-row-clickable" tabindex="0" role="button" data-id="' + r.id + '" ' +
                     'aria-label="Edit leave of ' + escapeHtml(r.employeeName) + '">' +
+                '<td>' + escapeHtml(r.employeeNumber) + '</td>' +
                 '<td><strong>' + escapeHtml(r.employeeName) + '</strong>' +
-                    '<span class="leave-sub">' + escapeHtml(r.employeeNumber) + ' · ' + escapeHtml(r.employeeType) + '</span></td>' +
+                    '<span class="leave-sub">' + escapeHtml(r.employeeType) + '</span></td>' +
                 '<td>' + escapeHtml(r.category) + '</td>' +
                 '<td>' + dateRange(r.dateFrom, r.dateTo) + '</td>' +
                 '<td class="leave-days-cell">' + r.days + ' day' + (r.days === 1 ? '' : 's') + '</td>' +

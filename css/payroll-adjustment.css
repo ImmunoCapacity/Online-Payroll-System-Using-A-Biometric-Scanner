@@ -94,3 +94,10 @@
     color: var(--pp-text-muted, #6b7280);
     font-size: 0.75rem;
 }
+
+.pp-adjust-warn {
+    display: block;
+    color: var(--pp-warning, #b45309);
+    font-size: 0.72rem;
+    font-weight: 600;
+}

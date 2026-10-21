@@ -66,10 +66,14 @@ public class EmployeeController {
         return Map.of("success", true);
     }
 
+    /** Body (optional): { reason: "Resigned" | "Terminated" | "Inactive" }. */
     @PostMapping("/{id}/archive")
-    public Map<String, Object> archive(@PathVariable String id, HttpServletRequest http) {
-        String name = employees.archive(id);
-        audit.log(AuthInterceptor.currentUser(http).id(), "Employee Records", "Archived employee", name);
+    public Map<String, Object> archive(@PathVariable String id, @RequestBody(required = false) Map<String, String> body,
+                                       HttpServletRequest http) {
+        String reason = body == null ? null : body.get("reason");
+        String name = employees.archive(id, reason);
+        audit.log(AuthInterceptor.currentUser(http).id(), "Employee Records", "Archived employee",
+                name + (reason == null || reason.isBlank() ? "" : " · " + reason.trim()));
         return Map.of("success", true);
     }
 

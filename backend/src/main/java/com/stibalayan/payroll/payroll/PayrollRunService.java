@@ -330,7 +330,10 @@ public class PayrollRunService {
             line.put("amount", amount);
             earnings.add(line);
             gross = gross.add(amount);
-            hours = hours.add(h);
+            // Holiday double pay pays hours already counted in another line once more.
+            if (!String.valueOf(line.get("label")).toLowerCase().startsWith("holiday")) {
+                hours = hours.add(h);
+            }
         }
         List<Map<String, Object>> benefits = new ArrayList<>();
         BigDecimal benefitTotal = BigDecimal.ZERO;

@@ -53,7 +53,7 @@ public class EmployeeService {
             new LinkedHashSet<>(List.of("Full-time", "Part-time", "Contractual", "Temporary"));
 
     // Sanity limits; the columns themselves allow more.
-    private static final int MIN_AGE = 15;   // Labor Code minimum working age
+    private static final int MIN_AGE = 18;   // the school does not hire anyone younger than 18
     private static final int MAX_AGE = 100;
     private static final LocalDate EARLIEST_HIRE_DATE = LocalDate.of(1950, 1, 1);
     private static final int MAX_DEPENDENTS = 20;
@@ -138,13 +138,20 @@ public class EmployeeService {
      * Archives an employee. Employees are never deleted: their payroll, DTR,
      * leave, loan and schedule history stays; they are only hidden from
      * lists and pickers. Only employees who no longer work here (Inactive,
-     * Resigned or Terminated) can be archived. Returns the employee's name.
+     * Resigned or Terminated) can be archived; reason, when given, sets that
+     * status first (Employee Records asks for it). Returns the employee's name.
      */
     @Transactional
-    public String archive(String id) {
+    public String archive(String id, String reason) {
         StaffMember staff = find(id);
         if (staff.isArchived()) {
             throw unprocessable(staff.getFullName() + " is already archived.");
+        }
+        if (reason != null && !reason.isBlank()) {
+            if (!ARCHIVABLE.contains(reason.trim())) {
+                throw Validation.invalid("reason", "Choose why: Resigned, Terminated or Inactive.");
+            }
+            staff.setEmploymentStatus(reason.trim());
         }
         if (!ARCHIVABLE.contains(staff.getEmploymentStatus())) {
             throw Validation.invalid("employmentStatus", "Only employees who are Inactive, Resigned or Terminated can be archived. "
@@ -156,13 +163,14 @@ public class EmployeeService {
         return staff.getFullName();
     }
 
-    /** Brings an archived employee back to the lists. Returns the employee's name. */
+    /** Brings an archived employee back to the lists, as Active again. Returns the employee's name. */
     @Transactional
     public String restore(String id) {
         StaffMember staff = find(id);
         if (!staff.isArchived()) {
             throw unprocessable(staff.getFullName() + " is not archived.");
         }
+        staff.setEmploymentStatus("Active");
         staff.setArchived(false);
         staff.setArchivedAt(null);
         save(staff);
@@ -205,14 +213,15 @@ public class EmployeeService {
         oneOf(r.gender(), GENDERS, "gender", "Gender");
 
         LocalDate today = LocalDate.now();
-        LocalDate birthdate = Validation.date(r.birthdate(), "birthdate", "Birthdate", false);
-        if (birthdate != null) {
-            if (birthdate.isAfter(today)) {
-                throw Validation.invalid("birthdate", "Birthdate can't be in the future.");
-            }
-            if (birthdate.isAfter(today.minusYears(MIN_AGE)) || birthdate.isBefore(today.minusYears(MAX_AGE))) {
-                throw Validation.invalid("birthdate", "Birthdate must make the employee " + MIN_AGE + " to " + MAX_AGE + " years old.");
-            }
+        LocalDate birthdate = Validation.date(r.birthdate(), "birthdate", "Birthdate", true);
+        if (birthdate.isAfter(today)) {
+            throw Validation.invalid("birthdate", "Birthdate can't be in the future.");
+        }
+        if (birthdate.isAfter(today.minusYears(MIN_AGE))) {
+            throw Validation.invalid("birthdate", "The employee must be at least " + MIN_AGE + " years old.");
+        }
+        if (birthdate.isBefore(today.minusYears(MAX_AGE))) {
+            throw Validation.invalid("birthdate", "Birthdate must make the employee at most " + MAX_AGE + " years old.");
         }
         oneOf(r.civilStatus(), CIVIL_STATUSES, "civilStatus", "Civil status");
         Validation.wholeNumber(r.dependents(), "dependents", "Number of dependents", MAX_DEPENDENTS);
@@ -338,7 +347,8 @@ public class EmployeeService {
         if (r.notes() != null) {
             staff.setNotes(trim(r.notes()));
         }
-        staff.setBasicPay(r.basicPay());
+        // Faculty have no basic pay (Admin and Faculty/Admin do).
+        staff.setBasicPay(staff instanceof FacultyStaff ? null : r.basicPay());
 
         staff.setGender(blankToNull(r.gender()));
         LocalDate birthdate = blankToNull(r.birthdate()) == null ? null : parseDate(r.birthdate(), "Birthdate");

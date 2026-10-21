@@ -5,3 +5,142 @@
    Add page-specific rules here as they come up, instead of
    adding to the shared file.
    ============================================================ */
+
+/* Export buttons in the summary header */
+.pp-attendance-export {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* Letterhead, title and dates: only on paper */
+.pp-attendance-print-header {
+    display: none;
+}
+
+@media print {
+    @page { size: landscape; margin: 12mm; }
+
+    body.pp-app-shell { background: #fff !important; }
+
+    #pp-sidebar-mount,
+    #pp-topbar-mount,
+    .pp-content-header,
+    .pp-widget-header,
+    .pp-filter-bar,
+    .pp-toast-container {
+        display: none !important;
+    }
+
+    .pp-widget,
+    .pp-widget-body,
+    .pp-table-wrap {
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        overflow: visible !important;
+        background: #fff !important;
+    }
+
+    .pp-attendance-print-header {
+        display: block;
+        margin-bottom: 10px;
+        text-align: center;
+    }
+
+    .pp-attendance-letterhead {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding-bottom: 8px;
+        margin-bottom: 12px;
+        border-bottom: 2px solid #1e3a8a;
+        text-align: left;
+    }
+
+    .pp-attendance-letterhead img { height: 42px; }
+    .pp-attendance-letterhead strong { display: block; font-size: 16px; color: #000; }
+    .pp-attendance-letterhead span { font-size: 10px; color: #4b5563; }
+
+    .pp-attendance-print-header h2 {
+        margin: 0;
+        font-size: 15px;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: #000;
+    }
+
+    .pp-attendance-print-header p {
+        margin: 2px 0 0;
+        font-size: 10px;
+        color: #4b5563;
+    }
+
+    .pp-table th,
+    .pp-table td {
+        padding: 4px 6px !important;
+        border: 1px solid #d1d5db !important;
+        font-size: 9.5px !important;
+        color: #000 !important;
+    }
+
+    .pp-table thead th {
+        background: #1e3a8a !important;
+        color: #fff !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .pp-table .pp-badge {
+        background: none !important;
+        color: #000 !important;
+        padding: 0 !important;
+        font-weight: 400 !important;
+        text-transform: none !important;
+    }
+
+    .pp-table thead { display: table-header-group; }
+    .pp-table tr { break-inside: avoid; }
+}
+
+/* Print / Export buttons: same look as the Reports page (css/reports.css) */
+.pp-attendance-export {
+    align-items: center;
+}
+
+.report-action-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-height: 38px;
+    padding: 8px 14px;
+    background: #1f4e79;
+    border: 1px solid #1f4e79;
+    border-radius: 6px;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.report-action-button i {
+    font-size: 15px;
+}
+
+.report-action-button:hover {
+    background: #173a5c;
+    border-color: #173a5c;
+    color: #ffffff;
+}
+
+.report-action-button:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(31, 78, 121, 0.15);
+}
+
+.report-action-button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    box-shadow: none;
+}

@@ -2609,3 +2609,113 @@ input[type="number"] {
     -moz-appearance: textfield;
     appearance: textfield;
 }
+
+/* ============================================================
+   Notifications (bell in the top bar)
+   ============================================================ */
+.pp-notif-wrapper {
+    position: relative;
+}
+
+.pp-notif-panel {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 340px;
+    max-width: calc(100vw - 24px);
+    background: #ffffff;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-6px);
+    transition: all 0.18s ease;
+    z-index: 1100;
+    overflow: hidden;
+}
+
+.pp-notif-panel.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.pp-notif-head {
+    padding: 12px 14px;
+    border-bottom: 1px solid #E2E8F0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1E293B;
+}
+
+.pp-notif-list {
+    max-height: 380px;
+    overflow-y: auto;
+}
+
+.pp-notif-item {
+    display: flex;
+    gap: 10px;
+    padding: 11px 14px;
+    border-bottom: 1px solid #F1F5F9;
+    color: #334155;
+    text-decoration: none;
+}
+
+.pp-notif-item:last-child {
+    border-bottom: none;
+}
+
+a.pp-notif-item:hover {
+    background: #F8FAFC;
+    color: #334155;
+}
+
+.pp-notif-item.is-new {
+    background: #F0F7FF;
+}
+
+.pp-notif-icon {
+    flex: 0 0 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-size: 14px;
+    background: #E0ECFF;
+    color: #1F4E79;
+}
+
+.pp-notif-warning .pp-notif-icon { background: #FEF3C7; color: #92400E; }
+.pp-notif-danger .pp-notif-icon  { background: #FEE2E2; color: #B91C1C; }
+
+.pp-notif-body {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.pp-notif-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1E293B;
+}
+
+.pp-notif-text {
+    font-size: 12px;
+    color: #64748B;
+    margin-top: 1px;
+}
+
+.pp-notif-empty {
+    padding: 22px 14px;
+    text-align: center;
+    font-size: 13px;
+    color: #64748B;
+}
+
+.pp-notif-empty .bi {
+    color: #16A34A;
+    margin-right: 4px;
+}

@@ -357,3 +357,133 @@
     .pp-reports-sidebar-group::before { left: 1rem; }
     .pp-reports-sidebar-link { min-height: 44px; }
 }
+
+/* Amount and hour columns */
+.report-table th.report-num,
+.report-table td.report-num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Letterhead, title and period: only on paper */
+.report-print-header {
+    display: none;
+}
+
+/* Print / Export PDF: letterhead, title, period and the table only */
+@media print {
+    @page { size: landscape; margin: 12mm; }
+
+    body.pp-app-shell,
+    .reports-page {
+        background: #fff !important;
+    }
+
+    .pp-sidebar,
+    #pp-sidebar-mount,
+    #pp-topbar-mount,
+    .pp-content-header,
+    .report-breadcrumb,
+    .report-header,
+    .report-filter-card,
+    .pp-toast-container {
+        display: none !important;
+    }
+
+    .pp-shell-main,
+    .pp-content,
+    .reports-workspace,
+    .report-content {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        max-width: none !important;
+        border: none !important;
+        box-shadow: none !important;
+        background: #fff !important;
+    }
+
+    .report-print-header {
+        display: block;
+        margin-bottom: 10px;
+        text-align: center;
+    }
+
+    .report-print-letterhead {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding-bottom: 8px;
+        margin-bottom: 12px;
+        border-bottom: 2px solid #1e3a8a;
+        text-align: left;
+    }
+
+    .report-print-letterhead img {
+        height: 42px;
+    }
+
+    .report-print-letterhead strong {
+        display: block;
+        font-size: 16px;
+        color: #000;
+    }
+
+    .report-print-letterhead span {
+        font-size: 10px;
+        color: #4b5563;
+    }
+
+    .report-print-header h2 {
+        margin: 0;
+        font-size: 15px;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: #000;
+    }
+
+    .report-print-header p {
+        margin: 2px 0 0;
+        font-size: 10px;
+        color: #4b5563;
+    }
+
+    .report-table-card,
+    .report-table-wrapper {
+        overflow: visible !important;
+        border: none !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+    }
+
+    .report-table {
+        min-width: 0 !important;
+    }
+
+    .report-table th,
+    .report-table td,
+    .report-table tfoot th {
+        padding: 4px 6px !important;
+        border: 1px solid #d1d5db !important;
+        font-size: 9.5px !important;
+        color: #000 !important;
+        white-space: nowrap;
+    }
+
+    .report-table thead th {
+        background: #1e3a8a !important;
+        color: #fff !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .report-table tfoot th {
+        background: #e5e7eb !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .report-table thead { display: table-header-group; }
+    .report-table tfoot { display: table-row-group; }
+    .report-table tr { break-inside: avoid; }
+}

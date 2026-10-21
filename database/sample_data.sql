@@ -429,13 +429,9 @@ SELECT @internet, e.faculty_id, e.adminstaff_id, 250.00 FROM tmp_emp e WHERE e.k
 
 -- ---------------------------------------------------------------
 -- 8. Basic pay (monthly, record only): a regular month at their rates.
---    Admin: rate/hour x office hours x 22 days. Faculty: rate/hour/unit x
---    weekly lecture hours x 4. Faculty/Admin: both.
+--    Admin: rate/hour x office hours x 22 days. Faculty/Admin: that plus
+--    rate/hour/unit x weekly lecture hours x 4. Faculty have no basic pay.
 -- ---------------------------------------------------------------
-
-UPDATE faculty_staff
-SET basic_pay = ROUND(IFNULL(rate_per_hour_unit, 0) * IFNULL(lecture_hours, 0) * 4)
-WHERE employee_number IN ('STIBLN-0001-M', 'STIBLN-0002-F', 'STIBLN-0003-M', 'STIBLN-0004-M', 'STIBLN-0005-M', 'STIBLN-0006-M', 'STIBLN-0007-F', 'STIBLN-0008-F', 'STIBLN-0009-F', 'STIBLN-0010-F');
 
 UPDATE admin_staff
 SET basic_pay = ROUND(IFNULL(rate_per_hour, 0) * IFNULL(office_hours, 0) * 22

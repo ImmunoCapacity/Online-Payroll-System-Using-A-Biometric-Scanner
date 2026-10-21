@@ -158,8 +158,8 @@
         el('facultyBody').innerHTML = shown.map(function (t) {
             return '<tr class="pp-row-clickable" tabindex="0" role="button" data-employee="' + escapeHtml(t.id) + '" ' +
                     'aria-label="Open the schedule of ' + escapeHtml(t.displayName) + '">' +
-                '<td><strong>' + escapeHtml(t.displayName) + '</strong></td>' +
                 '<td>' + escapeHtml(t.employeeNumber) + '</td>' +
+                '<td><strong>' + escapeHtml(t.displayName) + '</strong></td>' +
                 '<td class="text-end">' + (weekCounts[t.id] || 0) + '</td>' +
             '</tr>';
         }).join('');

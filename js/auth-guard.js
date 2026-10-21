@@ -61,6 +61,7 @@
         // Payroll
         'payroll-processing.html': [MASTER],
         'payroll-adjustment.html': [MASTER],
+        'thirteenth-month.html': [MASTER],
 
         // Reports
         'reports.html': [MASTER],
@@ -72,7 +73,10 @@
         // Utility
         'system-admin.html': [ADMIN],
         'user-management.html': [ADMIN],
-        'biometric-devices.html': [ADMIN]
+        'biometric-devices.html': [ADMIN],
+        'audit-trail.html': [ADMIN],
+        'archive.html': [ADMIN],
+        'backup-restore.html': [ADMIN]
     };
 
     function currentPage() {

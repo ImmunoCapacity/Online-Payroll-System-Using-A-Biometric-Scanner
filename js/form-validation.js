@@ -202,8 +202,11 @@
         if (max && value > max) return label + ' can\'t be after ' + max + '.';
         var minAge = input.getAttribute('data-min-age');
         var maxAge = input.getAttribute('data-max-age');
-        if ((minAge && value > shiftYears(now, -Number(minAge))) || (maxAge && value < shiftYears(now, -Number(maxAge)))) {
-            return label + ' must make the employee ' + (minAge || 0) + ' to ' + (maxAge || 120) + ' years old.';
+        if (minAge && value > shiftYears(now, -Number(minAge))) {
+            return 'The employee must be at least ' + minAge + ' years old.';
+        }
+        if (maxAge && value < shiftYears(now, -Number(maxAge))) {
+            return label + ' must make the employee at most ' + maxAge + ' years old.';
         }
         var other = otherField(input);
         var gapYears = Number(input.getAttribute('data-after-years') || 0);

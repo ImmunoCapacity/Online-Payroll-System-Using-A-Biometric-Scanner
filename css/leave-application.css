@@ -191,16 +191,20 @@
 
 /* Column widths */
 
+.leave-table .id-column {
+    width: 12%;
+}
+
 .leave-table .employee-column {
-    width: 18%;
+    width: 16%;
 }
 
 .leave-table .type-column {
-    width: 13%;
+    width: 12%;
 }
 
 .leave-table .date-column {
-    width: 16%;
+    width: 15%;
 }
 
 .leave-table .days-column {
@@ -220,7 +224,7 @@
 }
 
 .leave-table .remarks-column {
-    width: 17%;
+    width: 19%;
 }
 
 

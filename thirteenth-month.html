@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="js/auth-guard.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>13th Month Pay — PayrollPro</title>
+    <link rel="icon" type="image/png" href="sti_logo.png">
+    <link href="vendor/bootstrap/bootstrap.min.css" rel="stylesheet">
+    <link href="vendor/bootstrap-icons/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="css/payrollpro.css" rel="stylesheet">
+    <link href="css/thirteenth-month.css" rel="stylesheet">
+</head>
+<body class="pp-app pp-app-shell">
+
+    <div id="pp-sidebar-mount"></div>
+
+    <div class="pp-shell-main">
+        <div id="pp-topbar-mount"></div>
+
+        <main class="pp-content">
+            <header class="pp-content-header">
+                <div>
+                    <h1 class="pp-content-title">13th Month Pay</h1>
+                    <p class="pp-content-subtitle">One twelfth of the basic pay earned in the year, from released payroll. Click an employee to see their pay month by month.</p>
+                </div>
+            </header>
+
+            <section class="pp-widget" aria-labelledby="thirteenthTitle">
+                <div class="pp-widget-header">
+                    <h2 class="pp-widget-title" id="thirteenthTitle">Employees</h2>
+                </div>
+                <div class="pp-widget-body">
+                    <div class="pp-filter-bar">
+                        <div class="pp-filter-group">
+                            <label for="yearSelect" class="pp-form-label">Year</label>
+                            <select class="form-select pp-form-select" id="yearSelect"></select>
+                        </div>
+                        <div class="pp-filter-group">
+                            <label for="typeSelect" class="pp-form-label">Employee Type</label>
+                            <select data-clearable class="form-select pp-form-select" id="typeSelect">
+                                <option value="all" hidden data-hint>All employee types</option>
+                                <option value="Faculty">Faculty</option>
+                                <option value="Admin">Admin</option>
+                                <option value="Faculty/Admin">Faculty/Admin</option>
+                            </select>
+                        </div>
+                        <div class="pp-filter-group search">
+                            <label for="thirteenthSearch" class="pp-form-label">Search</label>
+                            <div class="pp-search-input">
+                                <i class="bi bi-search"></i>
+                                <input type="search" class="form-control pp-form-control" id="thirteenthSearch" maxlength="100" placeholder="Search by ID or name…">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pp-table-wrap">
+                        <table class="pp-table w-100 pp-13th-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Employee Type</th>
+                                    <th class="text-end">Months Paid</th>
+                                    <th class="text-end">Basic Pay (Year)</th>
+                                    <th class="text-end">Net Pay (Year)</th>
+                                    <th class="text-end">13th Month Pay</th>
+                                </tr>
+                            </thead>
+                            <tbody id="thirteenthBody"></tbody>
+                            <tfoot id="thirteenthFoot"></tfoot>
+                        </table>
+                    </div>
+                    <div class="pp-empty-state d-none" id="thirteenthEmpty">No released payroll for this year.</div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Month-by-month breakdown of one employee -->
+    <div class="modal fade pp-modal" id="thirteenthModal" tabindex="-1" aria-labelledby="thirteenthModalTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div>
+                        <h2 class="modal-title" id="thirteenthModalTitle">13th Month Pay</h2>
+                        <div class="pp-13th-sub" id="thirteenthModalSub"></div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <table class="pp-table w-100 pp-13th-months">
+                        <thead>
+                            <tr>
+                                <th>Month</th>
+                                <th class="text-end">Basic Pay</th>
+                                <th class="text-end">Net Pay</th>
+                            </tr>
+                        </thead>
+                        <tbody id="thirteenthMonths"></tbody>
+                        <tfoot id="thirteenthMonthsFoot"></tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="vendor/bootstrap/bootstrap.bundle.min.js"></script>
+    <script src="js/data-store.js"></script>
+    <script src="js/confirm-modal.js"></script>
+    <script src="js/toast.js"></script>
+    <script src="js/payrollpro-layout.js"></script>
+    <script src="js/select-hint.js"></script>
+    <script src="js/thirteenth-month.js"></script>
+</body>
+</html>

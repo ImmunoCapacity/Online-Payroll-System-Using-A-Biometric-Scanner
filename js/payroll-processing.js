@@ -248,7 +248,22 @@
         if (e.department === 'Faculty/Admin') {
             add('Approved teaching hours', h.teachingHours, e.teachingRate);
         }
+        // Double-pay holidays (Maintenance → Holiday Calendar): the hours worked
+        // that day are already paid above, so these lines pay them once more.
+        var holidayOffice = Number(h.holidayOfficeHours) || 0;
+        var holidayTeaching = Number(h.holidayTeachingHours) || 0;
+        if (holidayOffice > 0 && e.department !== 'Faculty') {
+            add('Holiday double pay (office hours)', holidayOffice, e.rate);
+        }
+        if (holidayTeaching > 0) {
+            add('Holiday double pay (teaching hours)', holidayTeaching, e.department === 'Faculty/Admin' ? e.teachingRate : e.rate);
+        }
         return lines;
+    }
+
+    /** Holiday double pay lines pay hours already counted in another line. */
+    function isHolidayLine(line) {
+        return String(line.label || '').toLowerCase().indexOf('holiday') === 0;
     }
 
     function calcDeductionsTotal(d) {
@@ -320,6 +335,8 @@
 
             return employeesData.employees
                 .filter(function (e) { return e.status === 'Active'; })
+                // Not yet hired by the end of the period: not part of this payroll.
+                .filter(function (e) { return !e.dateHired || e.dateHired <= period.to; })
                 .sort(function (a, b) {
                     return (TYPE_ORDER[a.department] - TYPE_ORDER[b.department]) || a.displayName.localeCompare(b.displayName);
                 })
@@ -336,7 +353,7 @@
                         name: e.displayName,
                         type: e.department,
                         designation: e.position || e.instructorRank || e.department,
-                        hours: round2(earnings.reduce(function (s, l) { return s + l.hours; }, 0)),
+                        hours: round2(earnings.reduce(function (s, l) { return isHolidayLine(l) ? s : s + l.hours; }, 0)),
                         daysWorked: worked.daysWorked,
                         overlapHours: Number(worked.overlapHours) || 0,
                         unapprovedClasses: worked.unapprovedClasses || 0,
@@ -492,7 +509,8 @@
                 return (
                     '<tr class="pp-row-clickable" tabindex="0" role="button" data-idx="' + idx + '" ' +
                         'aria-label="View payroll breakdown for ' + escapeHtml(emp.name) + '">' +
-                        '<td><strong>' + escapeHtml(emp.name) + '</strong><br><span class="text-muted" style="font-size:0.75rem;">' + escapeHtml(emp.employeeNumber) + '</span></td>' +
+                        '<td>' + escapeHtml(emp.employeeNumber) + '</td>' +
+                        '<td><strong>' + escapeHtml(emp.name) + '</strong></td>' +
                         '<td>' + typeBadge(emp.type) + '</td>' +
                         '<td class="col-units">' + emp.hours + ' hrs</td>' +
                         '<td class="col-money">' + peso(calcGross(emp)) + '</td>' +
@@ -522,7 +540,7 @@
 
     /** Earnings lines grouped into the payslip rows (same rule as the PDF). */
     function payslipEarnings(emp) {
-        var rows = { lecture: null, office: null, leave: null, adjustment: null };
+        var rows = { lecture: null, office: null, leave: null, holiday: null, adjustment: null };
         function add(key, l) {
             var r = rows[key] || (rows[key] = { hours: 0, amount: 0, rate: null, mixed: false });
             r.hours += Number(l.hours) || 0;
@@ -536,6 +554,7 @@
         lines.forEach(function (l) {
             var label = String(l.label || '').toLowerCase();
             add(label.indexOf('adjustment') === 0 ? 'adjustment'
+                : label.indexOf('holiday') === 0 ? 'holiday'
                 : label.indexOf('teaching') !== -1 ? 'lecture'
                 : label.indexOf('office') !== -1 ? 'office'
                 : label.indexOf('leave') !== -1 ? 'leave' : 'adjustment', l);
@@ -593,7 +612,7 @@
                     earningRow('No. of Hours Lecture', e.lecture) +
                     earningRow('No. of Office Hours', e.office) +
                     (e.leave ? earningRow('Paid Leave', e.leave) : '') +
-                    psRow('Holiday', '', '', '') +
+                    earningRow('Holiday', e.holiday) +
                     earningRow('Adjustment', e.adjustment) +
                     '<tr class="pp-payslip-total"><td></td><td colspan="2">Total Applied Salary</td><td class="num">' + num2(applied) + '</td></tr>' +
                 '</tbody>' +

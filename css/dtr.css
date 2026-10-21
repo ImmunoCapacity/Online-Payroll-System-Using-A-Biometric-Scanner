@@ -766,3 +766,20 @@
     .pp-att-cell-status { display: none; }
     .pp-att-day-grid { grid-template-columns: 1fr; }
 }
+
+/* ---- Live sync indicator next to Sync Device (js/biometric-sync.js) ---- */
+.pp-sync-actions { display: flex; align-items: center; gap: 0.75rem; }
+.pp-live-badge { display: inline-flex; align-items: center; gap: 0.375rem; font-size: 0.75rem; font-weight: 600; color: var(--pp-success); }
+.pp-live-badge[hidden] { display: none; }
+.pp-live-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; animation: pp-live-pulse 2s ease-in-out infinite; }
+.pp-live-badge.offline { color: var(--pp-text-muted); }
+.pp-live-badge.offline .pp-live-dot { animation: none; }
+@keyframes pp-live-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+/* ---- Attendance Recording: Recorded Attendance list (js/dtr-views.js) ---- */
+.pp-manual-list-title { font-size: 1rem; font-weight: 700; color: var(--pp-primary-dark); margin: 1.75rem 0 0.75rem; }
+
+/* Attendance Recording: automatic status box (js/dtr.js) */
+#manualStatus { font-weight: 600; background: var(--pp-bg, #f8fafc); }
+#manualStatus.pp-status-present { color: var(--pp-success); }
+#manualStatus.pp-status-late { color: #b45309; }

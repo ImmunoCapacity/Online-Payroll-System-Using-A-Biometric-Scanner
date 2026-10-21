@@ -12,6 +12,7 @@ import com.stibalayan.payroll.teaching.TeachingHoursService.ApprovedHours;
 import com.stibalayan.payroll.teaching.TeachingHoursService.ClassPeriod;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.sql.Date;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -23,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +35,9 @@ import org.springframework.transaction.annotation.Transactional;
  *   paidLeaveDays — approved paid leave days not also worked (Leave Management)
  *   teachingHours — APPROVED payable hours from Faculty Teaching Hours, never
  *                   straight from the Faculty Schedule
+ *   holidayOfficeHours / holidayTeachingHours — the part of those hours
+ *                   worked on a double-pay holiday (Holiday Calendar); payroll
+ *                   pays them once more as Holiday pay
  *
  * Faculty earnings = teachingHours × faculty rate; Admin earnings =
  * officeHours × rate; a Faculty/Admin employee gets both, each at its own
@@ -46,15 +51,17 @@ public class PayrollHoursService {
     private final AdminStaffRepository admins;
     private final TeachingHoursService teaching;
     private final LeaveService leave;
+    private final JdbcTemplate jdbc;
     private final boolean excludeOverlap;
 
     public PayrollHoursService(DailyTimeRecordRepository dtr, AdminStaffRepository admins, TeachingHoursService teaching,
-                               LeaveService leave,
+                               LeaveService leave, JdbcTemplate jdbc,
                                @Value("${payroll.exclude-teaching-from-office-hours:true}") boolean excludeOverlap) {
         this.dtr = dtr;
         this.admins = admins;
         this.teaching = teaching;
         this.leave = leave;
+        this.jdbc = jdbc;
         this.excludeOverlap = excludeOverlap;
     }
 
@@ -69,9 +76,13 @@ public class PayrollHoursService {
         Map<String, ApprovedHours> taught = teaching.approvedHours(from, to);
         Set<Integer> facultyAdmins = new HashSet<>();
         admins.findAll().stream().filter(AdminStaff::isFaculty).forEach(a -> facultyAdmins.add(a.getId()));
+        Set<LocalDate> doublePay = new HashSet<>(jdbc.query(
+                "SELECT holiday_date FROM holiday WHERE double_pay = 1 AND holiday_date BETWEEN ? AND ?",
+                (rs, i) -> rs.getDate(1).toLocalDate(), Date.valueOf(from), Date.valueOf(to)));
 
         // Biometric minutes per employee, less any overlap with approved classes (Faculty/Admin only).
-        Map<String, long[]> office = new HashMap<>();   // employeeId -> {minutes, days, overlapMinutes}
+        // employeeId -> {minutes, days, overlapMinutes, minutes on double-pay holidays (less overlap)}
+        Map<String, long[]> office = new HashMap<>();
         Map<String, Set<LocalDate>> workedDates = new HashMap<>();
         for (DailyTimeRecord r : dtr.findByRecordDateBetween(from, to)) {
             String employeeId = r.getFacultyId() != null ? EmployeeId.faculty(r.getFacultyId())
@@ -79,17 +90,23 @@ public class PayrollHoursService {
             if (employeeId == null || r.getTimeIn() == null || r.getTimeOut() == null || !r.getTimeOut().isAfter(r.getTimeIn())) {
                 continue;
             }
-            long[] t = office.computeIfAbsent(employeeId, k -> new long[3]);
-            t[0] += Duration.between(r.getTimeIn(), r.getTimeOut()).toMinutes();
+            long[] t = office.computeIfAbsent(employeeId, k -> new long[4]);
+            long minutes = Duration.between(r.getTimeIn(), r.getTimeOut()).toMinutes();
+            long overlap = 0;
+            t[0] += minutes;
             t[1]++;
             workedDates.computeIfAbsent(employeeId, k -> new HashSet<>()).add(r.getRecordDate());
             boolean facultyAdmin = r.getAdminstaffId() != null && facultyAdmins.contains(r.getAdminstaffId());
             if (excludeOverlap && facultyAdmin && taught.containsKey(employeeId)) {
                 for (ClassPeriod p : taught.get(employeeId).periods) {
                     if (p.date().equals(r.getRecordDate())) {
-                        t[2] += overlapMinutes(r.getTimeIn(), r.getTimeOut(), p.start(), p.end());
+                        overlap += overlapMinutes(r.getTimeIn(), r.getTimeOut(), p.start(), p.end());
                     }
                 }
+            }
+            t[2] += overlap;
+            if (doublePay.contains(r.getRecordDate())) {
+                t[3] += Math.max(0, minutes - overlap);
             }
         }
 
@@ -107,9 +124,15 @@ public class PayrollHoursService {
         ids.addAll(paidLeaveDays.keySet());
         List<Map<String, Object>> result = new ArrayList<>();
         for (String id : ids) {
-            long[] t = office.getOrDefault(id, new long[3]);
+            long[] t = office.getOrDefault(id, new long[4]);
             ApprovedHours h = taught.get(id);
+            BigDecimal holidayTeaching = h == null ? BigDecimal.ZERO : h.hoursByDate.entrySet().stream()
+                    .filter(d -> doublePay.contains(d.getKey()))
+                    .map(Map.Entry::getValue)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
             Map<String, Object> row = new HashMap<>();
+            row.put("holidayOfficeHours", hours(t[3]));
+            row.put("holidayTeachingHours", holidayTeaching.setScale(2, RoundingMode.HALF_UP));
             row.put("paidLeaveDays", paidLeaveDays.getOrDefault(id, 0));
             row.put("employeeId", id);
             row.put("biometricHours", hours(t[0]));

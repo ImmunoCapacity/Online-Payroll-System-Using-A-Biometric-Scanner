@@ -314,3 +314,11 @@
         padding: 0.5rem 0.75rem;
     }
 }
+/* ---- Benefits Table section (js/benefits.js) ---- */
+.pp-maint-benefits { padding: 1rem; overflow: auto; }
+.pp-maint-benefits .pp-filter-bar { margin-bottom: 0.75rem; }
+.bn-sub { display: block; font-size: 0.75rem; color: var(--pp-text-muted); }
+.bn-widget-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.bn-total { font-weight: 700; }
+tr.bn-inactive td { color: var(--pp-text-muted); }
+#benefitFoot th { padding: 0.625rem 0.875rem; border-top: 1px solid var(--pp-border); background: var(--pp-bg); }

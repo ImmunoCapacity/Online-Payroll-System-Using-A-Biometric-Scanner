@@ -33,8 +33,18 @@ public class ZkemkeeperDevice implements BiometricDevice {
     // ZKTeco SDK GetLastError code meaning "no data", i.e. the log is empty.
     private static final int ERR_NO_DATA = 0;
 
+    // GetDeviceStatus item 6: number of attendance records stored on the device.
+    private static final int STATUS_ATTENDANCE_RECORDS = 6;
+
     @Override
     public List<AttendanceLog> readAttendanceLogs(DeviceProperties device) {
+        try (Session session = open(device)) {
+            return session.readAttendanceLogs();
+        }
+    }
+
+    @Override
+    public Session open(DeviceProperties device) {
         try {
             ComThread.InitSTA();
         } catch (UnsatisfiedLinkError | NoClassDefFoundError e) {
@@ -59,19 +69,70 @@ public class ZkemkeeperDevice implements BiometricDevice {
                         + ". Check that it is powered on, on the same network, and that device.ip and"
                         + " device.comm-key in application.properties are correct.");
             }
+            return new ZkSession(zk, device.machineNumber());
+        } catch (ComFailException e) {
+            ComThread.Release();
+            throw unavailable("The biometric device reported an error: " + e.getMessage());
+        } catch (RuntimeException e) {
+            ComThread.Release();
+            throw e;
+        }
+    }
 
+    private static final class ZkSession implements Session {
+
+        private final ActiveXComponent zk;
+        private final int machineNumber;
+        private boolean closed;
+
+        ZkSession(ActiveXComponent zk, int machineNumber) {
+            this.zk = zk;
+            this.machineNumber = machineNumber;
+        }
+
+        @Override
+        public int recordCount() {
+            try {
+                Variant count = new Variant(0, true);
+                boolean ok = Dispatch.callN(zk, "GetDeviceStatus", new Object[] {
+                        machineNumber, STATUS_ATTENDANCE_RECORDS, count}).getBoolean();
+                if (!ok) {
+                    throw unavailable("Lost the connection to the biometric device.");
+                }
+                return count.getIntRef();
+            } catch (ComFailException e) {
+                throw unavailable("The biometric device reported an error: " + e.getMessage());
+            }
+        }
+
+        @Override
+        public List<AttendanceLog> readAttendanceLogs() {
             try {
                 // Lock the keypad/scanner while reading so the log doesn't change underneath us.
-                Dispatch.call(zk, "EnableDevice", device.machineNumber(), false);
-                return readLogs(zk, device.machineNumber());
-            } finally {
-                Dispatch.call(zk, "EnableDevice", device.machineNumber(), true);
-                Dispatch.call(zk, "Disconnect");
+                Dispatch.call(zk, "EnableDevice", machineNumber, false);
+                try {
+                    return readLogs(zk, machineNumber);
+                } finally {
+                    Dispatch.call(zk, "EnableDevice", machineNumber, true);
+                }
+            } catch (ComFailException e) {
+                throw unavailable("The biometric device reported an error: " + e.getMessage());
             }
-        } catch (ComFailException e) {
-            throw unavailable("The biometric device reported an error: " + e.getMessage());
-        } finally {
-            ComThread.Release();
+        }
+
+        @Override
+        public void close() {
+            if (closed) {
+                return;
+            }
+            closed = true;
+            try {
+                Dispatch.call(zk, "Disconnect");
+            } catch (ComFailException e) {
+                // Already gone (device switched off or left the network).
+            } finally {
+                ComThread.Release();
+            }
         }
     }
 

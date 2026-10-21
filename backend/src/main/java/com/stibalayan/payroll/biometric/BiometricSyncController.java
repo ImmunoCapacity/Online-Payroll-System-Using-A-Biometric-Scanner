@@ -2,7 +2,9 @@ package com.stibalayan.payroll.biometric;
 
 import com.stibalayan.payroll.auth.RequireModule;
 import com.stibalayan.payroll.auth.SystemModule;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -10,20 +12,35 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * POST /api/biometric/sync — pull attendance from the K40 into the DTR.
  * Part of the Daily Time Record module; called by the "Sync Device" button on dtr.html.
+ *
+ * GET /api/biometric/status — live sync state; dtr.html polls it and reloads
+ * the table when "changes" goes up.
  */
 @RestController
 @RequestMapping("/api/biometric")
 public class BiometricSyncController {
 
+    private final BiometricLiveSync liveSync;
     private final BiometricSyncService syncService;
 
-    public BiometricSyncController(BiometricSyncService syncService) {
+    public BiometricSyncController(BiometricLiveSync liveSync, BiometricSyncService syncService) {
+        this.liveSync = liveSync;
         this.syncService = syncService;
     }
 
     @PostMapping("/sync")
     @RequireModule(SystemModule.DAILY_TIME_RECORD)
     public Map<String, Object> sync() {
-        return syncService.sync();
+        return liveSync.syncNow();
+    }
+
+    @GetMapping("/status")
+    @RequireModule(SystemModule.DAILY_TIME_RECORD)
+    public Map<String, Object> status() {
+        Map<String, Object> status = new LinkedHashMap<>();
+        status.put("live", liveSync.isEnabled());
+        status.put("connected", liveSync.isConnected());
+        status.put("changes", syncService.changeCount());
+        return status;
     }
 }

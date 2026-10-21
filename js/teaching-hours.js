@@ -193,8 +193,8 @@
             var s = weekStats[t.id] || { classes: 0, needsChecks: 0, pending: 0 };
             return '<tr class="pp-row-clickable" tabindex="0" role="button" data-employee="' + escapeHtml(t.id) + '" ' +
                     'aria-label="Open the classes of ' + escapeHtml(t.displayName) + '">' +
-                '<td><strong>' + escapeHtml(t.displayName) + '</strong></td>' +
                 '<td>' + escapeHtml(t.employeeNumber) + '</td>' +
+                '<td><strong>' + escapeHtml(t.displayName) + '</strong></td>' +
                 '<td class="text-end">' + s.classes + '</td>' +
                 '<td class="text-end">' + (s.needsChecks ? '<span class="fm-status incomplete">' + s.needsChecks + '</span>' : '0') + '</td>' +
                 '<td class="text-end">' + (s.pending ? '<span class="fm-status pending">' + s.pending + '</span>' : '0') + '</td>' +

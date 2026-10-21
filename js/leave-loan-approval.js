@@ -245,13 +245,13 @@
                     'aria-label="View loan details for ' + escapeHtml(loan.employeeName) + '">' +
 
                     '<td>' +
-                        '<strong>' +
-                            escapeHtml(loan.employeeName) +
-                        '</strong>' +
+                        escapeHtml(loan.employeeId) +
                     '</td>' +
 
                     '<td>' +
-                        escapeHtml(loan.employeeId) +
+                        '<strong>' +
+                            escapeHtml(loan.employeeName) +
+                        '</strong>' +
                     '</td>' +
 
                     '<td>' +

@@ -62,7 +62,16 @@ public class DtrController {
     @GetMapping("/employees")
     @RequireModule(SystemModule.ATTENDANCE_RECORDING)
     public Map<String, Object> employees() {
-        return Map.of("success", true, "employees", dtrService.employees());
+        // lateAfter: the form shows Present / Late as the time in is typed.
+        return Map.of("success", true, "employees", dtrService.employees(),
+                "lateAfter", dtrService.lateAfter().toString());
+    }
+
+    /** Manual entries between two dates (Attendance Recording → Daily / Weekly / Monthly). */
+    @GetMapping("/manual")
+    @RequireModule(SystemModule.ATTENDANCE_RECORDING)
+    public Map<String, Object> manualEntries(@RequestParam String from, @RequestParam String to) {
+        return Map.of("success", true, "records", dtrService.manualEntries(from, to));
     }
 
     @PostMapping("/manual")

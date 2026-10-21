@@ -294,6 +294,7 @@ public class TeachingHoursService {
             if (TeachingAttendance.APPROVED.equals(status)) {
                 BigDecimal hours = a.getPayableHours() == null ? BigDecimal.ZERO : a.getPayableHours();
                 h.hours = h.hours.add(hours);
+                h.hoursByDate.merge(c.getClassDate(), hours, BigDecimal::add);
                 h.approvedClasses++;
                 if (hours.signum() > 0) {
                     h.periods.add(new ClassPeriod(c.getClassDate(), c.getScheduledStart(), c.getScheduledEnd()));
@@ -308,6 +309,8 @@ public class TeachingHoursService {
     /** Approved teaching for one employee in a pay period. */
     public static final class ApprovedHours {
         public BigDecimal hours = BigDecimal.ZERO;
+        /** The same approved hours per class date (double-pay holidays). */
+        public final Map<LocalDate, BigDecimal> hoursByDate = new HashMap<>();
         public int approvedClasses;
         public int unapprovedClasses;
         public final List<ClassPeriod> periods = new ArrayList<>();

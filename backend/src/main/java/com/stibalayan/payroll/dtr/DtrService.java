@@ -36,7 +36,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class DtrService {
 
     private static final DateTimeFormatter HH_MM = DateTimeFormatter.ofPattern("HH:mm");
-    private static final Set<String> STATUSES = Set.of("present", "late", "absent");
 
     private final DailyTimeRecordRepository dtr;
     private final FacultyStaffRepository faculty;
@@ -95,6 +94,41 @@ public class DtrService {
         return rows;
     }
 
+    /** Manual entries recorded for days between two dates (Attendance Recording: daily, weekly, monthly). */
+    @Transactional(readOnly = true)
+    public List<DtrRow> manualEntries(String fromText, String toText) {
+        LocalDate from = parseDate(fromText);
+        LocalDate to = parseDate(toText);
+        if (to.isBefore(from)) {
+            throw unprocessable("The end date can't be before the start date.");
+        }
+        if (to.isAfter(from.plusDays(31))) {
+            throw unprocessable("Choose a range of at most one month.");
+        }
+
+        Map<Integer, FacultyStaff> facultyById = new HashMap<>();
+        faculty.findAll().forEach(f -> facultyById.put(f.getId(), f));
+        Map<Integer, AdminStaff> adminById = new HashMap<>();
+        admins.findAll().forEach(a -> adminById.put(a.getId(), a));
+
+        List<DtrRow> rows = new ArrayList<>();
+        for (DailyTimeRecord r : dtr.findByRecordDateBetween(from, to)) {
+            if (!r.isManualEntry()) {
+                continue;
+            }
+            if (r.getFacultyId() != null && facultyById.containsKey(r.getFacultyId())) {
+                rows.add(row(r, EmployeeId.faculty(r.getFacultyId()), facultyById.get(r.getFacultyId())));
+            } else if (r.getAdminstaffId() != null && adminById.containsKey(r.getAdminstaffId())) {
+                rows.add(row(r, EmployeeId.admin(r.getAdminstaffId()), adminById.get(r.getAdminstaffId())));
+            }
+        }
+
+        // Newest day first; within a day, by name.
+        rows.sort(Comparator.comparing(DtrRow::date).reversed()
+                .thenComparing(DtrRow::employeeName, String.CASE_INSENSITIVE_ORDER));
+        return rows;
+    }
+
     /**
      * Hours worked per employee over a pay period, from the DTR (paper,
      * Figures 3.1–3.2: "Get Number of Hours Worked from Attendance Records").
@@ -127,6 +161,11 @@ public class DtrService {
                 "hours", Math.round(t[0] / 60.0 * 100) / 100.0,
                 "daysWorked", t[1])));
         return result;
+    }
+
+    /** A time-in after this is late (start time plus the grace period). */
+    public LocalTime lateAfter() {
+        return standardStart.plusMinutes(graceMinutes);
     }
 
     /** Employees that can be picked for a manual entry. */
@@ -171,16 +210,8 @@ public class DtrService {
             throw Validation.invalid("reason", "The reason can be at most 255 characters.");
         }
 
-        String status = request.status() == null || request.status().isBlank() ? "auto" : request.status().toLowerCase();
-        if (!status.equals("auto") && !STATUSES.contains(status)) {
-            throw Validation.invalid("status", "Status must be present, late, absent or auto.");
-        }
-
-        LocalTime timeIn = Validation.time(request.timeIn(), "timeIn", "Time in", false);
+        LocalTime timeIn = Validation.time(request.timeIn(), "timeIn", "Time in", true);
         LocalTime timeOut = Validation.time(request.timeOut(), "timeOut", "Time out", false);
-        if (!status.equals("absent") && timeIn == null) {
-            throw Validation.invalid("timeIn", "Time in is required unless the employee is marked absent.");
-        }
         // One record per calendar day (the K40 sync works the same way), so
         // there are no overnight shifts: time-out must be later the same day.
         if (timeIn != null && timeOut != null && !timeOut.isAfter(timeIn)) {
@@ -192,13 +223,8 @@ public class DtrService {
         if (timeIn != null && date.equals(LocalDate.now()) && timeIn.isAfter(LocalTime.now().plusMinutes(1))) {
             throw Validation.invalid("timeIn", "Time in can't be later than the current time.");
         }
-        if (status.equals("auto")) {
-            status = timeIn.isAfter(standardStart.plusMinutes(graceMinutes)) ? "late" : "present";
-        }
-        if (status.equals("absent")) {
-            timeIn = null;
-            timeOut = null;
-        }
+        // Always automatic: late when time in is after the start time plus the grace period.
+        String status = timeIn.isAfter(lateAfter()) ? "late" : "present";
 
         // One record per employee per day: a manual entry replaces whatever is there.
         DailyTimeRecord record = (employeeId.isFaculty()

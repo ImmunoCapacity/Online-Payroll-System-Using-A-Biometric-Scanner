@@ -376,8 +376,4 @@ public class LeaveService {
         m.put("creditsRemaining", l.getRemainingLeave());
         return m;
     }
-
-    private static ApiException conflict(String message) {
-        return new ApiException(HttpStatus.CONFLICT, message);
-    }
 }

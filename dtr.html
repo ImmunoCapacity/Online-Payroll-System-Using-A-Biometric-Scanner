@@ -52,10 +52,13 @@
                                 </p>
                             </div>
 
-                            <button type="button" class="btn btn-pp-primary" id="syncDeviceBtn">
-                                <i class="bi bi-arrow-repeat me-1"></i>
-                                Sync Device
-                            </button>
+                            <div class="pp-sync-actions">
+                                <span class="pp-live-badge" id="liveSyncBadge" hidden><span class="pp-live-dot"></span><span>Live</span></span>
+                                <button type="button" class="btn btn-pp-primary" id="syncDeviceBtn">
+                                    <i class="bi bi-arrow-repeat me-1"></i>
+                                    Sync Device
+                                </button>
+                            </div>
                         </div>
 
                         <div class="pp-filter-bar">
@@ -137,6 +140,7 @@
 
                                     <thead>
                                         <tr>
+                                            <th>Employee ID</th>
                                             <th>Employee Name</th>
                                             <th>Employee Type</th>
                                             <th class="text-end">Present</th>
@@ -168,6 +172,7 @@
                                     <thead>
 
                                         <tr>
+                                            <th>Employee ID</th>
                                             <th>Employee Name</th>
                                             <th>Employee Type</th>
                                             <th>Time In</th>
@@ -359,11 +364,10 @@
                                             Status
                                         </label>
 
-                                        <select class="form-select pp-form-select" id="manualStatus">
-                                            <option value="auto" selected>Automatic (from time in, 15-min grace)</option>
-                                            <option value="present">Present</option>
-                                            <option value="late">Late</option>
-                                        </select>
+                                        <!-- Automatic from the time in (js/dtr.js); the server decides the same way. -->
+                                        <input type="text" class="form-control pp-form-control" id="manualStatus"
+                                               value="Enter the time in" readonly tabindex="-1">
+                                        <div class="form-text" id="manualStatusHint">Late when the time in is after 8:15 AM.</div>
 
                                     </div>
 
@@ -379,6 +383,63 @@
 
                             </div>
 
+                        </div>
+
+                        <!-- Manual entries recorded: daily / weekly / monthly (js/dtr-views.js) -->
+                        <h2 class="pp-manual-list-title">Recorded Attendance</h2>
+
+                        <div class="pp-filter-bar">
+
+                            <div class="pp-filter-group">
+                                <label for="manualView" class="pp-form-label">View</label>
+                                <select class="form-select pp-form-select" id="manualView">
+                                    <option value="daily">Daily</option>
+                                    <option value="weekly" selected>Weekly</option>
+                                    <option value="monthly">Monthly</option>
+                                </select>
+                            </div>
+
+                            <div class="pp-filter-group">
+                                <label for="manualViewDate" class="pp-form-label" id="manualViewDateLabel">Week of</label>
+                                <input type="date" class="form-control pp-form-control" id="manualViewDate">
+                            </div>
+
+                            <div class="pp-filter-group search">
+                                <label for="manualViewSearch" class="pp-form-label">Search</label>
+                                <div class="pp-search-input">
+                                    <i class="bi bi-search"></i>
+                                    <input type="search" class="form-control pp-form-control" id="manualViewSearch"
+                                           maxlength="100" placeholder="Search employee...">
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <p class="pp-table-hint" id="manualViewHint">
+                            <i class="bi bi-hand-index" aria-hidden="true"></i>
+                            <span>Click an entry to see the employee's attendance by day, week or month.</span>
+                        </p>
+
+                        <div class="pp-card pp-dtr-table-card">
+                            <div class="pp-table-wrap">
+                                <table class="pp-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Employee ID</th>
+                                            <th>Employee Name</th>
+                                            <th>Employee Type</th>
+                                            <th>Date</th>
+                                            <th>Time In</th>
+                                            <th>Time Out</th>
+                                            <th>Total Hours</th>
+                                            <th>Status</th>
+                                            <th>Reason</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="manualViewBody"></tbody>
+                                </table>
+                            </div>
+                            <div class="pp-empty-state d-none" id="manualViewEmpty"></div>
                         </div>
 
                     </section>

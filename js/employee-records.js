@@ -33,7 +33,9 @@
     const employeeDepartmentSelect = document.getElementById('employeeDepartmentSelect');
     const employeeEmail = document.getElementById('employeeEmail');
     const employeePhone = document.getElementById('employeePhone');
-    const employeeStatusSelect = document.getElementById('employeeStatusSelect');
+    // Active / On Leave / Inactive / Resigned / Terminated: not on the form; kept as
+    // loaded (new employees are Active) and set by Archive (reason) and Restore.
+    let currentStatus = 'Active';
     const employeeJoined = document.getElementById('employeeJoined');
     const saveButton = employeeForm.querySelector('button[type="submit"]');
     const archiveEmployeeBtn = document.getElementById('archiveEmployeeBtn');
@@ -132,6 +134,10 @@
         const both = department === 'Faculty/Admin';
         facultyFields.classList.toggle('d-none', department !== 'Faculty' && !both);
         adminFields.classList.toggle('d-none', department !== 'Admin' && !both);
+        // Basic Pay: Admin and Faculty/Admin only (Faculty have none).
+        const hasBasicPay = department === 'Admin' || both;
+        document.getElementById('basicPayField').classList.toggle('d-none', !hasBasicPay);
+        if (!hasBasicPay) document.getElementById('employeeBasicPay').value = '';
         document.getElementById('employeeRateUnitLabel').textContent =
             both ? 'Teaching Rate per Hour/Unit (₱)' : 'Rate per Hour/Unit (₱)';
     }
@@ -141,7 +147,7 @@
     // ================================================================
 
     function loadEmployees() {
-        employeeBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4">Loading employees…</td></tr>';
+        employeeBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">Loading employees…</td></tr>';
         emptyState.classList.add('d-none');
 
         // Archived employees too, for the Status filter's "Archived" view.
@@ -194,7 +200,8 @@
             return (
                 '<tr class="pp-row-clickable" tabindex="0" role="button" data-id="' + escapeHtml(employee.id) + '" ' +
                     'aria-label="View details of ' + name + '">' +
-                    '<td><strong>' + name + '</strong><br><span class="text-muted" style="font-size:0.75rem;">' + escapeHtml(employee.employeeNumber) + '</span></td>' +
+                    '<td>' + escapeHtml(employee.employeeNumber) + '</td>' +
+                    '<td><strong>' + name + '</strong></td>' +
                     '<td>' + escapeHtml(employee.department) + '</td>' +
                     '<td>' + escapeHtml(employee.email) + '</td>' +
                     '<td>' + escapeHtml(employee.phone) + '</td>' +
@@ -222,7 +229,6 @@
         employeeNumber: 'employeeNumber',
         department: 'employeeDepartmentSelect',
         dateHired: 'employeeJoined',
-        status: 'employeeStatusSelect',
         employeeType: 'employeeType',
         basicPay: 'employeeBasicPay',
         instructorRank: 'employeeRank',
@@ -259,7 +265,7 @@
         employeeForm.reset();
         employeeId.value = '';
         modalTitle.textContent = 'Add Employee';
-        employeeStatusSelect.value = 'Active';
+        currentStatus = 'Active';
         employeeDepartmentSelect.value = '';
         employeeDepartmentSelect.disabled = false;
         archiveEmployeeBtn.classList.add('d-none');
@@ -331,7 +337,7 @@
             employeeDepartmentSelect.disabled = true;
             employeeEmail.value = employee.email;
             employeePhone.value = employee.phone;
-            employeeStatusSelect.value = employee.status;
+            currentStatus = employee.status || 'Active';
             employeeJoined.value = employee.dateHired;
             // Older records may hold e.g. "0917-000-0000"; keep only the allowed characters.
             PPValidate.sanitize(employeeForm);
@@ -374,7 +380,7 @@
             department: employeeDepartmentSelect.value,
             email: employeeEmail.value.trim(),
             phone: employeePhone.value.trim(),
-            status: employeeStatusSelect.value,
+            status: currentStatus,
             dateHired: employeeJoined.value
         };
         readFields(PROFILE_FIELDS, payload);
@@ -440,42 +446,53 @@
             .then(function (response) { return response.json(); });
     }
 
+    // Archive: asks why the employee is leaving (Resigned / Terminated /
+    // Inactive); the server sets that status and archives them.
+    const archiveModal = new bootstrap.Modal(document.getElementById('archiveModal'));
+    let archiving = null;
+
     archiveEmployeeBtn.addEventListener('click', function () {
         const id = employeeId.value;
         const match = employeeList.find(function (item) { return item.id === id; });
         if (!match) return;
-
-        if (ARCHIVABLE.indexOf(match.status) === -1) {
-            PPValidate.setError(employeeStatusSelect,
-                'Only Inactive, Resigned or Terminated employees can be archived. Change the status and save first.');
-            employeeStatusSelect.focus();
-            return;
-        }
-
+        archiving = match;
+        document.getElementById('archiveMessage').textContent = 'Archive ' + match.displayName + ' (' + match.employeeNumber +
+            ')? They will be hidden from lists and can no longer be scheduled or paid. Their payroll, DTR, leave and loan ' +
+            'records are kept, and they can be restored from Status: Archived.';
+        document.getElementById('archiveReason').value =
+            ARCHIVABLE.indexOf(match.status) !== -1 ? match.status : 'Resigned';
         bootstrap.Modal.getInstance(employeeModal).hide();
-        ConfirmModal.show({
-            title: 'Archive Employee',
-            message: 'Archive ' + match.displayName + ' (' + match.employeeNumber + ')? They will be hidden from lists and ' +
-                'can no longer be scheduled or paid. Their payroll, DTR, leave and loan records are kept, and the ' +
-                'employee can be restored from Status: Archived.',
-            confirmText: 'Archive Employee'
-        }).then(function (confirmed) {
-            if (!confirmed) return;
+        archiveModal.show();
+    });
 
-            postAction(id, 'archive')
-                .then(function (data) {
-                    if (!data.success) {
-                        PPToast.error(data.message || 'Could not archive the employee.');
-                        return;
-                    }
-                    PPToast.success(match.displayName + ' archived.');
-                    loadEmployees();
-                })
-                .catch(function (error) {
-                    PPToast.error('Could not reach the server. Is the Spring Boot backend running?');
-                    console.error('[Employee Records]', error);
-                });
-        });
+    document.getElementById('confirmArchiveBtn').addEventListener('click', function () {
+        if (!archiving) return;
+        const match = archiving;
+        const reason = document.getElementById('archiveReason').value;
+        const button = document.getElementById('confirmArchiveBtn');
+        button.disabled = true;
+        fetch('api/employees/' + encodeURIComponent(match.id) + '/archive', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reason: reason })
+        })
+            .then(function (response) { return response.json(); })
+            .then(function (data) {
+                if (!data.success) {
+                    PPToast.error(data.message || 'Could not archive the employee.');
+                    return;
+                }
+                archiveModal.hide();
+                PPToast.success(match.displayName + ' archived (' + reason + ').');
+                loadEmployees();
+            })
+            .catch(function (error) {
+                PPToast.error('Could not reach the server. Is the Spring Boot backend running?');
+                console.error('[Employee Records]', error);
+            })
+            .then(function () {
+                button.disabled = false;
+            });
     });
 
     restoreEmployeeBtn.addEventListener('click', function () {
@@ -491,7 +508,7 @@
                     return;
                 }
                 bootstrap.Modal.getInstance(employeeModal).hide();
-                PPToast.success(match.displayName + ' restored. Set their status to Active to schedule and pay them again.');
+                PPToast.success(match.displayName + ' restored and active again.');
                 loadEmployees();
             })
             .catch(function (error) {

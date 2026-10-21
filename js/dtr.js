@@ -537,18 +537,16 @@
                             aria-label="Attendance of ${escapeHtml(emp.displayName)}">
 
                             <td>
+                                ${escapeHtml(emp.id)}
+                            </td>
+
+                            <td>
 
                                 <strong>
                                     ${escapeHtml(emp.displayName)}
                                 </strong>
 
                                 ${manualTag}
-
-                                <br>
-
-                                <span class="text-muted small">
-                                    ${escapeHtml(emp.id)}
-                                </span>
 
                             </td>
 
@@ -668,6 +666,20 @@
     let manualEmployees = [];
 
 
+    // Status is automatic: Late when the time in is after the start time plus
+    // the grace period (attendance.* on the server, sent with the employees).
+    let lateAfter = '08:15';
+
+    function updateManualStatus() {
+        const timeIn = document.getElementById('manualTimeIn');
+        const status = document.getElementById('manualStatus');
+        if (!timeIn || !status) return;
+        const late = timeIn.value && timeIn.value > lateAfter;
+        status.value = !timeIn.value ? 'Enter the time in' : late ? 'Late' : 'Present';
+        status.classList.toggle('pp-status-late', !!late);
+        status.classList.toggle('pp-status-present', !!timeIn.value && !late);
+    }
+
     function loadManualEmployees() {
 
         fetch('api/dtr/employees')
@@ -681,6 +693,12 @@
                 }
 
                 manualEmployees = data.employees;
+                if (data.lateAfter) {
+                    lateAfter = data.lateAfter.slice(0, 5);
+                    document.getElementById('manualStatusHint').textContent =
+                        'Late when the time in is after ' + formatTime12(lateAfter) + '.';
+                    updateManualStatus();
+                }
 
             })
             .catch(function (error) {
@@ -873,13 +891,18 @@
         }
     });
 
+    const manualTimeInInput = document.getElementById('manualTimeIn');
+    if (manualTimeInInput) {
+        manualTimeInInput.addEventListener('input', updateManualStatus);
+        manualTimeInInput.addEventListener('change', updateManualStatus);
+    }
+
     // API field name -> input id, so server errors show beside the right field.
     const MANUAL_SERVER_FIELDS = {
         employeeId: 'manualEmployeeSearch',
         date: 'manualDate',
         timeIn: 'manualTimeIn',
         timeOut: 'manualTimeOut',
-        status: 'manualStatus',
         reason: 'manualReason'
     };
 
@@ -1012,9 +1035,6 @@
                     timeOut:
                         document.getElementById('manualTimeOut').value || null,
 
-                    status:
-                        document.getElementById('manualStatus').value,
-
                     reason:
                         document.getElementById('manualReason').value.trim()
 
@@ -1064,6 +1084,8 @@
 
                         PPValidate.clear(manualForm);
 
+                        updateManualStatus();
+
                         manualEmployee.value =
                             '';
 
@@ -1077,6 +1099,9 @@
                         }
 
                         loadDtrRecords();
+
+                        // Recorded Attendance (js/dtr-views.js) shows the new entry.
+                        document.dispatchEvent(new CustomEvent('pp:manual-saved', { detail: { date: payload.date } }));
 
 
                         PPToast.success(

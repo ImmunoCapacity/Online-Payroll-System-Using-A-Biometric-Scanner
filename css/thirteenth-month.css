@@ -1,0 +1,35 @@
+/* 13th Month Pay */
+
+.pp-13th-table th,
+.pp-13th-table td {
+    white-space: nowrap;
+}
+
+.pp-13th-table tfoot th,
+.pp-13th-months tfoot th {
+    border-top: 1px solid var(--pp-border, #e2e5e9);
+    font-weight: 650;
+}
+
+.pp-13th-sub {
+    color: var(--pp-text-muted, #6b7280);
+    font-size: 0.8125rem;
+    margin-top: 0.15rem;
+}
+
+.pp-13th-months td,
+.pp-13th-months th {
+    padding-top: 0.45rem;
+    padding-bottom: 0.45rem;
+}
+
+.pp-13th-months .pp-13th-total th {
+    background: var(--pp-surface-alt, #f8f9fa);
+    font-size: 0.95rem;
+}
+
+.pp-13th-rule {
+    color: var(--pp-text-muted, #6b7280);
+    font-size: 0.75rem;
+    font-weight: 500;
+}

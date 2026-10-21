@@ -19,7 +19,6 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -43,7 +42,6 @@ public class PayrollAdjustmentService {
     public static final String PENDING = "Pending";
     public static final String APPLIED = "Applied";
     private static final BigDecimal MAX_HOURS = new BigDecimal("24");
-    private static final Set<String> INACTIVE = Set.of("Inactive", "Resigned", "Terminated");
     private static final Map<String, Integer> TYPE_ORDER = Map.of("Admin", 0, "Faculty", 1, "Faculty/Admin", 2);
 
     /** One grid row as sent by the page; empty hours = no adjustment. */
@@ -79,13 +77,16 @@ public class PayrollAdjustmentService {
         List<Map<String, Object>> rows = new ArrayList<>();
         employees.all().forEach((id, s) -> {
             Map<String, Object> a = saved.get(id);
-            boolean current = !s.isArchived() && !INACTIVE.contains(s.getEmploymentStatus());
-            if (!current && a == null) return;
+            // Only employees Payroll Computation pays in this cut-off are listed (and
+            // anyone with a saved adjustment, flagged so it can be removed).
+            boolean paid = inPayroll(s, to);
+            if (!paid && a == null) return;
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("employeeId", id);
             m.put("employeeNumber", s.getEmployeeNumber());
             m.put("name", s.getFullName());
             m.put("type", s.staffType());
+            m.put("inPayroll", paid);
             if (a == null) {
                 m.put("rate", rate(s, ratesAtEnd.get(id)));
             } else {
@@ -144,6 +145,10 @@ public class PayrollAdjustmentService {
                 continue;
             }
             String who = staff.getFullName() + ": ";
+            if (!inPayroll(staff, end)) {
+                throw Validation.invalid("rows", who + "not in this cut-off's payroll (status " + staff.getEmploymentStatus()
+                        + (staff.isArchived() ? ", archived" : "") + "), so an adjustment would never be paid. Clear the row.");
+            }
             LocalDate from = date(r.dateFrom(), who + "enter Date From.");
             LocalDate to = date(r.dateTo(), who + "enter Date To.");
             if (to.isBefore(from)) {
@@ -219,13 +224,25 @@ public class PayrollAdjustmentService {
         return result;
     }
 
-    /** Called when a cut-off is released: its adjustments are now paid. */
+    /**
+     * Called when a cut-off is released: its adjustments are now paid. Only
+     * those of employees on that run's payroll; any other stays Pending.
+     */
     public void markApplied(int runId, LocalDate from, LocalDate to) {
-        jdbc.update("UPDATE payroll_adjustment SET status = ?, payroll_run_id = ? WHERE apply_start = ? AND apply_end = ? AND status = ?",
-                APPLIED, runId, Date.valueOf(from), Date.valueOf(to), PENDING);
+        jdbc.update("UPDATE payroll_adjustment a SET a.status = ?, a.payroll_run_id = ? "
+                        + "WHERE a.apply_start = ? AND a.apply_end = ? AND a.status = ? AND EXISTS ("
+                        + "SELECT 1 FROM payroll p WHERE p.payroll_run_id = ? "
+                        + "AND (p.faculty_id <=> a.faculty_id) AND (p.adminstaff_id <=> a.adminstaff_id))",
+                APPLIED, runId, Date.valueOf(from), Date.valueOf(to), PENDING, runId);
     }
 
     // ---------------------------------------------------------------
+
+    /** Same rule as Payroll Computation: Active, not archived, hired by the end of the cut-off. */
+    private static boolean inPayroll(StaffMember s, LocalDate end) {
+        return !s.isArchived() && "Active".equals(s.getEmploymentStatus())
+                && (s.getDateHired() == null || !s.getDateHired().isAfter(end));
+    }
 
     private boolean isReleased(LocalDate start, LocalDate end) {
         Integer released = jdbc.queryForObject("SELECT COUNT(*) FROM payroll_run WHERE pay_period_start = ? AND pay_period_end = ? "

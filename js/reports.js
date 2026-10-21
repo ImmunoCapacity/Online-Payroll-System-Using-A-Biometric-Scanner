@@ -90,6 +90,10 @@
         return Number(value) || 0;
     }
 
+    function round2(value) {
+        return Math.round(number(value) * 100) / 100;
+    }
+
     function escapeHtml(value) {
         return String(value == null ? '' : value)
             .replace(/&/g, '&amp;')
@@ -242,68 +246,104 @@
             loan: loan,
             deductions: deductions,
             net: net,
-            hours: g(['hours', 'workedHours', 'totalHours'])
+            hours: round2(g(['hours', 'workedHours', 'totalHours']))
         };
     }
 
 
-    /* Table builders */
-    function headRow(columns) {
-        return '<tr>' + columns.map(function (c) {
-            return '<th>' + c + '</th>';
-        }).join('') + '</tr>';
+    /* Table
+       Every report is shown through show(): columns ({ label, kind, strong }),
+       rows of raw values and optional totals (one per column, null = none).
+       kind is 'text', 'money' or 'number'. The same data is what Export PDF
+       and Export Excel send to the server, so the files match the screen. */
+    var exportData = null;
+
+    var TEXT = 'text', MONEY = 'money', NUM = 'number';
+
+    function col(label, kind, strong) {
+        return { label: label, kind: kind || TEXT, strong: !!strong };
     }
 
-    function bodyRows(rows, colspan) {
-        if (!rows.length) {
-            return '<tr><td colspan="' + colspan + '" class="report-empty">' +
-                'No records found for the selected filters.</td></tr>';
+    function cellHtml(column, value) {
+        var html = column.kind === MONEY ? peso(value)
+            : column.kind === NUM ? escapeHtml(value == null ? '—' : value)
+            : escapeHtml(value == null || value === '' ? '—' : value);
+        if (column.strong) { html = '<strong>' + html + '</strong>'; }
+        return '<td' + (column.kind === TEXT ? '' : ' class="report-num"') + '>' + html + '</td>';
+    }
+
+    function show(columns, rows, totals, emptyText) {
+        tableHead.innerHTML = '<tr>' + columns.map(function (c) {
+            return '<th' + (c.kind === TEXT ? '' : ' class="report-num"') + '>' + escapeHtml(c.label) + '</th>';
+        }).join('') + '</tr>';
+
+        tableBody.innerHTML = rows.length
+            ? rows.map(function (row) {
+                return '<tr>' + columns.map(function (c, i) { return cellHtml(c, row[i]); }).join('') + '</tr>';
+            }).join('')
+            : '<tr><td colspan="' + columns.length + '" class="report-empty">' +
+              (emptyText || 'No records found for the selected filters.') + '</td></tr>';
+
+        tableFooter.innerHTML = '';
+        if (totals && rows.length) {
+            var lead = 0;
+            while (lead < columns.length && totals[lead] == null) { lead++; }
+            lead = Math.max(1, lead);
+            var cells = '<th colspan="' + lead + '">Total</th>';
+            for (var i = lead; i < columns.length; i++) {
+                var v = totals[i];
+                cells += '<th class="report-num">' +
+                    (v == null ? '' : columns[i].kind === MONEY ? peso(v) : escapeHtml(round2(v))) + '</th>';
+            }
+            tableFooter.innerHTML = '<tr>' + cells + '</tr>';
         }
 
-        return rows.map(function (cells) {
-            return '<tr>' + cells.map(function (c) {
-                return '<td>' + c + '</td>';
-            }).join('') + '</tr>';
-        }).join('');
+        setText('reportRecordLabel', rows.length + (rows.length === 1 ? ' record' : ' records'));
+
+        exportData = {
+            columns: columns.map(function (c) { return { label: c.label, kind: c.kind }; }),
+            rows: rows,
+            totals: totals || null
+        };
+    }
+
+    function showLoading(columns, text) {
+        exportData = null;
+        tableHead.innerHTML = '<tr>' + columns.map(function (c) {
+            return '<th' + (c.kind === TEXT ? '' : ' class="report-num"') + '>' + escapeHtml(c.label) + '</th>';
+        }).join('') + '</tr>';
+        tableBody.innerHTML = '<tr><td colspan="' + columns.length + '" class="report-empty">' + text + '</td></tr>';
+        tableFooter.innerHTML = '';
+    }
+
+    function sumColumns(rows, columns) {
+        return columns.map(function (c, i) {
+            if (c.kind === TEXT) return null;
+            return round2(rows.reduce(function (sum, row) { return sum + number(row[i]); }, 0));
+        });
+    }
+
+    function baseCells(record) {
+        return [idOf(record), nameOf(record), typeOf(record)];
     }
 
 
     /* Payroll report */
     function renderPayrollReport(records) {
-        var columns = ['EMP. ID', 'EMPLOYEE', 'TYPE', 'HOURS', 'GROSS PAY', 'SSS',
-            'PHILHEALTH', 'PAG-IBIG', 'TAX', 'LOAN', 'TOTAL DED.', 'NET PAY'];
-
-        var t = { hours: 0, gross: 0, sss: 0, philhealth: 0, pagibig: 0,
-            tax: 0, loan: 0, deductions: 0, net: 0 };
+        var columns = [col('EMP. ID'), col('EMPLOYEE', TEXT, true), col('TYPE'), col('HOURS', NUM),
+            col('GROSS PAY', MONEY), col('SSS', MONEY), col('PHILHEALTH', MONEY), col('PAG-IBIG', MONEY),
+            col('TAX', MONEY), col('LOAN', MONEY), col('TOTAL DED.', MONEY), col('NET PAY', MONEY, true)];
 
         var rows = records.map(function (record) {
             var v = getPayrollValues(record);
-
-            Object.keys(t).forEach(function (k) { t[k] += v[k]; });
-
-            return [
-                escapeHtml(idOf(record)),
-                '<strong>' + escapeHtml(nameOf(record)) + '</strong>',
-                escapeHtml(typeOf(record)),
-                v.hours,
-                peso(v.gross), peso(v.sss), peso(v.philhealth), peso(v.pagibig),
-                peso(v.tax), peso(v.loan), peso(v.deductions),
-                '<strong>' + peso(v.net) + '</strong>'
-            ];
+            return baseCells(record).concat([v.hours, v.gross, v.sss, v.philhealth, v.pagibig,
+                v.tax, v.loan, v.deductions, v.net]);
         });
+        var totals = sumColumns(rows, columns);
 
-        tableHead.innerHTML = headRow(columns);
-        tableBody.innerHTML = bodyRows(rows, columns.length);
-
-        tableFooter.innerHTML =
-            '<tr><th colspan="3">Total</th>' +
-            '<th>' + t.hours + '</th>' +
-            [t.gross, t.sss, t.philhealth, t.pagibig, t.tax, t.loan, t.deductions, t.net]
-                .map(function (x) { return '<th>' + peso(x) + '</th>'; }).join('') +
-            '</tr>';
-
-        updateSummary(records, t);
-        updateRecordHeader(records);
+        show(columns, rows, totals);
+        updateSummary(records, { gross: totals[4], deductions: totals[10], net: totals[11] });
+        setText('reportPeriodLabel', payrollPeriod.selectedOptions[0].textContent.trim());
     }
 
 
@@ -315,41 +355,34 @@
         setText('summaryNet', peso(totals.net));
     }
 
-    function updateRecordHeader(records) {
-        setText('reportPeriodLabel', payrollPeriod.selectedOptions[0].textContent.trim());
-        setText('reportRecordLabel', records.length + (records.length === 1 ? ' record' : ' records'));
-    }
-
 
     /* Other reports */
     var simpleReports = {
         payslip: {
-            columns: ['EMP. ID', 'EMPLOYEE', 'TYPE', 'GROSS PAY', 'TOTAL DED.', 'NET PAY'],
-            extra: function (r, v) { return [peso(v.gross), peso(v.deductions), peso(v.net)]; }
+            columns: [col('GROSS PAY', MONEY), col('TOTAL DED.', MONEY), col('NET PAY', MONEY, true)],
+            extra: function (r, v) { return [v.gross, v.deductions, v.net]; }
         },
         thirteenth: {
-            columns: ['EMP. ID', 'EMPLOYEE', 'TYPE', 'GROSS PAY', '13TH MONTH PAY'],
+            columns: [col('GROSS PAY', MONEY), col('13TH MONTH PAY', MONEY, true)],
             extra: function (r, v) {
-                var t = number(getValue(r,
-                    ['thirteenthMonth', 'thirteenthMonthPay', '13thMonthPay'], 0));
-                return [peso(v.gross), peso(t)];
+                return [v.gross, number(getValue(r, ['thirteenthMonth', 'thirteenthMonthPay', '13thMonthPay'], 0))];
             }
         },
         sss: {
-            columns: ['EMP. ID', 'EMPLOYEE', 'TYPE', 'SSS CONTRIBUTION'],
-            extra: function (r, v) { return [peso(v.sss)]; }
+            columns: [col('SSS CONTRIBUTION', MONEY)],
+            extra: function (r, v) { return [v.sss]; }
         },
         philhealth: {
-            columns: ['EMP. ID', 'EMPLOYEE', 'TYPE', 'PHILHEALTH CONTRIBUTION'],
-            extra: function (r, v) { return [peso(v.philhealth)]; }
+            columns: [col('PHILHEALTH CONTRIBUTION', MONEY)],
+            extra: function (r, v) { return [v.philhealth]; }
         },
         pagibig: {
-            columns: ['EMP. ID', 'EMPLOYEE', 'TYPE', 'PAG-IBIG CONTRIBUTION'],
-            extra: function (r, v) { return [peso(v.pagibig)]; }
+            columns: [col('PAG-IBIG CONTRIBUTION', MONEY)],
+            extra: function (r, v) { return [v.pagibig]; }
         },
         bir: {
-            columns: ['EMP. ID', 'EMPLOYEE', 'TYPE', 'WITHHOLDING TAX'],
-            extra: function (r, v) { return [peso(v.tax)]; }
+            columns: [col('WITHHOLDING TAX', MONEY)],
+            extra: function (r, v) { return [v.tax]; }
         }
     };
 
@@ -357,28 +390,19 @@
         var def = simpleReports[reportKey];
         if (!def) { return; }
 
+        var columns = [col('EMP. ID'), col('EMPLOYEE', TEXT, true), col('TYPE')].concat(def.columns);
         var rows = records.map(function (record) {
-            var base = [
-                escapeHtml(idOf(record)),
-                escapeHtml(nameOf(record)),
-                escapeHtml(typeOf(record))
-            ];
-            return base.concat(def.extra(record, getPayrollValues(record)));
+            return baseCells(record).concat(def.extra(record, getPayrollValues(record)));
         });
-
-        tableHead.innerHTML = headRow(def.columns);
-        tableBody.innerHTML = bodyRows(rows, def.columns.length);
-        tableFooter.innerHTML = '';
+        show(columns, rows, sumColumns(rows, columns));
     }
 
 
     /* Loan Report (paper, 8.5): balances and deduction history, from the database via api/loans */
     function renderLoanReport() {
-        var columns = ['EMP. ID', 'EMPLOYEE', 'LOAN TYPE', 'REFERENCE', 'LOAN AMOUNT',
-            'PER PAYROLL', 'TOTAL DEDUCTED', 'BALANCE'];
-        tableHead.innerHTML = headRow(columns);
-        tableBody.innerHTML = '<tr><td colspan="' + columns.length + '" class="report-empty">Loading loans…</td></tr>';
-        tableFooter.innerHTML = '';
+        var columns = [col('EMP. ID'), col('EMPLOYEE', TEXT, true), col('LOAN TYPE'), col('REFERENCE'),
+            col('LOAN AMOUNT', MONEY), col('PER PAYROLL', MONEY), col('TOTAL DEDUCTED', MONEY), col('BALANCE', MONEY, true)];
+        showLoading(columns, 'Loading loans…');
 
         fetch('api/loans')
             .then(function (response) { return response.json(); })
@@ -392,37 +416,25 @@
                         String(l.employeeName || '').toLowerCase().includes(search) ||
                         String(l.employeeId || '').toLowerCase().includes(search);
                 });
-                var totals = { amount: 0, deducted: 0, balance: 0 };
                 var rows = loans.map(function (l) {
-                    totals.amount += number(l.amount);
-                    totals.deducted += number(l.totalDeducted);
-                    totals.balance += number(l.remainingBalance);
-                    return [
-                        escapeHtml(l.employeeId), '<strong>' + escapeHtml(l.employeeName) + '</strong>',
-                        escapeHtml(l.type), escapeHtml(l.reference || '—'),
-                        peso(l.amount), peso(l.deductionPerPayroll), peso(l.totalDeducted), peso(l.remainingBalance)
-                    ];
+                    return [l.employeeId, l.employeeName, l.type, l.reference || '',
+                        number(l.amount), number(l.deductionPerPayroll), number(l.totalDeducted), number(l.remainingBalance)];
                 });
-
-                tableBody.innerHTML = bodyRows(rows, columns.length);
-                tableFooter.innerHTML = rows.length
-                    ? '<tr><th colspan="4">Total</th><th>' + peso(totals.amount) + '</th><th></th><th>' +
-                      peso(totals.deducted) + '</th><th>' + peso(totals.balance) + '</th></tr>'
-                    : '';
-                setText('reportRecordLabel', rows.length + (rows.length === 1 ? ' record' : ' records'));
+                var totals = sumColumns(rows, columns);
+                totals[5] = null; // a sum of per-payroll amounts means nothing
+                show(columns, rows, totals);
             })
             .catch(function () {
                 if (currentReport !== 'loans') return;
-                tableBody.innerHTML = '<tr><td colspan="' + columns.length + '" class="report-empty">Could not load loans from the server.</td></tr>';
+                showLoading(columns, 'Could not load loans from the server.');
             });
     }
 
     /* Employee List Report (paper, 8.6): from the database via api/employees */
     function renderEmployeeListReport() {
-        var columns = ['EMP. NO.', 'EMPLOYEE', 'TYPE', 'EMAIL', 'CONTACT', 'DATE HIRED'];
-        tableHead.innerHTML = headRow(columns);
-        tableBody.innerHTML = '<tr><td colspan="' + columns.length + '" class="report-empty">Loading employees…</td></tr>';
-        tableFooter.innerHTML = '';
+        var columns = [col('EMP. NO.'), col('EMPLOYEE', TEXT, true), col('TYPE'), col('EMAIL'),
+            col('CONTACT'), col('DATE HIRED')];
+        showLoading(columns, 'Loading employees…');
 
         fetch('api/employees')
             .then(function (response) { return response.json(); })
@@ -442,20 +454,14 @@
                     return typeMatch && searchMatch;
                 });
 
-                var rows = employees.map(function (e) {
-                    return [
-                        escapeHtml(e.employeeNumber), '<strong>' + escapeHtml(e.displayName) + '</strong>',
-                        escapeHtml(e.department), escapeHtml(e.email), escapeHtml(e.phone),
-                        escapeHtml(e.dateHired || '—')
-                    ];
-                });
-                tableBody.innerHTML = bodyRows(rows, columns.length);
-                setText('reportRecordLabel', rows.length + (rows.length === 1 ? ' record' : ' records'));
+                show(columns, employees.map(function (e) {
+                    return [e.employeeNumber, e.displayName, e.department, e.email, e.phone, e.dateHired || ''];
+                }));
             })
             .catch(function (error) {
                 console.error('[Reports] Employee list failed:', error);
-                tableBody.innerHTML = '<tr><td colspan="' + columns.length + '" class="report-empty">' +
-                    'Could not load employees from the server.</td></tr>';
+                if (currentReport !== 'employees') return;
+                showLoading(columns, 'Could not load employees from the server.');
             });
     }
 
@@ -495,10 +501,7 @@
     /* Events */
     $('generateReport').addEventListener('click', function () {
         selectReport(currentReport);
-
-        if (typeof Toast !== 'undefined' && Toast.success) {
-            Toast.success('Report generated successfully.');
-        }
+        if (window.PPToast) PPToast.success('Report generated successfully.');
     });
 
     [payrollPeriod, employeeType].forEach(function (el) {
@@ -508,36 +511,89 @@
     reportSearch.addEventListener('input', function () { selectReport(currentReport); });
 
 
-    /* Print / PDF */
-    $('printReport').addEventListener('click', function () { window.print(); });
-    $('exportPdf').addEventListener('click', function () { window.print(); });
+    /* Filter lines printed under the title of an exported file */
+    function filterLines() {
+        var lines = [];
+        if (currentReport === 'thirteenth') {
+            var p = payrollPeriod.value;
+            var match = p === 'all' ? null : payrollRecords.find(function (r) { return r.periodLabel === p; });
+            lines.push('Year: ' + (match ? match.periodEnd.slice(0, 4) : 'All years'));
+        } else if (currentReport !== 'loans' && currentReport !== 'employees') {
+            lines.push(payrollPeriod.value === 'all'
+                ? 'All released payroll periods' : 'Payroll period: ' + payrollPeriod.selectedOptions[0].textContent.trim());
+        }
+        // Only filters actually in use.
+        if (currentReport !== 'loans' && employeeType.value !== 'all') {
+            lines.push(employeeType.selectedOptions[0].textContent.trim());
+        }
+        var search = reportSearch.value.trim();
+        if (search) { lines.push('Search: "' + search + '"'); }
+        return lines.length ? [lines.join('   |   ')] : [];
+    }
 
 
-    /* Export Excel (CSV) */
-    $('exportExcel').addEventListener('click', function () {
-        var csv = [];
-
-        document.querySelectorAll('.report-table tr').forEach(function (row) {
-            var values = [];
-
-            row.querySelectorAll('th, td').forEach(function (cell) {
-                values.push('"' + cell.innerText.replace(/"/g, '""') + '"');
-            });
-
-            csv.push(values.join(','));
-        });
-
-        var blob = new Blob([csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
-        var url = URL.createObjectURL(blob);
-        var link = document.createElement('a');
-
-        link.href = url;
-        link.download = currentReport + '-report.csv';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+    /* Print: only a letterhead, the title, the filters in use and the
+       table (css/reports.css @media print). */
+    window.addEventListener('beforeprint', function () {
+        setText('printTitle', reportDefinitions[currentReport].title);
+        setText('printSubtitle', filterLines().join(''));
     });
+
+    $('printReport').addEventListener('click', function () { window.print(); });
+
+
+    /* Export PDF / Excel: the server builds the file from the table on screen */
+    function exportReport(format, button) {
+        if (!exportData) {
+            if (window.PPToast) PPToast.error('Wait for the report to finish loading.');
+            return;
+        }
+        var label = button.innerHTML;
+        button.disabled = true;
+        button.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Exporting…';
+
+        fetch('api/reports/export', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                format: format,
+                title: reportDefinitions[currentReport].title,
+                subtitle: filterLines(),
+                columns: exportData.columns,
+                rows: exportData.rows,
+                totals: exportData.totals
+            })
+        })
+            .then(function (response) {
+                if (!response.ok) {
+                    return response.json().catch(function () { return {}; }).then(function (data) {
+                        throw new Error(data.message || 'The export failed.');
+                    });
+                }
+                var disposition = response.headers.get('Content-Disposition') || '';
+                var match = /filename="?([^";]+)"?/.exec(disposition);
+                return response.blob().then(function (blob) {
+                    var url = URL.createObjectURL(blob);
+                    var link = document.createElement('a');
+                    link.href = url;
+                    link.download = match ? match[1] : currentReport + '-report.' + format;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+                });
+            })
+            .catch(function (error) {
+                if (window.PPToast) PPToast.error(error.message || 'The export failed.');
+            })
+            .then(function () {
+                button.disabled = false;
+                button.innerHTML = label;
+            });
+    }
+
+    $('exportPdf').addEventListener('click', function () { exportReport('pdf', this); });
+    $('exportExcel').addEventListener('click', function () { exportReport('xlsx', this); });
 
 
     /* Sidebar state */

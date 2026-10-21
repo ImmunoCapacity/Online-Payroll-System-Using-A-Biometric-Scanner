@@ -65,13 +65,14 @@
         rates: 'Employee Rates',
         leave: 'Leave Categories',
         ranks: 'Instructor Ranks',
+        holidays: 'Holiday Calendar',
         bir: 'BIR Table',
         philhealth: 'PhilHealth Table',
         pagibig: 'Pag-IBIG Table',
         sss: 'SSS Table'
     };
     var AUDIT_TARGETS = {
-        rates: 'ratesAudit', leave: 'leaveAudit', ranks: 'ranksAudit', bir: 'birAudit',
+        rates: 'ratesAudit', leave: 'leaveAudit', ranks: 'ranksAudit', holidays: 'holidaysAudit', bir: 'birAudit',
         philhealth: 'phAudit', pagibig: 'pagAudit', sss: 'sssAudit'
     };
 
@@ -101,6 +102,8 @@
         rates: 'sectionRates',
         leave: 'sectionLeave',
         ranks: 'sectionRanks',
+        holidays: 'sectionHolidays',
+        benefits: 'sectionBenefits',
         bir: 'sectionBir',
         philhealth: 'sectionPhilhealth',
         pagibig: 'sectionPagibig',
@@ -136,14 +139,14 @@
             renderRates();
         }).catch(function () {
             document.getElementById('ratesBody').innerHTML =
-                '<tr><td colspan="6" class="text-center text-muted py-4">Could not load employee rates from the server.</td></tr>';
+                '<tr><td colspan="7" class="text-center text-muted py-4">Could not load employee rates from the server.</td></tr>';
         });
     }
 
     function renderRates() {
         if (!rates.length) {
             document.getElementById('ratesBody').innerHTML =
-                '<tr><td colspan="6" class="text-center text-muted py-4">No employees with a rate yet. Rates are set in Employee Records or here.</td></tr>';
+                '<tr><td colspan="7" class="text-center text-muted py-4">No employees with a rate yet. Rates are set in Employee Records or here.</td></tr>';
             return;
         }
         document.getElementById('ratesBody').innerHTML = rates.map(function (r) {
@@ -151,6 +154,7 @@
                 '<tr class="pp-row-clickable' + (r.active ? '' : ' inactive') + '" tabindex="0" role="button" ' +
                     'data-employee="' + escapeHtml(r.employeeId) + '" data-kind="' + escapeHtml(r.kind) + '" ' +
                     'aria-label="New rate for ' + escapeHtml(r.employeeName) + '">' +
+                    '<td>' + escapeHtml(r.employeeNumber) + '</td>' +
                     '<td><strong>' + escapeHtml(r.employeeName) + '</strong><br><span class="text-muted small">' + escapeHtml(r.employeeType) + '</span></td>' +
                     '<td>' + escapeHtml(r.rateType) + '</td>' +
                     '<td class="col-money">' + peso(r.amount) + '</td>' +
@@ -825,16 +829,153 @@
             }).catch(function () { PPToast.error('Could not reach the server.'); });
     });
 
+    // ================================================================
+    // HOLIDAY CALENDAR (api/holidays) — the holidays on the Dashboard
+    // calendar. Hours worked on a double-pay holiday are paid twice.
+    // ================================================================
+
+    var holidays = [];
+    var holidayEditId = null;
+    var holidayYear = document.getElementById('holidayYear');
+
+    (function fillHolidayYears() {
+        var now = new Date().getFullYear();
+        for (var y = now - 2; y <= now + 2; y++) {
+            holidayYear.add(new Option(String(y), String(y), false, y === now));
+        }
+    })();
+
+    function loadHolidays() {
+        return api('api/holidays?year=' + holidayYear.value).then(function (data) {
+            if (!data.success) throw new Error(data.message);
+            holidays = data.holidays;
+            renderHolidays();
+        }).catch(function () {
+            document.getElementById('holidaysBody').innerHTML =
+                '<tr><td colspan="5" class="text-center text-muted py-4">Could not load holidays from the server.</td></tr>';
+        });
+    }
+
+    function holidayDateText(iso) {
+        var p = iso.split('-').map(Number);
+        return new Date(p[0], p[1] - 1, p[2]).toLocaleDateString('en-PH', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    function renderHolidays() {
+        var body = document.getElementById('holidaysBody');
+        if (!holidays.length) {
+            body.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">No holidays for ' +
+                escapeHtml(holidayYear.value) + ' yet. Click Add Holiday.</td></tr>';
+            return;
+        }
+        body.innerHTML = holidays.map(function (h) {
+            return '<tr data-id="' + h.id + '">' +
+                '<td>' + holidayDateText(h.date) + '</td>' +
+                '<td><strong>' + escapeHtml(h.name) + '</strong></td>' +
+                '<td>' + escapeHtml(h.type) + '</td>' +
+                '<td>' + (h.doublePay ? '<span class="pp-badge-leave-paid">Yes</span>' : '<span class="pp-badge-inactive">No</span>') + '</td>' +
+                '<td class="col-actions"><span class="pp-maint-row-actions">' +
+                    '<button type="button" class="pp-btn-row" data-action="edit">Edit</button>' +
+                    '<button type="button" class="pp-btn-row deactivate" data-action="remove">Remove</button>' +
+                '</span></td>' +
+            '</tr>';
+        }).join('');
+    }
+
+    function openHolidayForm(holiday) {
+        holidayEditId = holiday ? holiday.id : null;
+        var form = document.getElementById('holidayForm');
+        document.getElementById('holidayModalTitle').textContent = holiday ? 'Edit Holiday' : 'Add Holiday';
+        form.reset();
+        document.getElementById('holidayDate').value = holiday ? holiday.date : '';
+        document.getElementById('holidayName').value = holiday ? holiday.name : '';
+        document.getElementById('holidayType').value = holiday ? holiday.type : 'Regular Holiday';
+        document.getElementById('holidayDoublePay').value = holiday ? (holiday.doublePay ? 'Yes' : 'No') : 'Yes';
+        PPValidate.clear(form);
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('holidayModal')).show();
+    }
+
+    holidayYear.addEventListener('change', loadHolidays);
+    document.getElementById('btnAddHoliday').addEventListener('click', function () { openHolidayForm(null); });
+
+    // Regular holidays are usually double pay; special days usually aren't.
+    document.getElementById('holidayType').addEventListener('change', function (e) {
+        document.getElementById('holidayDoublePay').value = e.target.value === 'Regular Holiday' ? 'Yes' : 'No';
+    });
+
+    document.getElementById('holidaysBody').addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        var id = parseInt(btn.closest('tr').dataset.id, 10);
+        var holiday = holidays.find(function (h) { return h.id === id; });
+        if (!holiday) return;
+        if (btn.dataset.action === 'edit') {
+            openHolidayForm(holiday);
+            return;
+        }
+        ConfirmModal.show({
+            title: 'Remove Holiday',
+            message: 'Remove "' + holiday.name + '" (' + holidayDateText(holiday.date) + ')? It will no longer be marked on the calendar or paid as a holiday.',
+            confirmText: 'Remove',
+            tone: 'danger'
+        }).then(function (confirmed) {
+            if (!confirmed) return;
+            api('api/holidays/' + holiday.id, 'DELETE').then(function (data) {
+                if (!data.success) { PPToast.error(data.message); return; }
+                holidays = data.holidays;
+                renderHolidays();
+                PPToast.success('"' + holiday.name + '" removed.');
+                loadAudit();
+            }).catch(function () { PPToast.error('Could not reach the server.'); });
+        });
+    });
+
+    document.getElementById('holidayForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        var form = e.target;
+        if (!PPValidate.validateForm(form)) return;
+        var payload = {
+            date: document.getElementById('holidayDate').value,
+            name: document.getElementById('holidayName').value.trim(),
+            type: document.getElementById('holidayType').value,
+            doublePay: document.getElementById('holidayDoublePay').value === 'Yes'
+        };
+        api(holidayEditId ? 'api/holidays/' + holidayEditId : 'api/holidays', holidayEditId ? 'PUT' : 'POST', payload)
+            .then(function (data) {
+                if (!data.success) {
+                    var fields = { date: 'holidayDate', name: 'holidayName', type: 'holidayType' };
+                    if (!PPValidate.showServerError(form, data, fields)) PPToast.error(data.message);
+                    return;
+                }
+                bootstrap.Modal.getInstance(document.getElementById('holidayModal')).hide();
+                // Show the year of the saved holiday.
+                var year = payload.date.slice(0, 4);
+                if (!Array.prototype.some.call(holidayYear.options, function (o) { return o.value === year; })) {
+                    holidayYear.add(new Option(year, year));
+                }
+                holidayYear.value = year;
+                holidays = data.holidays;
+                renderHolidays();
+                PPToast.success(holidayEditId ? 'Holiday updated.' : '"' + payload.name + '" added.');
+                loadAudit();
+            }).catch(function () { PPToast.error('Could not reach the server.'); });
+    });
+
     loadRates();
     loadLeaveCategories();
+    loadHolidays();
     loadRanks();
     loadTables();
     loadAudit();
 
     if (location.hash === '#leave') {
         document.querySelector('[data-section="leave"]').click();
+    } else if (location.hash === '#holidays') {
+        document.querySelector('[data-section="holidays"]').click();
     } else if (location.hash === '#ranks') {
         document.querySelector('[data-section="ranks"]').click();
+    } else if (location.hash === '#benefits') {
+        document.querySelector('[data-section="benefits"]').click();
     } else if (location.hash === '#bir') {
         document.querySelector('[data-section="bir"]').click();
     } else if (location.hash === '#sss') {

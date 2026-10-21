@@ -58,6 +58,21 @@ mvn spring-boot:run
 
 Then open http://localhost:8080.
 
+On the defense laptop, just double-click `start-payroll.bat` in the project
+folder: it starts MySQL, builds the system the first time and runs it (and
+the Cloudflare Tunnel once set up). See `../DEPLOYMENT.md`.
+
+## Where the data lives
+
+Everything is in the database; the browser keeps only the login and display
+preferences. Payroll runs (`payroll_run`, `payroll` with each employee's
+breakdown as JSON, itemised `deduction` rows on release), the BIR / SSS /
+PhilHealth / Pag-IBIG tables, the employee rate history (`employee_rate`),
+biometric devices and the audit trail (`audit_trail`) are all tables, so
+every computer — including through the website domain — sees the same data.
+Payroll for a period uses the rates in effect at the end of that period.
+Logins lock for 15 minutes after 5 wrong passwords.
+
 ## API
 
 | Method | Path | Who |
@@ -65,8 +80,10 @@ Then open http://localhost:8080.
 | POST | `/api/auth/login` | anyone |
 | POST | `/api/auth/logout` | anyone |
 | GET | `/api/auth/session` | logged in |
+| POST | `/api/auth/forgot-password` { email }, `/verify-otp` { email, code }, `/reset-password` { email, resetToken, password, confirmPassword } | anyone (Forgot Password; needs email set up) |
 | GET / POST | `/api/employees` | Employee Record Management → Payroll Master |
-| PUT / DELETE | `/api/employees/{id}` (`F3`, `A5`) | Employee Record Management → Payroll Master |
+| PUT | `/api/employees/{id}` (`F3`, `A5`) | Employee Record Management → Payroll Master |
+| POST | `/api/employees/{id}/archive`, `/restore` (employees are archived, never deleted; `GET /api/employees?archived=true` includes them) | Employee Record Management → Payroll Master |
 | POST | `/api/biometric/sync` | Daily Time Record → Payroll Master, Payroll Staff |
 | GET | `/api/dtr?date=YYYY-MM-DD` | Daily Time Record → Payroll Master, Payroll Staff |
 | GET | `/api/dtr/employees` | Attendance Recording → Payroll Master, Payroll Staff |
@@ -78,11 +95,28 @@ Then open http://localhost:8080.
 | GET | `/api/teaching-hours/classes?from=&to=`, `/classes/{id}/audit` | Faculty Teaching Hours → Payroll Master, Payroll Staff |
 | POST | `/api/teaching-hours/classes/{id}/checks` | Faculty Teaching Hours → Payroll Master, Payroll Staff |
 | POST | `/api/teaching-hours/classes/{id}/approve`, `/reject` | Teaching Hours approval → Payroll Master |
-| POST | `/api/payroll/payslips/email` | Payroll → Payroll Master |
+| GET | `/api/payroll/loan-deductions?from=&to=`, `/contribution-tables`, `/rates?date=` | Payroll → Payroll Master |
+| GET / PUT | `/api/payroll/runs?from=&to=`, `/api/payroll/runs`, `/runs/summary` | Payroll → Payroll Master |
+| POST | `/api/payroll/runs/{id}/review`, `/release`, `/email` | Payroll → Payroll Master |
+| GET | `/api/payroll/released?year=` | Reports → Payroll Master |
+| GET / POST / PUT / DELETE | `/api/contribution-tables`, `/{table}`, `/{table}/{id}`, `/{table}/years` | Deduction Tables → Payroll Master |
+| GET / POST | `/api/rates` | Maintenance (Employee Rates) → Payroll Master |
+| GET | `/api/audit/latest?modules=` | Maintenance → Payroll Master |
+| GET | `/api/audit?limit=` | Utility (audit trail) → System Administrator |
+| GET / POST / PUT / DELETE | `/api/devices`, `/api/devices/{id}` | Utility (device configuration) → System Administrator |
+| GET | `/api/devices/status` | Dashboard → Payroll Master, Payroll Staff |
+| GET | `/api/dtr/summary?from=&to=` (Attendance Report) | Daily Time Record → Payroll Master, Payroll Staff |
+| GET / POST / PUT | `/api/leave/categories`, `/api/leave/categories/{id}` | Maintenance → Payroll Master |
+| GET / POST / PUT | `/api/leave/requests`, `/api/leave/requests/{id}` | Maintenance → Payroll Master |
+| POST | `/api/leave/requests/{id}/approve`, `/reject`, `/cancel` | Maintenance → Payroll Master |
+| GET / PUT | `/api/leave/balance?employeeId=&year=`, `/api/leave/credits` | Maintenance → Payroll Master |
+| GET / POST | `/api/loans` | Deduction Tables → Payroll Master |
+| GET / POST / PUT | `/api/benefits`, `/api/benefits/{id}`, `/api/benefits/{id}/employees` | Maintenance (Benefits Table) → Payroll Master |
+| GET | `/api/payroll/benefits` | Payroll → Payroll Master |
 | GET | `/api/fingerprints` | Fingerprint Registration → Payroll Master, Payroll Staff |
 | PUT / DELETE | `/api/fingerprints/{id}` | Fingerprint Registration → Payroll Master, Payroll Staff |
 | GET / POST | `/api/users` | Utility → System Administrator |
-| PUT / DELETE | `/api/users/{id}` | Utility → System Administrator |
+| PUT / DELETE | `/api/users/{id}` (System Administrator accounts can't be deleted) | Utility → System Administrator |
 
 Errors always come back as `{ "success": false, "message": "..." }`, plus
 `"field"` when the error is about one input.
@@ -177,3 +211,36 @@ com.stibalayan.payroll
     overlaps an approved class is not counted twice
     (`payroll.exclude-teaching-from-office-hours`).
   - Unapproved classes are never paid.
+
+## Leave and loans
+
+- **Leave Management** (`leave-application.html`) records leave requests for
+  employees, which the Payroll Master approves, rejects or cancels.
+  - Days are working days (Monday to Friday).
+  - Each leave category (Maintenance → Leave Categories) has a maximum number
+    of days per request, a Paid/Unpaid setting and a "uses leave credits"
+    setting.
+  - Credit-based leave draws on the employee's yearly credits (15 by
+    default, editable per employee and year). Requests and approvals beyond
+    the remaining credits are refused.
+  - Approved paid leave is paid in payroll as normal office days for Admin
+    and Faculty/Admin staff, but not on a day the employee also has a DTR
+    record.
+- **Loan Management** (`leave-loan-approval.html`) records loans approved by
+  their lender, with a deduction per payroll and a start period.
+  - Payroll deducts the scheduled amount, or the remaining balance when
+    smaller.
+  - Releasing a payroll period records each deduction in `loan_payment`, one
+    per loan per period. Re-releasing a period replaces its amounts.
+  - A loan is Paid once its payments add up to the loan amount.
+
+## Benefits Table
+
+The sidebar's **Benefits Table** (`benefits.html`) holds allowances such as
+rice or transportation (Benefit Maintenance).
+- Each benefit has a default amount and a list of employees who receive it,
+  each with an amount paid **every payroll period**.
+- Payroll adds the employee's active benefits to their pay; inactive
+  benefits are not paid.
+- The BIR, SSS, PhilHealth and Pag-IBIG deduction tables are still under
+  **Maintenance**.

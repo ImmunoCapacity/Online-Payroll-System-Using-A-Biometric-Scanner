@@ -41,8 +41,9 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addResourceHandler("/js/**").addResourceLocations(frontendLocation + "js/").setCacheControl(revalidate);
         // Bootstrap and Bootstrap Icons, kept locally so the system works without internet.
         registry.addResourceHandler("/vendor/**").addResourceLocations(frontendLocation + "vendor/");
-        // Images kept in the project root, e.g. sti_logo.png.
-        registry.addResourceHandler("/*.png", "/*.jpg", "/*.svg", "/*.ico").addResourceLocations(frontendLocation);
+        // Images kept in the project root, e.g. sti_logo.png (revalidated too, so a replaced logo shows at once).
+        registry.addResourceHandler("/*.png", "/*.jpg", "/*.svg", "/*.ico").addResourceLocations(frontendLocation)
+                .setCacheControl(revalidate);
     }
 
     @Override

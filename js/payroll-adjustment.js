@@ -123,9 +123,14 @@
         return grid.released || row.status === 'Applied';
     }
 
-    /** Rate for the row: the rate on Date From if known, else the rate shown. */
+    /**
+     * Rate for the row: a saved adjustment keeps the rate it was saved with
+     * (until its Date From changes); otherwise the rate on Date From if known,
+     * else the rate shown.
+     */
     function rateFor(row) {
         var s = state[row.employeeId];
+        if (row.status && s.dateFrom === saved[row.employeeId].dateFrom) return Number(row.rate) || 0;
         var onDate = s.dateFrom && ratesByDate[s.dateFrom] ? ratesByDate[s.dateFrom][row.employeeId] : null;
         if (onDate) {
             var r = row.type === 'Faculty' ? onDate.teaching : onDate.office;
@@ -221,10 +226,16 @@
     function render() {
         el('emptyState').classList.add('d-none');
         el('saveAdjustmentsBtn').disabled = !!grid.released;
-        el('adjustmentHint').querySelector('span').textContent = grid.released
-            ? 'This cut-off\'s payroll is released, so its adjustments are paid and can no longer be changed.'
-            : 'Addition and Deduction are hours per day. Days are working days (Mon–Fri) from Date From to Date To; ' +
-              'amounts = hours × days × rate. The Total is added to (or taken from) this cut-off\'s pay when payroll is computed.';
+        // The hint line is optional on the page.
+        var hint = el('adjustmentHint') && el('adjustmentHint').querySelector('span');
+        if (hint) {
+            hint.textContent = grid.released
+                ? 'This cut-off\'s payroll is released, so its adjustments are paid and can no longer be changed.'
+                : 'Addition and Deduction are hours per day. Days are working days (Mon–Fri) from Date From to Date To; ' +
+                  'amounts = hours × days × rate. The Total is added to (or taken from) this cut-off\'s pay when payroll is computed.';
+        }
+        el('saveAdjustmentsBtn').title = grid.released
+            ? 'This cut-off\'s payroll is released, so its adjustments can no longer be changed.' : '';
 
         if (!grid.rows.length) {
             el('adjustmentBody').innerHTML = '';
@@ -240,7 +251,8 @@
             return '<tr data-id="' + id + '" class="' + (locked && r.status ? 'is-locked' : '') + '">' +
                 '<td>' + escapeHtml(r.employeeNumber) + '</td>' +
                 '<td><strong>' + escapeHtml(r.name) + '</strong>' +
-                    (r.status === 'Applied' ? '<span class="pp-adjust-lock" title="Paid when the cut-off was released"><i class="bi bi-lock-fill"></i></span>' : '') + '</td>' +
+                    (r.status === 'Applied' ? '<span class="pp-adjust-lock" title="Paid when the cut-off was released"><i class="bi bi-lock-fill"></i></span>' : '') +
+                    (r.inPayroll === false && r.status !== 'Applied' ? '<span class="pp-adjust-warn" title="Not Active (or hired after this cut-off), so not in this cut-off\'s payroll. Clear this row."><i class="bi bi-exclamation-triangle-fill"></i> Not in payroll</span>' : '') + '</td>' +
                 '<td>' + escapeHtml(r.type) + '</td>' +
                 '<td class="text-end" data-cell="rate"></td>' +
                 '<td><div class="pp-adjust-dates">' +

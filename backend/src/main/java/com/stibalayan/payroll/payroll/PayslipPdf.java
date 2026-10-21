@@ -126,6 +126,7 @@ public class PayslipPdf {
         Line lecture = new Line();
         Line office = new Line();
         Line leave = new Line();
+        Line holiday = new Line();
         Line other = new Line();
         if (p.earnings() == null || p.earnings().isEmpty()) {
             (s instanceof FacultyStaff ? lecture : office).add(p.hours(), p.rate(), money(p.gross()));
@@ -133,7 +134,9 @@ public class PayslipPdf {
             for (PayslipRequest.Earning e : p.earnings()) {
                 String label = nz(e.label()).toLowerCase();
                 // Adjustments first: their reason often mentions "leave".
+                // Holiday double pay before teaching/office: its label names both.
                 Line target = label.startsWith("adjustment") ? other
+                        : label.startsWith("holiday") ? holiday
                         : label.contains("teaching") ? lecture
                         : label.contains("office") ? office
                         : label.contains("leave") ? leave : other;
@@ -145,7 +148,7 @@ public class PayslipPdf {
         if (!leave.isEmpty()) {
             earningRow(t, "PAID LEAVE", leave);
         }
-        earningRow(t, "HOLIDAY", new Line());
+        earningRow(t, "HOLIDAY", holiday);
         earningRow(t, "ADJUSTMENT", other);
         BigDecimal applied = money(p.gross());
         t.addCell(blank());

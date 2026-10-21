@@ -46,10 +46,11 @@
         groupClass: 'pp-payroll-sidebar-group',
         linkClass: 'pp-payroll-sidebar-link',
         dataKey: 'payroll',
-        hrefFor: function (key) { return key === 'adjustment' ? 'payroll-adjustment.html' : 'payroll-processing.html'; },
+        hrefFor: function (key) { return key === 'adjustment' ? 'payroll-adjustment.html' : key === 'thirteenth' ? 'thirteenth-month.html' : 'payroll-processing.html'; },
         items: [
             { key: 'computation', label: 'Payroll Computation', icon: 'bi-calculator', href: 'payroll-processing.html' },
-            { key: 'adjustment', label: 'Payroll Adjustment', icon: 'bi-sliders', href: 'payroll-adjustment.html' }
+            { key: 'adjustment', label: 'Payroll Adjustment', icon: 'bi-sliders', href: 'payroll-adjustment.html' },
+            { key: 'thirteenth', label: '13th Month Pay', icon: 'bi-gift', href: 'thirteenth-month.html' }
         ]
     };
 
@@ -138,13 +139,6 @@
         },
 
         {
-            id: 'benefits',
-            label: 'Benefits Table',
-            icon: 'bi-gift',
-            href: 'benefits.html'
-        },
-
-        {
             id: 'reports',
             label: 'Reports',
             icon: 'bi-file-earmark-bar-graph',
@@ -187,6 +181,27 @@
             label: 'Biometric Device',
             icon: 'bi-hdd-network',
             href: 'biometric-devices.html'
+        },
+
+        {
+            id: 'audit',
+            label: 'Audit Trail',
+            icon: 'bi-journal-text',
+            href: 'audit-trail.html'
+        },
+
+        {
+            id: 'archive',
+            label: 'Archive',
+            icon: 'bi-archive',
+            href: 'archive.html'
+        },
+
+        {
+            id: 'backup',
+            label: 'Backup & Restore',
+            icon: 'bi-database-check',
+            href: 'backup-restore.html'
         }
 
     ];
@@ -477,11 +492,8 @@
         var inst = config.institution;
 
 
-        var notifDot = config.notifications
-
-            ? '<span class="pp-notif-dot" aria-hidden="true"></span>'
-
-            : '';
+        // Shown by bindNotifications() when there is something not yet seen.
+        var notifDot = '<span class="pp-notif-dot d-none" id="ppNotifDot" aria-hidden="true"></span>';
 
 
         return (
@@ -515,15 +527,28 @@
 
                 '<div class="pp-topbar-actions">' +
 
-                    '<button type="button" ' +
-                            'class="pp-topbar-btn" ' +
-                            'aria-label="Notifications">' +
+                    '<div class="pp-notif-wrapper">' +
 
-                        '<i class="bi bi-bell"></i>' +
+                        '<button type="button" ' +
+                                'class="pp-topbar-btn" ' +
+                                'id="ppNotifButton" ' +
+                                'aria-label="Notifications" ' +
+                                'aria-expanded="false">' +
 
-                        notifDot +
+                            '<i class="bi bi-bell"></i>' +
 
-                    '</button>' +
+                            notifDot +
+
+                        '</button>' +
+
+                        '<div class="pp-notif-panel" id="ppNotifPanel" role="dialog" aria-label="Notifications">' +
+                            '<div class="pp-notif-head">Notifications</div>' +
+                            '<div class="pp-notif-list" id="ppNotifList">' +
+                                '<div class="pp-notif-empty">Loading…</div>' +
+                            '</div>' +
+                        '</div>' +
+
+                    '</div>' +
 
                     '<div class="pp-topbar-user-wrapper">' +
 
@@ -721,6 +746,118 @@
     // USER MENU
     // ============================================================
 
+    // ============================================================
+    // NOTIFICATIONS (api/notifications)
+    // Things waiting for this user, refreshed every minute. The red dot
+    // shows items not seen yet (ids kept in localStorage); opening the
+    // panel marks them seen. Settings → "Enable notifications" off hides
+    // the dot, but the list still opens.
+    // ============================================================
+
+    function bindNotifications() {
+
+        var button = document.getElementById('ppNotifButton');
+        var panel = document.getElementById('ppNotifPanel');
+        var list = document.getElementById('ppNotifList');
+        var dot = document.getElementById('ppNotifDot');
+        var items = [];
+
+        if (!button || !panel) {
+            return;
+        }
+
+        function escapeHtml(value) {
+            return String(value == null ? '' : value)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+        }
+
+        function seenIds() {
+            try { return JSON.parse(localStorage.getItem('ppNotifSeen') || '[]'); } catch (e) { return []; }
+        }
+
+        function dotEnabled() {
+            try { return JSON.parse(localStorage.getItem('ppSettings') || '{}').notifications !== false; } catch (e) { return true; }
+        }
+
+        function render() {
+            var seen = seenIds();
+            var unseen = items.filter(function (n) { return seen.indexOf(n.id) === -1; });
+            if (dot) dot.classList.toggle('d-none', !unseen.length || !dotEnabled());
+            button.setAttribute('aria-label', 'Notifications' + (unseen.length ? ' (' + unseen.length + ' new)' : ''));
+
+            list.innerHTML = items.length
+                ? items.map(function (n) {
+                    var tag = n.href ? 'a' : 'div';
+                    return '<' + tag + ' class="pp-notif-item pp-notif-' + escapeHtml(n.level) +
+                        (seen.indexOf(n.id) === -1 ? ' is-new' : '') + '"' +
+                        (n.href ? ' href="' + escapeHtml(n.href) + '"' : '') + '>' +
+                        '<span class="pp-notif-icon"><i class="bi ' + escapeHtml(n.icon) + '"></i></span>' +
+                        '<span class="pp-notif-body">' +
+                            '<span class="pp-notif-title">' + escapeHtml(n.title) + '</span>' +
+                            '<span class="pp-notif-text">' + escapeHtml(n.text) + '</span>' +
+                        '</span>' +
+                    '</' + tag + '>';
+                }).join('')
+                : '<div class="pp-notif-empty"><i class="bi bi-check2-circle"></i> You\'re all caught up.</div>';
+        }
+
+        function load() {
+            fetch('api/notifications')
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (!data.success) throw new Error(data.message);
+                    items = data.notifications || [];
+                    render();
+                })
+                .catch(function () {
+                    if (!items.length) {
+                        list.innerHTML = '<div class="pp-notif-empty">Notifications aren\'t available right now.</div>';
+                    }
+                });
+        }
+
+        function markSeen() {
+            try {
+                // Only current ids are kept, so the list never grows.
+                localStorage.setItem('ppNotifSeen', JSON.stringify(items.map(function (n) { return n.id; })));
+            } catch (e) {
+                // storage unavailable: the dot just stays
+            }
+            if (dot) dot.classList.add('d-none');
+        }
+
+        function close() {
+            if (!panel.classList.contains('show')) return;
+            panel.classList.remove('show');
+            button.setAttribute('aria-expanded', 'false');
+            markSeen();
+            render();
+        }
+
+        button.addEventListener('click', function (event) {
+            event.stopPropagation();
+            if (panel.classList.contains('show')) {
+                close();
+                return;
+            }
+            var userDropdown = document.getElementById('ppUserDropdown');
+            if (userDropdown) userDropdown.classList.remove('show');
+            panel.classList.add('show');
+            button.setAttribute('aria-expanded', 'true');
+            load();
+        });
+
+        panel.addEventListener('click', function (event) { event.stopPropagation(); });
+        document.addEventListener('click', close);
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') close();
+        });
+
+        load();
+        setInterval(load, 60000);
+    }
+
     function bindUserMenu() {
 
         var userButton =
@@ -761,6 +898,12 @@
                     );
 
                 } else {
+
+                    // Only one top-bar panel open at a time.
+                    var notifPanel = document.getElementById('ppNotifPanel');
+                    if (notifPanel && notifPanel.classList.contains('show')) {
+                        document.getElementById('ppNotifButton').click();
+                    }
 
                     dropdown.classList.add('show');
 
@@ -1299,6 +1442,7 @@
             bindSidebarCollapse();
 
             bindUserMenu();
+            bindNotifications();
 
             bindAccountModals(config);
 

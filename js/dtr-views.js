@@ -143,7 +143,7 @@
         if (view === 'daily') return;
         var range = rangeOf(view, filterDate.value);
         var token = ++summaryToken;
-        el('dtrSummaryBody').innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">Loading…</td></tr>';
+        el('dtrSummaryBody').innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">Loading…</td></tr>';
         el('dtrSummaryEmpty').classList.add('d-none');
         api('api/dtr/summary?from=' + range[0] + '&to=' + range[1]).then(function (data) {
             if (token !== summaryToken) return;
@@ -176,7 +176,8 @@
         el('dtrSummaryBody').innerHTML = rows.map(function (r) {
             return '<tr class="pp-row-clickable" tabindex="0" role="button" data-employee="' + escapeHtml(r.employeeId) + '" ' +
                     'aria-label="Attendance of ' + escapeHtml(r.employeeName) + '">' +
-                '<td><strong>' + escapeHtml(r.employeeName) + '</strong><br><span class="text-muted small">' + escapeHtml(r.employeeNumber) + '</span></td>' +
+                '<td>' + escapeHtml(r.employeeNumber) + '</td>' +
+                '<td><strong>' + escapeHtml(r.employeeName) + '</strong></td>' +
                 '<td>' + typeBadge(r.type) + '</td>' +
                 '<td class="text-end">' + r.present + '</td>' +
                 '<td class="text-end">' + r.late + '</td>' +
@@ -198,11 +199,11 @@
     // One employee: Daily / Weekly / Monthly
     // ---------------------------------------------------------------
 
-    function openAttendance(employeeId) {
+    function openAttendance(employeeId, view, anchor) {
         if (!employeeId) return;
         att.employeeId = employeeId;
-        att.view = filterView.value === 'daily' ? 'weekly' : filterView.value;
-        att.anchor = filterDate.value || today();
+        att.view = view || (filterView.value === 'daily' ? 'weekly' : filterView.value);
+        att.anchor = anchor || filterDate.value || today();
         el('attendanceTitle').textContent = 'Attendance';
         el('attendanceSub').textContent = '';
         loadAttendance();
@@ -338,6 +339,112 @@
             }
         });
     });
+
+    // ---------------------------------------------------------------
+    // Attendance Recording: manual entries by day, week or month
+    // ---------------------------------------------------------------
+
+    var manualView = el('manualView');
+    var manualDate = el('manualViewDate');
+    var manualSearch = el('manualViewSearch');
+    var manualRows = [];
+    var manualToken = 0;
+
+    function totalHours(timeIn, timeOut) {
+        if (!timeIn || !timeOut) return 0;
+        var a = timeIn.split(':').map(Number);
+        var b = timeOut.split(':').map(Number);
+        var minutes = (b[0] * 60 + b[1]) - (a[0] * 60 + a[1]);
+        return minutes > 0 ? minutes / 60 : 0;
+    }
+
+    function applyManualView() {
+        var view = manualView.value;
+        var range = rangeOf(view, manualDate.value);
+        el('manualViewDateLabel').textContent = view === 'daily' ? 'Date' : view === 'weekly' ? 'Week of' : 'Month of';
+        el('manualViewHint').querySelector('span').textContent = 'Showing manual entries for ' + rangeLabel(view, range) +
+            '. Click an entry to see the employee\'s attendance by day, week or month.';
+        loadManual(range);
+    }
+
+    function loadManual(range) {
+        var token = ++manualToken;
+        el('manualViewBody').innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4">Loading…</td></tr>';
+        el('manualViewEmpty').classList.add('d-none');
+        api('api/dtr/manual?from=' + range[0] + '&to=' + range[1]).then(function (data) {
+            if (token !== manualToken) return;
+            if (!data.success) {
+                throw new Error(data.message === 'Not Found.'
+                    ? 'The server doesn\'t have this view yet. Restart it with start-payroll.bat.' : data.message);
+            }
+            manualRows = data.records;
+            renderManual();
+        }).catch(function (error) {
+            if (token !== manualToken) return;
+            manualRows = [];
+            el('manualViewBody').innerHTML = '';
+            el('manualViewEmpty').textContent = error.message || 'Could not load the manual entries.';
+            el('manualViewEmpty').classList.remove('d-none');
+        });
+    }
+
+    function renderManual() {
+        var q = manualSearch.value.trim().toLowerCase();
+        var rows = manualRows.filter(function (r) {
+            return !q || (r.employeeName + ' ' + r.employeeNumber).toLowerCase().indexOf(q) !== -1;
+        });
+        if (!rows.length) {
+            el('manualViewBody').innerHTML = '';
+            el('manualViewEmpty').textContent = manualRows.length
+                ? 'No entries match the search.' : 'No manual entries were recorded for these dates.';
+            el('manualViewEmpty').classList.remove('d-none');
+            return;
+        }
+        el('manualViewEmpty').classList.add('d-none');
+        el('manualViewBody').innerHTML = rows.map(function (r) {
+            var date = parseIso(r.date);
+            return '<tr class="pp-row-clickable" tabindex="0" role="button" data-employee="' + escapeHtml(r.employeeId) + '" ' +
+                    'data-date="' + escapeHtml(r.date) + '" aria-label="Attendance of ' + escapeHtml(r.employeeName) + '">' +
+                '<td>' + escapeHtml(r.employeeNumber) + '</td>' +
+                '<td><strong>' + escapeHtml(r.employeeName) + '</strong></td>' +
+                '<td>' + typeBadge(r.type) + '</td>' +
+                '<td>' + date.toLocaleDateString('en-PH', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) + '</td>' +
+                '<td>' + time12(r.timeIn) + '</td>' +
+                '<td>' + time12(r.timeOut) + '</td>' +
+                '<td>' + hoursText(totalHours(r.timeIn, r.timeOut)) + '</td>' +
+                '<td>' + statusBadge(r.status) + '</td>' +
+                '<td>' + escapeHtml(r.remarks || '—') + '</td>' +
+            '</tr>';
+        }).join('');
+    }
+
+    if (manualView && manualDate && manualSearch) {
+        manualDate.value = today();
+        manualView.addEventListener('change', applyManualView);
+        manualDate.addEventListener('change', applyManualView);
+        manualSearch.addEventListener('input', renderManual);
+        // A saved entry: show the period that contains its date.
+        document.addEventListener('pp:manual-saved', function (e) {
+            if (e.detail && e.detail.date) manualDate.value = e.detail.date;
+            applyManualView();
+        });
+
+        // An entry opens the employee's attendance around that date, in the chosen view.
+        var openManual = function (row) {
+            openAttendance(row.dataset.employee, manualView.value, row.dataset.date);
+        };
+        el('manualViewBody').addEventListener('click', function (e) {
+            var row = e.target.closest('tr[data-employee]');
+            if (row) openManual(row);
+        });
+        el('manualViewBody').addEventListener('keydown', function (e) {
+            if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('tr[data-employee]')) {
+                e.preventDefault();
+                openManual(e.target);
+            }
+        });
+        applyManualView();
+    }
 
     applyView();
 })();

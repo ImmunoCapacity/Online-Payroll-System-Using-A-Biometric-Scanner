@@ -16,6 +16,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicLong;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -40,6 +41,7 @@ public class BiometricSyncService {
     private final TransactionTemplate transaction;
     private final LocalTime standardStart;
     private final int graceMinutes;
+    private final AtomicLong changes = new AtomicLong();
 
     public BiometricSyncService(BiometricDevice biometricDevice, DeviceProperties deviceProperties,
                                 DeviceRepository devices, FacultyStaffRepository faculty, AdminStaffRepository admins,
@@ -57,17 +59,33 @@ public class BiometricSyncService {
         this.graceMinutes = graceMinutes;
     }
 
-    /** Synchronized: the scheduled auto-sync and the Sync Device button never talk to the K40 at once. */
-    public synchronized Map<String, Object> sync() {
+    /** Connects to the K40, reads every punch, and records it. Used when live sync is off. */
+    public Map<String, Object> sync() {
+        // Talk to the device outside the database transaction — it can be slow.
+        return record(biometricDevice.readAttendanceLogs(deviceProperties));
+    }
+
+    /**
+     * Turns punches read from the K40 into DTR rows. Synchronized so two
+     * reads never record at once.
+     */
+    public synchronized Map<String, Object> record(List<AttendanceLog> logs) {
         Device device = devices.findFirstByIpAddress(deviceProperties.ip())
                 .orElseThrow(() -> new ApiException(HttpStatus.UNPROCESSABLE_ENTITY,
                         "No row in the device table has ip_address = " + deviceProperties.ip()
                                 + ". Add this scanner on the Biometric Devices page first."));
 
-        // Talk to the device outside the database transaction — it can be slow.
-        List<AttendanceLog> logs = biometricDevice.readAttendanceLogs(deviceProperties);
+        Map<String, Object> result = transaction.execute(status -> record(logs, device.getId()));
+        if (!"0".equals(String.valueOf(result.get("inserted")))
+                || !"0".equals(String.valueOf(result.get("updated_time_out")))) {
+            changes.incrementAndGet();
+        }
+        return result;
+    }
 
-        return transaction.execute(status -> record(logs, device.getId()));
+    /** Goes up each time a sync adds or changes DTR rows; the DTR page reloads when it does. */
+    public long changeCount() {
+        return changes.get();
     }
 
     private Map<String, Object> record(List<AttendanceLog> logs, Integer deviceId) {

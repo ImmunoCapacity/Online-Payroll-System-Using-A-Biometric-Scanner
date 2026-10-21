@@ -1,24 +1,23 @@
 /**
- * Benefits Table (Benefit Maintenance) — api/benefits.
+ * Benefits Table (Benefit Maintenance) — api/benefits. Part of Maintenance
+ * (maintenance.html#benefits), which sets up the page layout.
  *
- * Two views on one page:
+ * Two views:
  *   1. the employees, with how many benefits they get and the total;
- *   2. one employee (benefits.html?employee=A5): their benefits, where a
- *      benefit can be added (an existing one or a new one), changed or removed.
+ *   2. one employee (maintenance.html?employee=A5#benefits): their benefits,
+ *      where a benefit can be added (an existing one or a new one), changed
+ *      or removed.
  * "Benefit Types" renames, re-prices or deactivates a benefit for everyone.
  * Payroll pays each active benefit every payroll period (api/payroll/benefits).
  */
 (function () {
     'use strict';
 
-    PayrollProLayout.init({
-        activeNav: 'benefits',
-        institution: {
-            name: 'STI Balayan',
-            short: 'STI'
-        },
-        notifications: true
-    });
+    if (!document.getElementById('sectionBenefits')) return;
+
+    // Addresses of the two views, so Back / Forward in the browser work.
+    var PAGE = window.location.pathname;   // maintenance.html
+    var TAB = '#benefits';
 
     var NEW_BENEFIT = '__new__';
 
@@ -130,7 +129,8 @@
             var list = benefitsOf(e.id);
             return '<tr class="pp-row-clickable" tabindex="0" role="button" data-employee="' + escapeHtml(e.id) + '" ' +
                     'aria-label="Benefits of ' + escapeHtml(e.displayName) + '">' +
-                '<td><strong>' + escapeHtml(e.displayName) + '</strong><span class="bn-sub">' + escapeHtml(e.employeeNumber) + '</span></td>' +
+                '<td>' + escapeHtml(e.employeeNumber) + '</td>' +
+                '<td><strong>' + escapeHtml(e.displayName) + '</strong></td>' +
                 '<td>' + typeBadge(e.department) + '</td>' +
                 '<td class="text-end">' + list.length + '</td>' +
                 '<td class="text-end">' + peso(totalOf(list)) + '</td>' +
@@ -366,7 +366,7 @@
     // ---------------------------------------------------------------
 
     function openEmployee(employeeId) {
-        history.pushState({ employee: employeeId }, '', 'benefits.html?employee=' + encodeURIComponent(employeeId));
+        history.pushState({ employee: employeeId }, '', PAGE + '?employee=' + encodeURIComponent(employeeId) + TAB);
         showEmployee(employeeId);
     }
 
@@ -381,7 +381,7 @@
         if (history.state && history.state.employee) {
             history.back();
         } else {
-            history.pushState({}, '', 'benefits.html');
+            history.pushState({}, '', PAGE + TAB);
             showList();
         }
     });
@@ -404,7 +404,7 @@
     el('employeeSearch').addEventListener('input', renderList);
     el('addBenefitBtn').addEventListener('click', function () { openAssign(null); });
 
-    el('employeeBody').innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4">Loading employees…</td></tr>';
+    el('employeeBody').innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">Loading employees…</td></tr>';
     load().then(function () {
         renderTypes();
         route();
