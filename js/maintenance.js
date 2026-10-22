@@ -1,5 +1,6 @@
 /**
- * Maintenance (Payroll Master): Employee Rates, Leave Categories and the
+ * Maintenance (Payroll Master): Employee Rates, Leave Categories, Grace Period,
+ * Payroll Periods and the
  * Deduction Tables (BIR, PhilHealth, Pag-IBIG, SSS). Everything is stored
  * in the database; every change is written to the audit trail by the
  * server, and the latest change of each table is shown under it.
@@ -85,11 +86,13 @@
         bir: 'BIR Table',
         philhealth: 'PhilHealth Table',
         pagibig: 'Pag-IBIG Table',
-        sss: 'SSS Table'
+        sss: 'SSS Table',
+        grace: 'Grace Period',
+        periods: 'Payroll Periods'
     };
     var AUDIT_TARGETS = {
         rates: 'ratesAudit', leave: 'leaveAudit', ranks: 'ranksAudit', holidays: 'holidaysAudit', bir: 'birAudit',
-        philhealth: 'phAudit', pagibig: 'pagAudit', sss: 'sssAudit'
+        philhealth: 'phAudit', pagibig: 'pagAudit', sss: 'sssAudit', grace: 'graceAudit', periods: 'periodsAudit'
     };
 
     function formatAudit(entry) {
@@ -123,7 +126,9 @@
         bir: 'sectionBir',
         philhealth: 'sectionPhilhealth',
         pagibig: 'sectionPagibig',
-        sss: 'sectionSss'
+        sss: 'sectionSss',
+        grace: 'sectionGrace',
+        periods: 'sectionPeriods'
     };
 
     document.querySelectorAll('.pp-maint-nav-btn').forEach(function (btn) {
@@ -999,11 +1004,254 @@
             }).catch(function () { PPToast.error('Could not reach the server.'); });
     });
 
+    // ================================================================
+    // GRACE PERIOD (api/settings/grace) — office lateness for the DTR and
+    // biometric records, and the window for the faculty classroom checks.
+    // ================================================================
+
+    var graceForm = document.getElementById('graceForm');
+    var graceOfficeStart = document.getElementById('graceOfficeStart');
+    var graceOfficeMinutes = document.getElementById('graceOfficeMinutes');
+    var graceClassMinutes = document.getElementById('graceClassMinutes');
+    PPValidate.attach(graceForm);
+
+    function fillGrace(grace) {
+        graceOfficeStart.value = String(grace.officeStart).slice(0, 5);
+        graceOfficeMinutes.value = grace.officeGraceMinutes;
+        graceClassMinutes.value = grace.classGraceMinutes;
+        PPValidate.clear(graceForm);
+    }
+
+    graceForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        if (!PPValidate.validateForm(graceForm)) return;
+        var btn = document.getElementById('graceSaveBtn');
+        btn.disabled = true;
+        api('api/settings/grace', 'PUT', {
+            officeStart: graceOfficeStart.value,
+            officeGraceMinutes: parseInt(graceOfficeMinutes.value, 10),
+            classGraceMinutes: parseInt(graceClassMinutes.value, 10)
+        }).then(function (data) {
+            btn.disabled = false;
+            if (!data.success) {
+                var fields = { officeStart: 'graceOfficeStart', officeGraceMinutes: 'graceOfficeMinutes', classGraceMinutes: 'graceClassMinutes' };
+                if (!PPValidate.showServerError(graceForm, data, fields)) PPToast.error(data.message);
+                return;
+            }
+            fillGrace(data.grace);
+            PPToast.success('Grace period saved.');
+            loadAudit();
+        }).catch(function () {
+            btn.disabled = false;
+            PPToast.error('Could not reach the server.');
+        });
+    });
+
+    // ================================================================
+    // PAYROLL PERIODS (api/settings/period-rules) — the two cut-off start
+    // days of each month, from an effective date. Saved payrolls keep
+    // their periods; only one change can wait to take effect.
+    // ================================================================
+
+    var periodRules = [];
+    var lastSavedPayrollEnd = null;
+    var periodModal = new bootstrap.Modal(document.getElementById('periodModal'));
+    var periodForm = document.getElementById('periodForm');
+    var periodFirst = document.getElementById('periodFirstDay');
+    var periodSecond = document.getElementById('periodSecondDay');
+    var periodEffective = document.getElementById('periodEffective');
+
+    function ordinal(n) {
+        var s = (n % 100 >= 11 && n % 100 <= 13) ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' })[n % 10] || 'th';
+        return n + s;
+    }
+
+    for (var day = 1; day <= 28; day++) {
+        periodFirst.add(new Option(ordinal(day), day));
+        periodSecond.add(new Option(ordinal(day), day));
+    }
+
+    function loadSettings() {
+        return api('api/settings').then(function (data) {
+            if (!data.success) return;
+            fillGrace(data.grace);
+            periodRules = data.periodRules;
+            lastSavedPayrollEnd = data.lastSavedPayrollEnd;
+            renderPeriods();
+        }).catch(function () { /* the other sections still work */ });
+    }
+
+    function renderPeriods() {
+        PPPeriods.reload().then(function () {
+            var p = PPPeriods.current();
+            var next = PPPeriods.next(p);
+            document.getElementById('periodsCurrent').innerHTML =
+                '<div><span>Current period</span><strong>' + escapeHtml(p.label) + '</strong></div>' +
+                '<div><span>Next period</span><strong>' + escapeHtml(next.label) + '</strong></div>' +
+                '<div><span>Last saved payroll ends</span><strong>' + (lastSavedPayrollEnd ? formatDate(lastSavedPayrollEnd) : 'None yet') + '</strong></div>';
+        });
+        var body = document.getElementById('periodsBody');
+        body.innerHTML = periodRules.map(function (r) {
+            var pill = r.state === 'Current' ? 'active' : r.state === 'Upcoming' ? 'upcoming' : 'past';
+            return '<tr>' +
+                '<td>' + escapeHtml(r.description) + '</td>' +
+                '<td>' + (r.effectiveDate <= '2000-01-01' ? 'Since the system started' : formatDate(r.effectiveDate)) + '</td>' +
+                '<td><span class="pp-maint-state ' + pill + '">' + escapeHtml(r.state) + '</span></td>' +
+                '<td class="text-end">' + (r.state === 'Upcoming'
+                    ? '<button type="button" class="btn btn-pp-outline btn-sm" data-remove-rule="' + r.id + '">Cancel Change</button>' : '') + '</td>' +
+            '</tr>';
+        }).join('');
+        body.querySelectorAll('[data-remove-rule]').forEach(function (btn) {
+            btn.addEventListener('click', function () { removePeriodRule(Number(btn.dataset.removeRule)); });
+        });
+    }
+
+    function removePeriodRule(id) {
+        var rule = periodRules.find(function (r) { return r.id === id; });
+        ConfirmModal.show({
+            title: 'Cancel Payroll Period Change',
+            message: 'Cancel the change to ' + rule.description + ' from ' + formatDate(rule.effectiveDate) + '? The current periods continue.',
+            confirmText: 'Cancel Change',
+            tone: 'danger'
+        }).then(function (confirmed) {
+            if (!confirmed) return;
+            api('api/settings/period-rules/' + id, 'DELETE').then(function (data) {
+                if (!data.success) { PPToast.error(data.message); return; }
+                periodRules = data.periodRules;
+                renderPeriods();
+                PPToast.success('Change cancelled.');
+                loadAudit();
+            }).catch(function () { PPToast.error('Could not reach the server.'); });
+        });
+    }
+
+    function dateOnly(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+
+    /** Start days of the chosen rule from the earliest allowed date, for the Effective From list. */
+    function fillEffectiveDates() {
+        var first = Number(periodFirst.value);
+        var second = Number(periodSecond.value);
+        var previous = periodEffective.value;
+        periodEffective.innerHTML = '';
+        if (!(second > first)) return;
+        var earliest = dateOnly(new Date());
+        earliest.setDate(earliest.getDate() - 31);
+        if (lastSavedPayrollEnd) {
+            var after = PPPeriods.parse(lastSavedPayrollEnd);
+            after.setDate(after.getDate() + 1);
+            if (after > earliest) earliest = after;
+        }
+        var d = new Date(earliest.getFullYear(), earliest.getMonth(), 1);
+        while (periodEffective.options.length < 12) {
+            [first, second].forEach(function (startDay) {
+                var s = new Date(d.getFullYear(), d.getMonth(), startDay);
+                if (s >= earliest && periodEffective.options.length < 12) {
+                    periodEffective.add(new Option(formatDate(PPPeriods.iso(s)), PPPeriods.iso(s)));
+                }
+            });
+            d.setMonth(d.getMonth() + 1);
+        }
+        // Default to the first start day from today on.
+        var today = PPPeriods.iso(new Date());
+        var pick = Array.prototype.find.call(periodEffective.options, function (o) { return o.value === previous; }) ||
+            Array.prototype.find.call(periodEffective.options, function (o) { return o.value >= today; }) ||
+            periodEffective.options[0];
+        if (pick) periodEffective.value = pick.value;
+    }
+
+    /** The first periods under the new rule, and where the old one stops. */
+    function renderPeriodPreview() {
+        var first = Number(periodFirst.value);
+        var second = Number(periodSecond.value);
+        var preview = document.getElementById('periodPreview');
+        PPValidate.clear(periodForm);
+        if (!(second > first)) {
+            PPValidate.setError(periodSecond, 'The second cut-off must start after the first one.');
+            preview.innerHTML = '';
+            return;
+        }
+        if (!periodEffective.value) { preview.innerHTML = ''; return; }
+        var start = PPPeriods.parse(periodEffective.value);
+        var before = new Date(start.getFullYear(), start.getMonth(), start.getDate() - 1);
+        var old = PPPeriods.of(before);
+        var html = '<p class="mb-1"><strong>' + escapeHtml(PPPeriods.describeDays(first, second)) + '</strong></p>' +
+            '<p class="pp-maint-hint-text mb-2">' + (old.to === PPPeriods.iso(before)
+                ? 'The period before it (' + escapeHtml(old.label) + ') stays as it is.'
+                : 'The period ' + escapeHtml(old.label) + ' is cut short to ' + formatDate(old.from) + ' – ' +
+                  formatDate(PPPeriods.iso(before)) + '.') + '</p>' +
+            '<p class="mb-1">The first periods under the change:</p><ol class="mb-0">';
+        for (var i = 0; i < 4; i++) {
+            var next = start.getDate() === first
+                ? new Date(start.getFullYear(), start.getMonth(), second)
+                : new Date(start.getFullYear(), start.getMonth() + 1, first);
+            var end = new Date(next.getFullYear(), next.getMonth(), next.getDate() - 1);
+            html += '<li>' + formatDate(PPPeriods.iso(start)) + ' – ' + formatDate(PPPeriods.iso(end)) + '</li>';
+            start = next;
+        }
+        preview.innerHTML = html + '<li class="text-muted">…</li></ol>';
+    }
+
+    document.getElementById('btnChangePeriods').addEventListener('click', function () {
+        var current = periodRules.find(function (r) { return r.state === 'Current'; }) || { firstDay: 11, secondDay: 26 };
+        periodFirst.value = current.firstDay;
+        periodSecond.value = current.secondDay;
+        periodEffective.value = '';
+        fillEffectiveDates();
+        renderPeriodPreview();
+        periodModal.show();
+    });
+
+    [periodFirst, periodSecond].forEach(function (select) {
+        select.addEventListener('change', function () { fillEffectiveDates(); renderPeriodPreview(); });
+    });
+    periodEffective.addEventListener('change', renderPeriodPreview);
+
+    periodForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var first = Number(periodFirst.value);
+        var second = Number(periodSecond.value);
+        if (!(second > first) || !periodEffective.value) { renderPeriodPreview(); return; }
+        var current = periodRules.find(function (r) { return r.state === 'Current'; });
+        if (current && current.firstDay === first && current.secondDay === second) {
+            PPValidate.setError(periodFirst, 'These are already the current cut-offs.');
+            return;
+        }
+        ConfirmModal.show({
+            title: 'Change Payroll Period',
+            message: 'From ' + formatDate(periodEffective.value) + ', payroll periods will be ' +
+                PPPeriods.describeDays(first, second) + '. Payroll Processing, loans, adjustments and reports will use the new periods.',
+            confirmText: 'Save Change'
+        }).then(function (confirmed) {
+            if (!confirmed) return;
+            var btn = document.getElementById('periodSaveBtn');
+            btn.disabled = true;
+            api('api/settings/period-rules', 'POST', {
+                effectiveDate: periodEffective.value, firstDay: first, secondDay: second
+            }).then(function (data) {
+                btn.disabled = false;
+                if (!data.success) {
+                    var fields = { firstDay: 'periodFirstDay', secondDay: 'periodSecondDay', effectiveDate: 'periodEffective' };
+                    if (!PPValidate.showServerError(periodForm, data, fields)) PPToast.error(data.message);
+                    return;
+                }
+                periodRules = data.periodRules;
+                renderPeriods();
+                periodModal.hide();
+                PPToast.success('Payroll periods changed.');
+                loadAudit();
+            }).catch(function () {
+                btn.disabled = false;
+                PPToast.error('Could not reach the server.');
+            });
+        });
+    });
+
     loadRates();
     loadLeaveCategories();
     loadHolidays();
     loadRanks();
     loadTables();
+    loadSettings();
     loadAudit();
 
     if (location.hash === '#leave') {
@@ -1016,6 +1264,8 @@
         document.querySelector('[data-section="benefits"]').click();
     } else if (location.hash === '#bir') {
         document.querySelector('[data-section="bir"]').click();
+    } else if (location.hash === '#grace' || location.hash === '#periods') {
+        document.querySelector('[data-section="' + location.hash.slice(1) + '"]').click();
     } else if (location.hash === '#sss') {
         document.querySelector('[data-section="sss"]').click();
     }

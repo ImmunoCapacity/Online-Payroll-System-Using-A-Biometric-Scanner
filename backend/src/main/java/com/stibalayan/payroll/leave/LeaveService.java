@@ -30,8 +30,8 @@ import org.springframework.transaction.annotation.Transactional;
  *     (their leave credits of that type, e.g. Sick Leave 15). Paid leave
  *     uses them up; it can't exceed what is left (the rest is recorded as
  *     unpaid).
- *   - PAID leave is paid in payroll as office hours (Admin and Faculty/Admin
- *     staff) — see paidLeaveDates().
+ *   - Only administrative staff (Admin and Faculty/Admin) have leave; faculty
+ *     don't. PAID leave is paid in payroll as office hours — see paidLeaveDates().
  */
 @Service
 public class LeaveService {
@@ -114,6 +114,7 @@ public class LeaveService {
         // earlier approval workflow stay in the table but are not shown or paid.
         leaves.findAllByOrderByDateFromDescIdDesc().stream()
                 .filter(l -> EmployeeLeave.APPROVED.equals(l.getStatus()))
+                .filter(l -> l.getAdminstaffId() != null)
                 .forEach(l -> result.add(view(l, people)));
         return result;
     }
@@ -121,6 +122,9 @@ public class LeaveService {
     /** Records leave that was already approved (outside the system); it counts in payroll right away. */
     @Transactional
     public Map<String, Object> create(LeaveRequest r, int userId, String recordedBy) {
+        if (EmployeeId.parse(r.employeeId()).isFaculty()) {
+            throw Validation.invalid("employeeId", "Leave is for administrative staff only. Faculty don't have leave.");
+        }
         StaffMember staff = employees.require(r.employeeId());
         if (INACTIVE.contains(staff.getEmploymentStatus())) {
             throw Validation.invalid("employeeId", staff.getFullName() + " is " + staff.getEmploymentStatus().toLowerCase() + ".");
@@ -237,6 +241,7 @@ public class LeaveService {
     @Transactional(readOnly = true)
     public List<Map<String, Object>> balance(String employeeId, int year, Integer excludeLeaveId) {
         employees.require(employeeId);
+        if (EmployeeId.parse(employeeId).isFaculty()) return List.of();
         List<Map<String, Object>> result = new ArrayList<>();
         for (LeaveCategory c : categories.findAllByOrderByNameAsc()) {
             if (!c.isPaid()) continue;
@@ -274,7 +279,7 @@ public class LeaveService {
     public Map<String, Set<LocalDate>> paidLeaveDates(LocalDate from, LocalDate to) {
         Map<String, Set<LocalDate>> result = new HashMap<>();
         for (EmployeeLeave l : leaves.findByStatusAndDateFromLessThanEqualAndDateToGreaterThanEqual(EmployeeLeave.APPROVED, to, from)) {
-            if (!l.isPaid()) continue;
+            if (!l.isPaid() || l.getAdminstaffId() == null) continue;
             LocalDate start = l.getDateFrom().isAfter(from) ? l.getDateFrom() : from;
             LocalDate end = l.getDateTo().isBefore(to) ? l.getDateTo() : to;
             for (LocalDate d = start; !d.isAfter(end); d = d.plusDays(1)) {

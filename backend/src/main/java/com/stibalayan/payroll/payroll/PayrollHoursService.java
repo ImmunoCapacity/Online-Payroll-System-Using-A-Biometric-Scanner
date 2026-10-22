@@ -41,6 +41,7 @@ import org.springframework.transaction.annotation.Transactional;
  *   paidLeaveTeachingHours — scheduled classes on paid leave days that were
  *                   not taught: paid leave pays them at the teaching rate
  *                   (Faculty, Faculty/Admin)
+ *   teachingLateMinutes — minutes late at the beginning check of those classes
  *   teachingHours — APPROVED payable hours from Faculty Teaching Hours, never
  *                   straight from the Faculty Schedule
  *   holidayOfficeHours / holidayTeachingHours — the part of those hours
@@ -219,6 +220,8 @@ public class PayrollHoursService {
             row.put("officeHours", hours(Math.max(0, t[0] - t[2])));
             row.put("teachingHours", h == null ? BigDecimal.ZERO.setScale(2) : h.hours.setScale(2, RoundingMode.HALF_UP));
             row.put("approvedClasses", h == null ? 0 : h.approvedClasses);
+            // Minutes late at approved classes: payroll deducts rate per hour ÷ 60 × minutes.
+            row.put("teachingLateMinutes", h == null ? 0 : h.lateMinutes);
             row.put("unapprovedClasses", Math.max(0, h == null ? 0 : h.unapprovedClasses - pendingOnLeave.getOrDefault(id, 0)
                     - pendingOnHoliday.getOrDefault(id, 0)));
             row.put("paidLeaveTeachingHours", leaveTeachingHours.getOrDefault(id, BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP));

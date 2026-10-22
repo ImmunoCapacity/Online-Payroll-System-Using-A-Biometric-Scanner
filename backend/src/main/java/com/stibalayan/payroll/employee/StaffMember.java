@@ -53,7 +53,7 @@ public abstract class StaffMember {
     @Column(name = "employment_status")
     private String employmentStatus;
 
-    /** Full-time, part-time, contractual or temporary. */
+    /** Full-time, part-time or contractual. */
     @Column(name = "employee_type")
     private String employeeType;
 

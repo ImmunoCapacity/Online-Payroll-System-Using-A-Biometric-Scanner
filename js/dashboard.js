@@ -23,22 +23,11 @@
        CURRENT PAYROLL PERIOD
        ============================================================ */
 
-    // Semi-monthly cutoffs: the 11th–25th, and the 26th to the 10th of the
-    // next month. The current period is the one today falls in.
+    // The cut-off today falls in (Maintenance → Payroll Periods, js/payroll-periods.js).
+    // Drawn first with the default cut-offs, then again once they are loaded.
     function periodContaining(date) {
-        var y = date.getFullYear();
-        var m = date.getMonth();
-        var d = date.getDate();
-
-        if (d >= 11 && d <= 25) {
-            return { start: new Date(y, m, 11), end: new Date(y, m, 25) };
-        }
-
-        if (d >= 26) {
-            return { start: new Date(y, m, 26), end: new Date(y, m + 1, 10) };
-        }
-
-        return { start: new Date(y, m - 1, 26), end: new Date(y, m, 10) };
+        var p = PPPeriods.of(date);
+        return { start: p.start, end: p.end };
     }
 
     function longDate(date) {
@@ -463,6 +452,18 @@
 
     renderPayrollInformation();
     renderPayrollCalendar();
+
+    PPPeriods.load().then(function () {
+        var p = periodContaining(new Date());
+        if (p.start.getTime() === currentPayroll.start.getTime() && p.end.getTime() === currentPayroll.end.getTime()) return;
+        currentPayroll.start = p.start;
+        currentPayroll.end = p.end;
+        currentPayroll.startDate = longDate(p.start);
+        currentPayroll.endDate = longDate(p.end);
+        currentPayroll.periodLabel = p.start.toLocaleDateString('en-US', { month: 'long', day: 'numeric' }) + ' – ' + longDate(p.end);
+        renderPayrollInformation();
+        renderPayrollCalendar();
+    });
 
 
     /* ============================================================

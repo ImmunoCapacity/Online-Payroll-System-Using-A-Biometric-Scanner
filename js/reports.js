@@ -567,6 +567,10 @@
         // Leave is by year; the payroll period filter doesn't apply to it.
         $('leaveYearFilter').classList.toggle('d-none', reportKey !== 'leave');
         $('payrollPeriodFilter').classList.toggle('d-none', reportKey === 'leave');
+        // Only administrative staff have leave, so the Leave Report has no Faculty choice.
+        var facultyOption = employeeType.querySelector('option[value="faculty"]');
+        facultyOption.hidden = reportKey === 'leave';
+        if (reportKey === 'leave' && employeeType.value === 'faculty') employeeType.value = 'all';
 
         if (reportKey === 'leave') {
             renderLeaveReport();

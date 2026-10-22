@@ -5,6 +5,7 @@ import com.stibalayan.payroll.auth.SessionUser;
 import com.stibalayan.payroll.auth.SystemModule;
 import com.stibalayan.payroll.biometric.BiometricLiveSync;
 import com.stibalayan.payroll.common.ApiException;
+import com.stibalayan.payroll.settings.PayrollPeriods;
 import jakarta.servlet.http.HttpServletRequest;
 import java.sql.Date;
 import java.time.LocalDate;
@@ -40,8 +41,10 @@ public class NotificationController {
 
     private final JdbcTemplate jdbc;
     private final BiometricLiveSync liveSync;
+    private final PayrollPeriods periods;
 
-    public NotificationController(JdbcTemplate jdbc, BiometricLiveSync liveSync) {
+    public NotificationController(JdbcTemplate jdbc, BiometricLiveSync liveSync, PayrollPeriods periods) {
+        this.periods = periods;
         this.jdbc = jdbc;
         this.liveSync = liveSync;
     }
@@ -103,7 +106,8 @@ public class NotificationController {
 
         // The last cut-off that has ended: payroll not computed, or not released.
         if (SystemModule.PAYROLL.allows(role)) {
-            LocalDate[] last = lastEndedCutoff(today);
+            PayrollPeriods.Period lastPeriod = periods.previous(periods.period(today));
+            LocalDate[] last = {lastPeriod.start(), lastPeriod.end()};
             String label = last[0].format(SHORT) + " – " + last[1].format(SHORT) + ", " + last[1].getYear();
             List<String> status = jdbc.queryForList("SELECT status FROM payroll_run WHERE pay_period_start = ? AND pay_period_end = ?",
                     String.class, Date.valueOf(last[0]), Date.valueOf(last[1]));
@@ -151,17 +155,6 @@ public class NotificationController {
     }
 
     // ---------------------------------------------------------------
-
-    /** The most recent cut-off (11th–25th or 26th–10th) that ended before today. */
-    static LocalDate[] lastEndedCutoff(LocalDate today) {
-        LocalDate start = today.getDayOfMonth() >= 26 ? today.withDayOfMonth(26)
-                : today.getDayOfMonth() >= 11 ? today.withDayOfMonth(11)
-                : today.minusMonths(1).withDayOfMonth(26);
-        LocalDate prevEnd = start.minusDays(1);
-        LocalDate prevStart = prevEnd.getDayOfMonth() == 25 ? prevEnd.withDayOfMonth(11)
-                : prevEnd.minusMonths(1).withDayOfMonth(26);
-        return new LocalDate[] {prevStart, prevEnd};
-    }
 
     private int count(String sql) {
         Integer n = jdbc.queryForObject(sql, Integer.class);

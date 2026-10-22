@@ -50,7 +50,7 @@ public class EmployeeService {
     private static final Set<String> CIVIL_STATUSES =
             new LinkedHashSet<>(List.of("Single", "Married", "Widowed", "Divorced", "Separated"));
     private static final Set<String> EMPLOYEE_TYPES =
-            new LinkedHashSet<>(List.of("Full-time", "Part-time", "Contractual", "Temporary"));
+            new LinkedHashSet<>(List.of("Full-time", "Part-time", "Contractual"));
 
     // Sanity limits; the columns themselves allow more.
     private static final int MIN_AGE = 18;   // the school does not hire anyone younger than 18

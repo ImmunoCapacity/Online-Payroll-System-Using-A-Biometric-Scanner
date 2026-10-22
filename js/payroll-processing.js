@@ -55,47 +55,23 @@
             });
         });
     }
-
     // ================================================================
-    // PAY PERIODS — semi-monthly cutoffs: the 11th–25th and the
-    // 26th–10th of the next month. The current period and the five
-    // before it.
+    // PAY PERIODS — the cut-offs from Maintenance → Payroll Periods
+    // (js/payroll-periods.js). The current period and the five before it.
     // ================================================================
 
     function buildPeriods() {
         var periods = {};
-        var today = new Date();
-        var start = today.getDate() >= 26 ? new Date(today.getFullYear(), today.getMonth(), 26)
-            : today.getDate() >= 11 ? new Date(today.getFullYear(), today.getMonth(), 11)
-            : new Date(today.getFullYear(), today.getMonth() - 1, 26);
-
-        for (var i = 0; i < 6; i++) {
-            var end = start.getDate() === 11
-                ? new Date(start.getFullYear(), start.getMonth(), 25)
-                : new Date(start.getFullYear(), start.getMonth() + 1, 10);
-            var payDate = new Date(end.getFullYear(), end.getMonth(), end.getDate() + 1);
-            var fmt = { month: 'short', day: 'numeric' };
-
-            periods[iso(start)] = {
-                key: iso(start),
-                from: iso(start),
-                to: iso(end),
-                label: start.toLocaleDateString('en-US', fmt) +
-                    (start.getFullYear() === end.getFullYear() ? '' : ', ' + start.getFullYear()) +
-                    ' – ' + end.toLocaleDateString('en-US', fmt) + ', ' + end.getFullYear(),
-                payDate: iso(payDate)
-            };
-
-            // Step back one cutoff.
-            start = start.getDate() === 26
-                ? new Date(start.getFullYear(), start.getMonth(), 11)
-                : new Date(start.getFullYear(), start.getMonth() - 1, 26);
-        }
+        PPPeriods.recent(6).forEach(function (p) {
+            var payDate = new Date(p.end.getFullYear(), p.end.getMonth(), p.end.getDate() + 1);
+            periods[p.from] = { key: p.from, from: p.from, to: p.to, label: p.label, payDate: iso(payDate) };
+        });
         return periods;
     }
 
-    var PERIODS = buildPeriods();
-    var currentPeriod = Object.keys(PERIODS)[0];
+    // Filled once the payroll periods are loaded (bottom of this file).
+    var PERIODS = {};
+    var currentPeriod = null;
 
     // The saved run of the selected period (api/payroll/runs), or null
     // when payroll hasn't been run for it yet.
@@ -319,6 +295,15 @@
         }
         if (e.department === 'Faculty/Admin') {
             add('Approved teaching hours', h.teachingHours, e.teachingRate);
+        }
+        // Minutes late at approved classes (Faculty Teaching Hours): deducted at
+        // rate per hour ÷ 60 × minutes late. Hours are kept to 4 decimals.
+        var lateMinutes = Number(h.teachingLateMinutes) || 0;
+        if (lateMinutes > 0 && (e.department === 'Faculty' || e.department === 'Faculty/Admin')) {
+            var teachRate = e.department === 'Faculty/Admin' ? e.teachingRate : e.rate;
+            var perMinute = (Number(teachRate) || 0) / 60;
+            add('Late deduction (' + lateMinutes + ' min × ₱' + perMinute.toFixed(2) + '/min)',
+                -Math.round(lateMinutes / 60 * 10000) / 10000, teachRate);
         }
         // Approved paid leave on days with classes: the classes missed are paid
         // at the teaching rate (their scheduled hours).
@@ -632,7 +617,7 @@
 
     /** Earnings lines grouped into the payslip rows (same rule as the PDF). */
     function payslipEarnings(emp) {
-        var rows = { lecture: null, office: null, leave: null, holiday: null, adjustment: null };
+        var rows = { lecture: null, office: null, leave: null, holiday: null, adjustment: null, late: null };
         function add(key, l) {
             var r = rows[key] || (rows[key] = { hours: 0, amount: 0, rate: null, mixed: false });
             r.hours += Number(l.hours) || 0;
@@ -646,7 +631,8 @@
         lines.forEach(function (l) {
             var label = String(l.label || '').toLowerCase();
             add(label.indexOf('adjustment') === 0 ? 'adjustment'
-                : label.indexOf('holiday') === 0 ? 'holiday'
+                : label.indexOf('late deduction') === 0 ? 'late'
+                : label.indexOf('holiday') !== -1 ? 'holiday'
                 : label.indexOf('teaching') !== -1 ? 'lecture'
                 : label.indexOf('office') !== -1 ? 'office'
                 : label.indexOf('leave') !== -1 ? 'leave' : 'adjustment', l);
@@ -706,6 +692,7 @@
                     (e.leave ? earningRow('Paid Leave', e.leave) : '') +
                     earningRow('Holiday', e.holiday) +
                     earningRow('Adjustment', e.adjustment) +
+                    (e.late ? earningRow('Late Deduction', e.late) : '') +
                     '<tr class="pp-payslip-total"><td></td><td colspan="2">Total Applied Salary</td><td class="num">' + num2(applied) + '</td></tr>' +
                 '</tbody>' +
                 '<tbody>' +
@@ -866,14 +853,18 @@
     // ================================================================
 
     var periodSelect = document.getElementById('periodSelect');
-    periodSelect.innerHTML = Object.keys(PERIODS).map(function (key) {
-        return '<option value="' + key + '">' + PERIODS[key].label + '</option>';
-    }).join('');
-    periodSelect.value = currentPeriod;
     periodSelect.addEventListener('change', function () {
         currentPeriod = periodSelect.value;
         loadRun();
     });
 
-    loadRun();
+    PPPeriods.load().then(function () {
+        PERIODS = buildPeriods();
+        currentPeriod = Object.keys(PERIODS)[0];
+        periodSelect.innerHTML = Object.keys(PERIODS).map(function (key) {
+            return '<option value="' + key + '">' + PERIODS[key].label + '</option>';
+        }).join('');
+        periodSelect.value = currentPeriod;
+        loadRun();
+    });
 })();

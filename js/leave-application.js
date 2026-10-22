@@ -112,7 +112,8 @@
                 requests = results[0].requests;
                 categories = results[1].categories;
                 employees = results[2].employees.filter(function (e) {
-                    return ['Inactive', 'Resigned', 'Terminated'].indexOf(e.status) === -1;
+                    // Only administrative staff (Admin, Faculty/Admin) have leave.
+                    return e.department !== 'Faculty' && ['Inactive', 'Resigned', 'Terminated'].indexOf(e.status) === -1;
                 });
                 fillFilters();
                 render();

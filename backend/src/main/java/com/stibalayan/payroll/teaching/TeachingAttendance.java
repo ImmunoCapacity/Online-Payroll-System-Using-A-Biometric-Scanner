@@ -23,6 +23,8 @@ public class TeachingAttendance {
 
     public static final String PRESENT = "Present";
     public static final String ABSENT = "Absent";
+    /** Beginning check only: came after the grace window; the minutes late are deducted from pay. */
+    public static final String LATE = "Late";
 
     /** Only one of the two checks is recorded. */
     public static final String INCOMPLETE = "Incomplete";
@@ -47,6 +49,10 @@ public class TeachingAttendance {
 
     @Column(name = "start_checked_by")
     private Integer startCheckedBy;
+
+    /** Minutes after the scheduled start when marked Late at the beginning check (0 otherwise). */
+    @Column(name = "late_minutes", nullable = false)
+    private int lateMinutes;
 
     @Column(name = "end_check_at")
     private LocalDateTime endCheckAt;
@@ -98,6 +104,8 @@ public class TeachingAttendance {
     public String getStartCheckStatus() { return startCheckStatus; }
     public void setStartCheckStatus(String startCheckStatus) { this.startCheckStatus = startCheckStatus; }
     public Integer getStartCheckedBy() { return startCheckedBy; }
+    public int getLateMinutes() { return lateMinutes; }
+    public void setLateMinutes(int lateMinutes) { this.lateMinutes = lateMinutes; }
     public void setStartCheckedBy(Integer startCheckedBy) { this.startCheckedBy = startCheckedBy; }
     public LocalDateTime getEndCheckAt() { return endCheckAt; }
     public void setEndCheckAt(LocalDateTime endCheckAt) { this.endCheckAt = endCheckAt; }

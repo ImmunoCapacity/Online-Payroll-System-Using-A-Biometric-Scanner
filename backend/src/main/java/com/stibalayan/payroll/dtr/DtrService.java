@@ -1,5 +1,6 @@
 package com.stibalayan.payroll.dtr;
 
+import com.stibalayan.payroll.settings.SettingsService;
 import com.stibalayan.payroll.common.ApiException;
 import com.stibalayan.payroll.common.Validation;
 import com.stibalayan.payroll.employee.AdminStaff;
@@ -20,7 +21,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,17 +40,14 @@ public class DtrService {
     private final DailyTimeRecordRepository dtr;
     private final FacultyStaffRepository faculty;
     private final AdminStaffRepository admins;
-    private final LocalTime standardStart;
-    private final int graceMinutes;
+    private final SettingsService settings;
 
     public DtrService(DailyTimeRecordRepository dtr, FacultyStaffRepository faculty, AdminStaffRepository admins,
-                      @Value("${attendance.standard-start}") String standardStart,
-                      @Value("${attendance.grace-minutes}") int graceMinutes) {
+                      SettingsService settings) {
         this.dtr = dtr;
         this.faculty = faculty;
         this.admins = admins;
-        this.standardStart = LocalTime.parse(standardStart);
-        this.graceMinutes = graceMinutes;
+        this.settings = settings;
     }
 
     /**
@@ -163,9 +160,9 @@ public class DtrService {
         return result;
     }
 
-    /** A time-in after this is late (start time plus the grace period). */
+    /** A time-in after this is late (start time plus the grace period, Maintenance → Grace Period). */
     public LocalTime lateAfter() {
-        return standardStart.plusMinutes(graceMinutes);
+        return settings.lateAfter();
     }
 
     /** Employees that can be picked for a manual entry. */

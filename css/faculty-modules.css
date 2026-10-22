@@ -410,6 +410,7 @@
 
 .fm-check-status.present { color: var(--pp-success); font-size: 0.75rem; font-weight: 600; }
 .fm-check-status.absent { color: var(--pp-error); font-size: 0.75rem; font-weight: 600; }
+.fm-check-status.late { color: #b7791f; font-size: 0.75rem; font-weight: 600; }
 .fm-check-none { color: var(--pp-text-muted); }
 
 /* Detail modal */
@@ -521,3 +522,7 @@
     font-size: 0.75rem;
     color: var(--pp-text-muted);
 }
+
+/* Status that follows the verification time */
+.fm-status-hint { font-size: 0.8rem; color: var(--pp-text-muted); min-height: 1.2rem; }
+.fm-late-note { display: block; margin-top: 0.35rem; color: #b7791f; font-size: 0.8rem; font-weight: 600; }

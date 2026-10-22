@@ -10,6 +10,7 @@ import com.stibalayan.payroll.employee.EmployeeDirectory;
 import com.stibalayan.payroll.employee.EmployeeId;
 import com.stibalayan.payroll.employee.StaffMember;
 import com.stibalayan.payroll.loan.LoanService;
+import com.stibalayan.payroll.settings.PayrollPeriods;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.Date;
@@ -42,6 +43,8 @@ public class PayrollRunService {
 
     public static final String PROCESSING = "Processing";
     public static final String RELEASED = "Released";
+    /** Earnings line that deducts the minutes late at approved classes (Faculty Teaching Hours). */
+    static final String LATE_LINE = "Late deduction";
     private static final BigDecimal MAX = new BigDecimal("99999999.99");
     private static final TypeReference<Map<String, Object>> MAP = new TypeReference<>() { };
 
@@ -49,12 +52,14 @@ public class PayrollRunService {
     private final ObjectMapper json;
     private final EmployeeDirectory employees;
     private final LoanService loans;
+    private final PayrollPeriods periods;
     private final AuditService audit;
 
     private final PayrollAdjustmentService adjustments;
 
     public PayrollRunService(JdbcTemplate jdbc, ObjectMapper json, EmployeeDirectory employees, LoanService loans,
-                             AuditService audit, PayrollAdjustmentService adjustments) {
+                             AuditService audit, PayrollAdjustmentService adjustments, PayrollPeriods periods) {
+        this.periods = periods;
         this.adjustments = adjustments;
         this.jdbc = jdbc;
         this.json = json;
@@ -94,6 +99,9 @@ public class PayrollRunService {
         List<Integer> ids = jdbc.queryForList("SELECT payroll_run_id FROM payroll_run WHERE pay_period_start = ? AND pay_period_end = ? FOR UPDATE",
                 Integer.class, Date.valueOf(from), Date.valueOf(to));
         int runId;
+        if (ids.isEmpty() && !periods.isPeriod(from, to)) {
+            throw Validation.invalid("from", "That is not a payroll period (Maintenance → Payroll Periods).");
+        }
         if (ids.isEmpty()) {
             jdbc.update("INSERT INTO payroll_run (pay_period_start, pay_period_end, period_label, status, computed_by) VALUES (?, ?, ?, ?, ?)",
                     Date.valueOf(from), Date.valueOf(to), label, PROCESSING, userId);
@@ -322,13 +330,18 @@ public class PayrollRunService {
         BigDecimal hours = BigDecimal.ZERO;
         for (Object o : list(e.get("earnings"))) {
             Map<?, ?> l = (Map<?, ?>) o;
-            // A Payroll Adjustment that deducts hours is a negative line.
-            boolean adjustment = String.valueOf(l.get("label")).startsWith("Adjustment:");
-            BigDecimal h = adjustment ? checkSigned(money(l.get("hours")), "hours") : check(money(l.get("hours")), "hours");
+            // A Payroll Adjustment that deducts hours is a negative line, and so is the
+            // late deduction (minutes late ÷ 60, kept to 4 decimals so rate ÷ 60 × minutes holds).
+            String labelText = String.valueOf(l.get("label"));
+            boolean adjustment = labelText.startsWith("Adjustment:");
+            boolean late = labelText.startsWith(LATE_LINE);
+            BigDecimal h = late ? lateHours(l.get("hours"))
+                    : adjustment ? checkSigned(money(l.get("hours")), "hours") : check(money(l.get("hours")), "hours");
             BigDecimal rate = check(money(l.get("rate")), "rate");
             BigDecimal amount = h.multiply(rate).setScale(2, RoundingMode.HALF_UP);
             Map<String, Object> line = new LinkedHashMap<>();
-            line.put("label", Validation.requiredText(String.valueOf(l.get("label")), "earnings", "Earnings label", 100));
+            // Adjustment lines carry their reason (up to 200 characters) and dates.
+            line.put("label", Validation.requiredText(String.valueOf(l.get("label")), "earnings", "Earnings label", 300));
             line.put("hours", h);
             line.put("rate", rate);
             line.put("amount", amount);
@@ -512,6 +525,20 @@ public class PayrollRunService {
         } catch (NumberFormatException e) {
             throw Validation.invalid("employees", "A payroll amount is not a number.");
         }
+    }
+
+    /** Late deduction line: hours = −(minutes late ÷ 60), 4 decimals, never positive. */
+    private static BigDecimal lateHours(Object value) {
+        BigDecimal h;
+        try {
+            h = new BigDecimal(String.valueOf(value)).setScale(4, RoundingMode.HALF_UP);
+        } catch (NumberFormatException e) {
+            throw Validation.invalid("employees", "A payroll amount is not a number.");
+        }
+        if (h.signum() > 0 || h.abs().compareTo(new BigDecimal("1000")) > 0) {
+            throw Validation.invalid("hours", "A late deduction is out of range.");
+        }
+        return h;
     }
 
     /** Like check(), but may be negative (a Payroll Adjustment that deducts hours). */

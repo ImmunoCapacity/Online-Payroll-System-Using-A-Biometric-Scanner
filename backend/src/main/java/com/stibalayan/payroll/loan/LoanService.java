@@ -5,6 +5,7 @@ import com.stibalayan.payroll.common.Validation;
 import com.stibalayan.payroll.employee.EmployeeDirectory;
 import com.stibalayan.payroll.employee.EmployeeId;
 import com.stibalayan.payroll.employee.StaffMember;
+import com.stibalayan.payroll.settings.PayrollPeriods;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -29,7 +30,8 @@ import org.springframework.transaction.annotation.Transactional;
  * A loan is recorded with its lender, amount, interest and payment period
  * (Payment From and Payment To dates). The total (amount plus interest) is
  * split evenly over the months of that period: one deduction a month, taken
- * in the payroll that ends on the 25th (the 11th–25th cut-off). The last
+ * in the first payroll period of each month (e.g. the 11th–25th; see
+ * Maintenance → Payroll Periods). The last
  * month takes the leftover centavos.
  *
  * Each released payroll records one payment per loan due (loan_payment); the
@@ -47,16 +49,16 @@ public class LoanService {
     private static final BigDecimal HUNDRED = new BigDecimal("100");
     private static final BigDecimal ONE_PESO = BigDecimal.ONE;
     private static final int MAX_MONTHS = 120;   // ten years
-    /** Loans are deducted in the cut-off that ends on this day of the month. */
-    static final int DEDUCTION_DAY = 25;
     private static final DateTimeFormatter MONTH_YEAR = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.ENGLISH);
-    private static final DateTimeFormatter MONTH_DAY = DateTimeFormatter.ofPattern("MMMM d", Locale.ENGLISH);
 
     private final LoanRepository loans;
     private final LoanPaymentRepository payments;
     private final EmployeeDirectory employees;
+    private final PayrollPeriods periods;
 
-    public LoanService(LoanRepository loans, LoanPaymentRepository payments, EmployeeDirectory employees) {
+    public LoanService(LoanRepository loans, LoanPaymentRepository payments, EmployeeDirectory employees,
+                       PayrollPeriods periods) {
+        this.periods = periods;
         this.loans = loans;
         this.payments = payments;
         this.employees = employees;
@@ -142,14 +144,15 @@ public class LoanService {
      * The loan deductions for a pay period, per employee id, in the order
      * Payroll Computation applies them (government loans first, then the
      * oldest). Loans are deducted once a month, in the period that has the
-     * 25th; each loan whose Payment From month has come and that still has a
+     * first start day of the month's cut-offs (PayrollPeriods.loanMonth); each
+     * loan whose Payment From month has come and that still has a
      * balance. A period already released keeps what it recorded (including a
      * skip).
      */
     @Transactional(readOnly = true)
     public Map<String, List<Map<String, Object>>> deductionsFor(LocalDate from, LocalDate to) {
         Map<String, List<Map<String, Object>>> result = new HashMap<>();
-        YearMonth month = deductionMonth(from, to);
+        YearMonth month = periods.loanMonth(from, to);
         List<Loan> all = new ArrayList<>(loans.findAll());
         all.sort(Comparator.comparing((Loan l) -> isGovernment(l) ? 0 : 1).thenComparing(Loan::getId));
         for (Loan l : all) {
@@ -243,7 +246,7 @@ public class LoanService {
             running = running.subtract(p.getAmount());
             if (p.isSkipped()) skips++;
             Map<String, Object> h = new HashMap<>();
-            h.put("period", p.getPeriodLabel() != null ? p.getPeriodLabel() : periodLabel(p.getPeriodFrom()));
+            h.put("period", p.getPeriodLabel() != null ? p.getPeriodLabel() : periods.label(periods.period(p.getPeriodFrom())));
             h.put("amount", p.getAmount());
             h.put("skipped", p.isSkipped());
             h.put("remainingBalance", running.max(BigDecimal.ZERO));
@@ -314,14 +317,6 @@ public class LoanService {
         return (int) ChronoUnit.MONTHS.between(YearMonth.from(start), YearMonth.from(end)) + 1;
     }
 
-    /** The month whose loan deduction falls in this pay period (it has the 25th), or null. */
-    static YearMonth deductionMonth(LocalDate from, LocalDate to) {
-        for (LocalDate d = from; !d.isAfter(to); d = d.plusDays(1)) {
-            if (d.getDayOfMonth() == DEDUCTION_DAY) return YearMonth.from(d);
-        }
-        return null;
-    }
-
     /** "SSS Loan", "Pag-IBIG Loan" or e.g. "BDO Loan" (decides the payslip line). */
     static String typeOf(String lender) {
         String t = lender.toLowerCase(Locale.ROOT);
@@ -359,17 +354,6 @@ public class LoanService {
             case "Faculty/Admin" -> "Administrative and Faculty Staff";
             default -> "Administrative Staff";
         };
-    }
-
-    /** Pay periods run the 11th–25th and the 26th–10th of the next month. */
-    static LocalDate periodEnd(LocalDate start) {
-        return start.getDayOfMonth() == 11 ? start.withDayOfMonth(25) : start.plusMonths(1).withDayOfMonth(10);
-    }
-
-    static String periodLabel(LocalDate start) {
-        LocalDate end = periodEnd(start);
-        return start.format(MONTH_DAY) + (start.getYear() == end.getYear() ? "" : ", " + start.getYear())
-                + " – " + end.format(MONTH_DAY) + ", " + end.getYear();
     }
 
     private static BigDecimal sum(List<LoanPayment> list) {

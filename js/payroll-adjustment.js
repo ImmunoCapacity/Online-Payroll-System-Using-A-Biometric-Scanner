@@ -68,12 +68,10 @@
         return Math.round(n * 100) / 100;
     }
 
-    /** Cut-offs: the 11th–25th, and the 26th to the 10th of the next month. */
+    /** The cut-off a date falls in (Maintenance → Payroll Periods, js/payroll-periods.js). */
     function cutoffContaining(date) {
-        var y = date.getFullYear(), m = date.getMonth(), d = date.getDate();
-        if (d >= 11 && d <= 25) return { start: iso(new Date(y, m, 11)), end: iso(new Date(y, m, 25)) };
-        if (d >= 26) return { start: iso(new Date(y, m, 26)), end: iso(new Date(y, m + 1, 10)) };
-        return { start: iso(new Date(y, m - 1, 26)), end: iso(new Date(y, m, 10)) };
+        var p = PPPeriods.of(date);
+        return { start: p.from, end: p.to };
     }
 
     /** Six cut-offs back (to view), the current one, and the next five. */
@@ -468,6 +466,8 @@
         }
     });
 
-    fillCutoffs();
-    load();
+    PPPeriods.load().then(function () {
+        fillCutoffs();
+        load();
+    });
 })();

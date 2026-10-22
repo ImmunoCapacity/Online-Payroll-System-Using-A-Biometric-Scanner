@@ -31,7 +31,9 @@ public enum SystemModule {
     /** User accounts, archive, audit trail, backup and restore, device configuration. */
     UTILITY(Roles.SYSTEM_ADMINISTRATOR),
     /** Whether the biometric scanner is connected (DTR live badge, Biometric Device page). */
-    SCANNER_STATUS(Roles.PAYROLL_MASTER, Roles.PAYROLL_STAFF, Roles.SYSTEM_ADMINISTRATOR);
+    SCANNER_STATUS(Roles.PAYROLL_MASTER, Roles.PAYROLL_STAFF, Roles.SYSTEM_ADMINISTRATOR),
+    /** Reading the grace period and payroll periods (every page that shows cut-offs needs them). */
+    SETTINGS_READ(Roles.PAYROLL_MASTER, Roles.PAYROLL_STAFF, Roles.SYSTEM_ADMINISTRATOR);
 
     private final Set<String> roles;
 

@@ -1,5 +1,6 @@
 package com.stibalayan.payroll.biometric;
 
+import com.stibalayan.payroll.settings.SettingsService;
 import com.stibalayan.payroll.common.ApiException;
 import com.stibalayan.payroll.device.Device;
 import com.stibalayan.payroll.device.DeviceRepository;
@@ -17,7 +18,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -39,15 +39,13 @@ public class BiometricSyncService {
     private final AdminStaffRepository admins;
     private final DailyTimeRecordRepository dtr;
     private final TransactionTemplate transaction;
-    private final LocalTime standardStart;
-    private final int graceMinutes;
+    private final SettingsService settings;
     private final AtomicLong changes = new AtomicLong();
 
     public BiometricSyncService(BiometricDevice biometricDevice, DeviceProperties deviceProperties,
                                 DeviceRepository devices, FacultyStaffRepository faculty, AdminStaffRepository admins,
                                 DailyTimeRecordRepository dtr, TransactionTemplate transaction,
-                                @Value("${attendance.standard-start}") String standardStart,
-                                @Value("${attendance.grace-minutes}") int graceMinutes) {
+                                SettingsService settings) {
         this.biometricDevice = biometricDevice;
         this.deviceProperties = deviceProperties;
         this.devices = devices;
@@ -55,8 +53,7 @@ public class BiometricSyncService {
         this.admins = admins;
         this.dtr = dtr;
         this.transaction = transaction;
-        this.standardStart = LocalTime.parse(standardStart);
-        this.graceMinutes = graceMinutes;
+        this.settings = settings;
     }
 
     /** Connects to the K40, reads every punch, and records it. Used when live sync is off. */
@@ -134,7 +131,7 @@ public class BiometricSyncService {
                 continue;
             }
 
-            LocalDateTime graceEnd = date.atTime(standardStart).plusMinutes(graceMinutes);
+            LocalDateTime graceEnd = date.atTime(settings.lateAfter());
 
             DailyTimeRecord record = new DailyTimeRecord();
             record.setFingerprintId(log.enrollNumber());

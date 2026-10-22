@@ -68,7 +68,7 @@ CREATE TABLE IF NOT EXISTS faculty_staff (
     civil_status       VARCHAR(20),
     dependent_number   INT DEFAULT 0,
     employment_status  VARCHAR(50)  NOT NULL DEFAULT 'Active',
-    employee_type      VARCHAR(20),                 -- full-time | part-time | contractual | temporary
+    employee_type      VARCHAR(20),                 -- full-time | part-time | contractual
     date_hired         DATE,
     load_units         INT,
     lecture_hours      DECIMAL(4,1),
@@ -711,3 +711,23 @@ ALTER TABLE bir_table ADD COLUMN IF NOT EXISTS archived_at DATETIME NULL;
 ALTER TABLE philhealth_table ADD COLUMN IF NOT EXISTS archived_at DATETIME NULL;
 ALTER TABLE pagibig_table ADD COLUMN IF NOT EXISTS archived_at DATETIME NULL;
 ALTER TABLE sss_table ADD COLUMN IF NOT EXISTS archived_at DATETIME NULL;
+-- Maintenance → Grace Period (key/value settings; application.properties holds the defaults).
+CREATE TABLE IF NOT EXISTS system_setting (
+    setting_key   VARCHAR(60)  PRIMARY KEY,
+    setting_value VARCHAR(255)
+) ENGINE=InnoDB;
+
+-- Maintenance → Payroll Periods: the two cut-off start days, from an effective date.
+-- Periods before a rule's effective date keep the older rule.
+CREATE TABLE IF NOT EXISTS payroll_period_rule (
+    rule_id          INT AUTO_INCREMENT PRIMARY KEY,
+    effective_date   DATE NOT NULL UNIQUE,
+    first_start_day  INT  NOT NULL,            -- e.g. 11: the 11th–25th
+    second_start_day INT  NOT NULL,            -- e.g. 26: the 26th–10th of the next month
+    created_by       INT,
+    created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+INSERT IGNORE INTO payroll_period_rule (effective_date, first_start_day, second_start_day) VALUES ('2000-01-01', 11, 26);
+
+-- Faculty Teaching Hours: minutes late at the beginning check (deducted from pay).
+ALTER TABLE faculty_teaching_attendance ADD COLUMN IF NOT EXISTS late_minutes INT NOT NULL DEFAULT 0 AFTER start_checked_by;

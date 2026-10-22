@@ -10,7 +10,7 @@
  * (Payment From and Payment To dates); the amount plus interest is divided
  * by the months in between, the last month taking the leftover centavos
  * (worked out again by the server). Payroll Computation deducts it once a
- * month, in the 11th–25th payroll; when the pay isn't enough, it is skipped
+ * month, in the first payroll of the month; when the pay isn't enough, it is skipped
  * and flagged, and the loan runs one month longer.
  */
 (function () {
@@ -323,8 +323,8 @@
         el('loanEndDate').min = from || '';
         var months = from && to && to >= from ? monthsBetween(from, to) : 0;
         if (!(amount > 0) || !months || rate < 0) {
-            el('loanPerPayroll').value = '—';
-            el('loanPerPayrollHint').textContent = '';
+            el('loanPerPayroll').value = 'Computed automatically';
+            el('loanPerPayrollHint').textContent = '(Loan amount + interest) ÷ number of months from Payment From to Payment To.';
             return;
         }
         var cents = Math.round(amount * 100);
@@ -335,7 +335,7 @@
         el('loanPerPayrollHint').textContent =
             (rate ? peso(amount) + ' + ' + rate + '% interest = ' + peso(total / 100) : peso(total / 100)) +
             ' ÷ ' + months + ' month' + (months === 1 ? '' : 's') +
-            ' (' + monthLabel(from) + (months > 1 ? ' – ' + monthLabel(to) : '') + '), deducted in the 11th–25th payroll' +
+            ' (' + monthLabel(from) + (months > 1 ? ' – ' + monthLabel(to) : '') + '), deducted in the first payroll of each month' +
             (months > 1 && last !== per ? '; the last month deducts ' + peso(last / 100) + '.' : '.');
     }
 
@@ -352,8 +352,10 @@
 
     el('btnAddLoan').addEventListener('click', function () { openAddLoan(currentEmployeeId); });
     el('btnAddLoanAny').addEventListener('click', function () { openAddLoan(null); });
-    ['loanStartDate', 'loanEndDate'].forEach(function (id) { el(id).addEventListener('change', updateComputed); });
-    ['loanAmount', 'loanInterest'].forEach(function (id) { el(id).addEventListener('input', updateComputed); });
+    ['loanStartDate', 'loanEndDate', 'loanAmount', 'loanInterest'].forEach(function (id) {
+        el(id).addEventListener('input', updateComputed);
+        el(id).addEventListener('change', updateComputed);
+    });
 
     el('loanEndDate').ppValidator = function (value) {
         var from = el('loanStartDate').value;

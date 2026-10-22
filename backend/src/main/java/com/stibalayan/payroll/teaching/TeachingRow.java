@@ -39,5 +39,6 @@ public record TeachingRow(
         BigDecimal payableHours,
         String approvedBy,
         String approvedAt,
-        String reviewNote) {
+        String reviewNote,
+        int lateMinutes) {
 }

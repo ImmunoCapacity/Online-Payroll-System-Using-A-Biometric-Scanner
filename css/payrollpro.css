@@ -2719,3 +2719,83 @@ a.pp-notif-item:hover {
     color: #16A34A;
     margin-right: 4px;
 }
+
+/* ================================================================
+   Row numbers: every data table gets a "#" first column, numbered
+   1, 2, 3… down the rows that are shown (so it stays in order after
+   searching or filtering). Done with a CSS counter so the page
+   scripts, which read cells by position, are not affected. Rows that
+   are a single message (e.g. "No records") get an empty cell.
+   Add class "pp-no-rownum" to a table to leave it out.
+   ================================================================ */
+:is(table.pp-table, table.leave-table, table.loan-history-table, table.report-table, table.attendance-table, .pp-admin-table table):not(.pp-no-rownum, .pp-13th-months) > tbody {
+    counter-reset: pp-row;
+}
+
+:is(table.pp-table, table.leave-table, table.loan-history-table, table.report-table, table.attendance-table, .pp-admin-table table):not(.pp-no-rownum, .pp-13th-months) > thead > tr::before,
+:is(table.pp-table, table.leave-table, table.loan-history-table, table.report-table, table.attendance-table, .pp-admin-table table):not(.pp-no-rownum, .pp-13th-months) > tbody > tr::before,
+:is(table.pp-table, table.leave-table, table.loan-history-table, table.report-table, table.attendance-table, .pp-admin-table table):not(.pp-no-rownum, .pp-13th-months) > tfoot > tr::before {
+    content: "";
+    display: table-cell;
+    width: 3rem;
+    min-width: 3rem;
+    padding: 0.625rem 0.5rem 0.625rem 0.875rem;
+    vertical-align: middle;
+    text-align: left;
+    color: var(--pp-text-muted);
+    font-variant-numeric: tabular-nums;
+    border-bottom: 1px solid var(--pp-border);
+}
+
+/* Header cell: same look as the table's other headings. */
+:is(table.pp-table, table.leave-table, table.loan-history-table, table.report-table, table.attendance-table, .pp-admin-table table):not(.pp-no-rownum, .pp-13th-months) > thead > tr:first-child::before {
+    content: "#";
+    background: #f8fafc;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+}
+
+table.pp-table-maint:not(.pp-no-rownum) > thead > tr:first-child::before {
+    background: #eef2f6;
+    border-bottom-width: 2px;
+    border-right: 1px solid var(--pp-border);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+table.leave-table > thead > tr:first-child::before,
+table.report-table > thead > tr:first-child::before {
+    background: var(--pp-surface-alt, #f8f9fa);
+}
+
+/* Data rows: 1, 2, 3… (rows that are one message spanning the table stay blank). */
+:is(table.pp-table, table.leave-table, table.loan-history-table, table.report-table, table.attendance-table, .pp-admin-table table):not(.pp-no-rownum, .pp-13th-months) > tbody > tr:not(:has(> td[colspan]))::before {
+    counter-increment: pp-row;
+    content: counter(pp-row);
+    font-size: 0.8125rem;
+}
+
+:is(table.pp-table, table.leave-table, table.loan-history-table, table.report-table, table.attendance-table, .pp-admin-table table):not(.pp-no-rownum, .pp-13th-months) > tbody > tr:last-child::before {
+    border-bottom: none;
+}
+
+table.report-table > tfoot > tr::before {
+    background: var(--pp-surface-alt, #f8f9fa);
+    border-top: 1px solid var(--pp-border, #e2e5e9);
+    border-bottom: none;
+}
+
+@media print {
+    table.report-table > thead > tr::before,
+    table.report-table > tbody > tr::before,
+    table.report-table > tfoot > tr::before {
+        width: auto;
+        min-width: 0;
+        padding: 4px 6px !important;
+        border: 1px solid #d1d5db !important;
+        font-size: 9.5px !important;
+        color: #000 !important;
+    }
+}

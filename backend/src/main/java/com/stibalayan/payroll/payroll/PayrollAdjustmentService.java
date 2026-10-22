@@ -8,6 +8,7 @@ import com.stibalayan.payroll.employee.EmployeeId;
 import com.stibalayan.payroll.employee.FacultyStaff;
 import com.stibalayan.payroll.employee.StaffMember;
 import com.stibalayan.payroll.rate.RateService;
+import com.stibalayan.payroll.settings.PayrollPeriods;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.Date;
@@ -55,8 +56,10 @@ public class PayrollAdjustmentService {
     private final JdbcTemplate jdbc;
     private final EmployeeDirectory employees;
     private final RateService rates;
+    private final PayrollPeriods periods;
 
-    public PayrollAdjustmentService(JdbcTemplate jdbc, EmployeeDirectory employees, RateService rates) {
+    public PayrollAdjustmentService(JdbcTemplate jdbc, EmployeeDirectory employees, RateService rates, PayrollPeriods periods) {
+        this.periods = periods;
         this.jdbc = jdbc;
         this.employees = employees;
         this.rates = rates;
@@ -250,11 +253,9 @@ public class PayrollAdjustmentService {
         return released != null && released > 0;
     }
 
-    private static void requireCutoff(LocalDate start, LocalDate end) {
-        boolean ok = start.getDayOfMonth() == 11 ? end.equals(start.withDayOfMonth(25))
-                : start.getDayOfMonth() == 26 && end.equals(start.plusMonths(1).withDayOfMonth(10));
-        if (!ok) {
-            throw Validation.invalid("applyStart", "Choose a payroll cut-off (11th–25th or 26th–10th).");
+    private void requireCutoff(LocalDate start, LocalDate end) {
+        if (!periods.isPeriod(start, end)) {
+            throw Validation.invalid("applyStart", "Choose a payroll cut-off (Maintenance → Payroll Periods).");
         }
     }
 

@@ -27,27 +27,15 @@
             <!-- 1. EMPLOYEES: one row per employee -->
             <div id="loanManagementView">
 
-                <div class="pp-page-toolbar">
-                    <header class="pp-content-header mb-0">
-                        <h1 class="pp-content-title">Loan Management</h1>
-                        <p class="pp-content-subtitle">
-                            Record employee loans; they are deducted automatically when payroll is computed.
-                        </p>
-                    </header>
-                    <button type="button" class="btn btn-pp-primary" id="btnAddLoanAny">
+                <header class="pp-content-header mb-3">
+                    <h1 class="pp-content-title">Loan Management</h1>
+                    <p class="pp-content-subtitle">
+                        Record employee loans; they are deducted automatically when payroll is computed.
+                    </p>
+                    <button type="button" class="btn btn-pp-primary mt-3" id="btnAddLoanAny">
                         <i class="bi bi-plus-lg me-1"></i> Add Loan
                     </button>
-                </div>
-
-                <div class="loan-info-note">
-                    <i class="bi bi-info-circle-fill"></i>
-                    <div>
-                        Loans are approved by the lender (SSS, Pag-IBIG, a bank, etc.). The loan plus interest is divided by
-                        the months from Payment From to Payment To, and deducted once a month in the 11th–25th payroll. When an
-                        employee's pay isn't enough to cover a loan, it is <strong>skipped</strong> that month and flagged, and the
-                        loan runs one month longer.
-                    </div>
-                </div>
+                </header>
 
                 <section class="pp-section-card">
 
@@ -365,7 +353,7 @@
 
                             <div class="col-12">
                                 <label for="loanPerPayroll" class="pp-form-label">Deduction per Payroll</label>
-                                <input type="text" class="form-control pp-form-control loan-computed" id="loanPerPayroll" value="—" readonly tabindex="-1">
+                                <input type="text" class="form-control pp-form-control loan-computed" id="loanPerPayroll" value="Computed automatically" readonly tabindex="-1" aria-live="polite">
                                 <div class="form-text" id="loanPerPayrollHint"></div>
                             </div>
 

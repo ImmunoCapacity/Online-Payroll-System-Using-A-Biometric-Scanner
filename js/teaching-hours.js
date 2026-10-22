@@ -127,7 +127,7 @@
     function checkCell(time, status) {
         if (!time) return '<span class="fm-check-none">—</span>';
         return '<span class="fm-check"><span class="fm-check-time">' + time12(time) + '</span>' +
-            '<span class="fm-check-status ' + (status === 'Present' ? 'present' : 'absent') + '">' + escapeHtml(status) + '</span></span>';
+            '<span class="fm-check-status ' + String(status).toLowerCase() + '">' + escapeHtml(status) + '</span></span>';
     }
 
     function addDays(text, days) {
@@ -347,6 +347,32 @@
         return '<div><span class="fm-detail-label">' + label + '</span><span class="fm-detail-value">' + value + '</span></div>';
     }
 
+    /** Minutes since midnight of "HH:mm". */
+    function minutesOf(hhmm) {
+        var p = String(hhmm).split(':').map(Number);
+        return p[0] * 60 + p[1];
+    }
+
+    /**
+     * The status that follows the time of a check (same rule as the server):
+     * beginning — up to start + grace Present, until the class ends Late, after
+     * that Absent; end — from end − grace Present, earlier Absent.
+     */
+    function statusAt(r, which, hhmm) {
+        if (!hhmm) return '';
+        var t = minutesOf(hhmm);
+        var grace = r.gracePeriodMinutes;
+        if (which === 'start') {
+            if (t <= minutesOf(r.scheduledStart) + grace) return 'Present';
+            return t < minutesOf(r.scheduledEnd) ? 'Late' : 'Absent';
+        }
+        return t < minutesOf(r.scheduledEnd) - grace ? 'Absent' : 'Present';
+    }
+
+    function lateMinutesAt(r, hhmm) {
+        return Math.max(0, minutesOf(hhmm) - minutesOf(r.scheduledStart));
+    }
+
     function checkForm(r, which) {
         var start = which === 'start';
         var time = start ? r.startCheckAt : r.endCheckAt;
@@ -355,14 +381,16 @@
         var anchor = start ? r.scheduledStart : r.scheduledEnd;
         var locked = r.approvalStatus === 'Approved';
         var future = r.classDate > iso(new Date());
-        var disabled = locked || future ? ' disabled' : '';
-        var defaultTime = time || (r.classDate === iso(new Date()) ? nowHHMM() : '');
+        var waiting = !start && !r.startCheckAt;
+        var disabled = locked || future || waiting ? ' disabled' : '';
+        var defaultTime = time || (r.classDate === iso(new Date()) && !waiting ? nowHHMM() : '');
         var id = which + 'Check';
 
         return '<div class="col-md-6"><form class="fm-check-card" id="' + id + 'Form" data-check="' + which + '" novalidate>' +
             '<h3>' + (start ? 'Beginning of Class' : 'End of Class') + '</h3>' +
             '<div class="fm-window">Grace window: ' + time12(shiftTime(anchor, -r.gracePeriodMinutes)) + ' – ' +
-                time12(shiftTime(anchor, r.gracePeriodMinutes)) + '</div>' +
+                time12(shiftTime(anchor, r.gracePeriodMinutes)) +
+                (start ? ' · Late after ' + time12(shiftTime(r.scheduledStart, r.gracePeriodMinutes)) : '') + '</div>' +
             '<div class="row g-2">' +
                 '<div class="col-6">' +
                     '<label for="' + id + 'Time" class="pp-form-label">Verified at</label>' +
@@ -371,23 +399,58 @@
                 '</div>' +
                 '<div class="col-6">' +
                     '<label for="' + id + 'Status" class="pp-form-label">Faculty was</label>' +
-                    '<select class="form-select pp-form-select" id="' + id + 'Status" data-label="Attendance" required' + disabled + '>' +
-                        // Placeholder only: shown until a choice is made, not listed as an option.
-                        '<option value="" hidden data-hint' + (status ? '' : ' selected') + '>Select…</option>' +
-                        '<option value="Present"' + (status === 'Present' ? ' selected' : '') + '>Present</option>' +
-                        '<option value="Absent"' + (status === 'Absent' ? ' selected' : '') + '>Absent</option>' +
-                    '</select>' +
+                    '<select class="form-select pp-form-select" id="' + id + 'Status" data-label="Attendance" required' + disabled + '></select>' +
                 '</div>' +
+                '<div class="col-12"><div class="fm-status-hint" id="' + id + 'Hint"></div></div>' +
                 (time
                     ? '<div class="col-12"><label for="' + id + 'Reason" class="pp-form-label">Reason for correction <span class="text-muted fw-normal">(required only if you change this check)</span></label>' +
                       '<input type="text" class="form-control pp-form-control" id="' + id + 'Reason" maxlength="255" data-validate="text" data-label="Reason for the correction"' + disabled + '></div>'
                     : '') +
             '</div>' +
-            (time ? '<div class="fm-check-recorded">Recorded by ' + escapeHtml(by || '—') + '</div>' : '') +
-            (locked || future ? '' :
+            (waiting ? '<p class="fm-note mt-2 mb-0">Record the beginning check first.</p>' : '') +
+            (time ? '<div class="fm-check-recorded">Recorded by ' + escapeHtml(by || '—') +
+                (start && r.lateMinutes ? ' · ' + r.lateMinutes + ' min late' : '') + '</div>' : '') +
+            (locked || future || waiting ? '' :
                 '<button type="submit" class="btn btn-pp-primary btn-sm mt-3">' +
                     (time ? 'Save Correction' : 'Record ' + (start ? 'Beginning' : 'Ending') + ' Check') + '</button>') +
         '</form></div>';
+    }
+
+    /**
+     * Fills "Faculty was" from the time: the status that follows it, plus
+     * Absent (the faculty member was not in the room). Keeps Absent if it was
+     * chosen (or recorded) and is still allowed.
+     */
+    function syncStatus(r, which, keep) {
+        var id = which + 'Check';
+        var timeInput = el(id + 'Time');
+        var select = el(id + 'Status');
+        if (!timeInput || !select) return;
+        var auto = statusAt(r, which, timeInput.value);
+        var current = keep || select.value;
+        select.innerHTML = auto
+            ? '<option value="' + auto + '">' + auto + '</option>' + (auto === 'Absent' ? '' : '<option value="Absent">Absent</option>')
+            : '<option value="" hidden selected>Enter the time first</option>';
+        if (auto && current === 'Absent') select.value = 'Absent';
+        renderStatusHint(r, which);
+    }
+
+    function renderStatusHint(r, which) {
+        var id = which + 'Check';
+        var hint = el(id + 'Hint');
+        var timeValue = el(id + 'Time').value;
+        var status = el(id + 'Status').value;
+        if (!timeValue || !status) { hint.innerHTML = ''; return; }
+        var text;
+        if (status === 'Late') {
+            var minutes = lateMinutesAt(r, timeValue);
+            text = '<span class="fm-check-status late">Late ' + minutes + ' min</span> — deducted in payroll at the hourly rate ÷ 60 × ' + minutes + ' minutes.';
+        } else if (status === 'Absent') {
+            text = '<span class="fm-check-status absent">Absent</span> — this class will not be paid.';
+        } else {
+            text = '<span class="fm-check-status present">Present</span>';
+        }
+        hint.innerHTML = text;
     }
 
     function reviewPanel(r) {
@@ -409,6 +472,13 @@
             '</form>';
     }
 
+    /** The late deduction that payroll will apply: minutes × (hourly rate ÷ 60). */
+    function lateNote(r) {
+        if (!r.lateMinutes) return '';
+        return '<span class="fm-late-note"><i class="bi bi-clock-history"></i> ' + r.lateMinutes +
+            ' min late — deducted in payroll at the hourly teaching rate ÷ 60 per minute.</span>';
+    }
+
     function openClass(classId) {
         var r = rows.find(function (x) { return x.classId === classId; });
         if (!r) return;
@@ -419,12 +489,12 @@
         var payable;
         if (r.approvalStatus === 'Approved') {
             payable = '<div class="fm-payable"><span>Approved payable teaching hours</span><strong>' + hours(r.payableHours) + '</strong>' +
-                '<span class="fm-note">Approved by ' + escapeHtml(r.approvedBy || '—') + ' · ' + escapeHtml((r.approvedAt || '').replace('T', ' ').slice(0, 16)) + '</span></div>';
+                '<span class="fm-note">Approved by ' + escapeHtml(r.approvedBy || '—') + ' · ' + escapeHtml((r.approvedAt || '').replace('T', ' ').slice(0, 16)) + '</span>' + lateNote(r) + '</div>';
         } else if (r.approvalStatus === 'Rejected') {
             payable = '<div class="fm-payable"><span>Rejected — no teaching hours will be paid</span><strong>0.00</strong></div>';
         } else if (r.payableIfApproved != null) {
             payable = '<div class="fm-payable"><span>Payable if approved</span><strong>' + hours(r.payableIfApproved) + '</strong>' +
-                '<span class="fm-note">Paid only when both checks found the faculty member present.</span></div>';
+                '<span class="fm-note">Paid only when the faculty member was present (or late) at the start and present at the end.</span>' + lateNote(r) + '</div>';
         } else {
             payable = '<div class="fm-payable"><span>Payable hours</span><strong>—</strong><span class="fm-note">Recorded after both checks and approval.</span></div>';
         }
@@ -448,20 +518,18 @@
             (r.reviewNote ? '<p class="mb-2"><strong>Review note:</strong> ' + escapeHtml(r.reviewNote) + '</p>' : '') +
             '<div class="fm-section-title">Classroom Checks</div>' +
             '<div class="row g-3">' + checkForm(r, 'start') + checkForm(r, 'end') + '</div>' +
-            '<div class="mt-3">' +
-                '<label for="checkRemarks" class="pp-form-label">Remarks <span class="text-muted fw-normal">(optional, saved with the next check)</span></label>' +
-                '<input type="text" class="form-control pp-form-control" id="checkRemarks" maxlength="255" value="' + escapeHtml(r.remarks || '') + '"' +
-                    (r.approvalStatus === 'Approved' ? ' disabled' : '') + '>' +
-            '</div>' +
             '<div class="fm-section-title">Payable Teaching Hours</div>' + payable +
             reviewPanel(r) +
             '<div class="fm-section-title">Audit History</div>' +
             '<ul class="fm-history" id="auditList"><li class="text-muted">Loading…</li></ul>';
 
-        ['startCheckForm', 'endCheckForm'].forEach(function (formId) {
-            var form = el(formId);
+        ['start', 'end'].forEach(function (which) {
+            var form = el(which + 'CheckForm');
             if (!form) return;
             PPValidate.attach(form);
+            syncStatus(r, which, which === 'start' ? r.startCheckStatus : r.endCheckStatus);
+            el(which + 'CheckTime').addEventListener('input', function () { syncStatus(r, which); });
+            el(which + 'CheckStatus').addEventListener('change', function () { renderStatusHint(r, which); });
             form.addEventListener('submit', function (e) {
                 e.preventDefault();
                 submitCheck(r, form);
@@ -505,7 +573,6 @@
             check: which,
             time: el(prefix + 'Time').value,
             status: el(prefix + 'Status').value,
-            remarks: el('checkRemarks').value.trim(),
             reason: el(prefix + 'Reason') ? el(prefix + 'Reason').value.trim() : null
         };
         var btn = form.querySelector('button[type="submit"]');
@@ -513,7 +580,7 @@
         postJson('api/teaching-hours/classes/' + r.classId + '/checks', payload).then(function (data) {
             btn.disabled = false;
             if (!data.success) {
-                var map = { time: prefix + 'Time', status: prefix + 'Status', reason: prefix + 'Reason', remarks: 'checkRemarks' };
+                var map = { time: prefix + 'Time', status: prefix + 'Status', reason: prefix + 'Reason' };
                 if (!PPValidate.showServerError(el('checkBody'), data, map)) PPToast.error(data.message || 'Could not save the check.');
                 return;
             }

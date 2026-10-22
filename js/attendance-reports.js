@@ -1,7 +1,7 @@
 /**
  * Attendance Report: per employee, the working days present, late, absent
  * or on approved leave in a date range (api/dtr/summary). Defaults to the
- * current pay period (11th–25th or 26th–10th).
+ * current pay period (Maintenance → Payroll Periods).
  */
 (function () {
     PayrollProLayout.init({
@@ -26,18 +26,13 @@
             .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
-    /* Cut-off: the 11th–25th or the 26th–10th. Choosing one fills From and
+    /* Cut-off (Maintenance → Payroll Periods). Choosing one fills From and
        To; changing a date by hand switches it to "Custom dates". */
     var reportCutoff = document.getElementById('reportCutoff');
 
     function cutoffContaining(date) {
-        var start = date.getDate() >= 26 ? new Date(date.getFullYear(), date.getMonth(), 26)
-            : date.getDate() >= 11 ? new Date(date.getFullYear(), date.getMonth(), 11)
-            : new Date(date.getFullYear(), date.getMonth() - 1, 26);
-        var end = start.getDate() === 11
-            ? new Date(start.getFullYear(), start.getMonth(), 25)
-            : new Date(start.getFullYear(), start.getMonth() + 1, 10);
-        return { start: iso(start), end: iso(end), startDate: start, endDate: end };
+        var p = PPPeriods.of(date);
+        return { start: p.from, end: p.to, startDate: p.start, endDate: p.end };
     }
 
     function cutoffLabel(c) {
@@ -52,7 +47,7 @@
     }
 
     // The current cut-off and the 24 before it (one year), newest first.
-    (function fillCutoffs() {
+    function fillCutoffs() {
         var c = cutoffContaining(new Date());
         var options = [];
         for (var i = 0; i < 25; i++) {
@@ -67,7 +62,7 @@
         reportFrom.value = current.start;
         reportTo.value = current.end;
         syncCutoff();
-    })();
+    }
 
     reportCutoff.addEventListener('change', function () {
         if (reportCutoff.value === 'custom') {
@@ -211,5 +206,8 @@
     reportType.addEventListener('change', render);
     reportFrom.addEventListener('change', function () { syncCutoff(); load(); });
     reportTo.addEventListener('change', function () { syncCutoff(); load(); });
-    load();
+    PPPeriods.load().then(function () {
+        fillCutoffs();
+        load();
+    });
 })();

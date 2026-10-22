@@ -2,6 +2,7 @@ package com.stibalayan.payroll.schedule;
 
 import com.stibalayan.payroll.common.ApiException;
 import com.stibalayan.payroll.common.Validation;
+import com.stibalayan.payroll.settings.SettingsService;
 import com.stibalayan.payroll.employee.EmployeeId;
 import com.stibalayan.payroll.employee.StaffMember;
 import com.stibalayan.payroll.teaching.TeachingAttendanceRepository;
@@ -34,8 +35,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class FacultyScheduleService {
 
     private static final DateTimeFormatter HH_MM = DateTimeFormatter.ofPattern("HH:mm");
-    /** Fixed grace period for classroom checks: 15 minutes before or after. */
-    private static final int GRACE_MINUTES = 15;
     private static final int MAX_RANGE_DAYS = 400;
     private static final int MAX_REPEAT_WEEKS = 26;   // one semester and then some
     private static final Set<String> INACTIVE = Set.of("Inactive", "Resigned", "Terminated");
@@ -45,9 +44,12 @@ public class FacultyScheduleService {
     private final TeachingAttendanceRepository attendance;
     private final Teachers teachers;
     private final UserNames userNames;
+    private final SettingsService settings;
 
     public FacultyScheduleService(FacultyClassRepository classes, ScheduleHistoryRepository history,
-                                  TeachingAttendanceRepository attendance, Teachers teachers, UserNames userNames) {
+                                  TeachingAttendanceRepository attendance, Teachers teachers, UserNames userNames,
+                                  SettingsService settings) {
+        this.settings = settings;
         this.classes = classes;
         this.history = history;
         this.attendance = attendance;
@@ -250,11 +252,13 @@ public class FacultyScheduleService {
         if (!end.isAfter(start)) {
             throw Validation.invalid("scheduledEnd", "The end time must be later than the start time.");
         }
-        // The beginning and ending check windows (15 minutes each side) must not overlap.
-        if (GRACE_MINUTES * 2L >= java.time.Duration.between(start, end).toMinutes()) {
-            throw Validation.invalid("scheduledEnd", "A class must be longer than " + (GRACE_MINUTES * 2) + " minutes.");
+        // The beginning and ending check windows (the class grace period each side, Maintenance →
+        // Grace Period) must not overlap.
+        int grace = settings.classGraceMinutes();
+        if (grace * 2L >= java.time.Duration.between(start, end).toMinutes()) {
+            throw Validation.invalid("scheduledEnd", "A class must be longer than " + (grace * 2) + " minutes.");
         }
-        return new Fields(subject, section, room, date, start, end, GRACE_MINUTES);
+        return new Fields(subject, section, room, date, start, end, grace);
     }
 
     private StaffMember activeTeacher(String employeeId) {
