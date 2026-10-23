@@ -1,6 +1,7 @@
 package com.stibalayan.payroll.auth;
 
 import com.stibalayan.payroll.audit.AuditService;
+import com.stibalayan.payroll.notification.EmailLog;
 import com.stibalayan.payroll.common.ApiException;
 import com.stibalayan.payroll.common.Validation;
 import com.stibalayan.payroll.user.User;
@@ -111,8 +112,10 @@ public class PasswordResetService {
         jdbc.update("UPDATE password_reset SET used_at = NOW() WHERE user_id = ? AND used_at IS NULL", user.getId());
         jdbc.update("INSERT INTO password_reset (user_id, otp_hash, expires_at) VALUES (?, ?, ?)",
                 user.getId(), encoder.encode(code), Timestamp.valueOf(LocalDateTime.now().plusMinutes(CODE_MINUTES)));
+        // Logged under "Email" (Audit Trail and the bell); never the code itself.
         try {
             sendCode(user, code);
+            audit.log(user.getId(), EmailLog.MODULE, EmailLog.RESET_CODE, "Password reset code sent to " + user.getEmail());
         } catch (Exception e) {
             log.warn("Could not email a password reset code to {}", user.getEmail(), e);
             throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "Could not send the email right now. Try again later.");

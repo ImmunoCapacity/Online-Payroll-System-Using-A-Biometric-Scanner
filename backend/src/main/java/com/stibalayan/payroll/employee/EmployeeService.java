@@ -64,6 +64,8 @@ public class EmployeeService {
     private static final BigDecimal MAX_OFFICE_HOURS = new BigDecimal("24.0");     // per day
 
     private static final String ID_PREFIX = "STIBLN-";
+    /** Employee ID: STIBLN-####-M or -F (4 or more digits). */
+    private static final java.util.regex.Pattern EMPLOYEE_ID = java.util.regex.Pattern.compile("^STIBLN-\\d{4,}-[MF]$");
 
     private final FacultyStaffRepository faculty;
     private final AdminStaffRepository admins;
@@ -98,7 +100,11 @@ public class EmployeeService {
         // Email must be unique across BOTH tables; the database can only
         // enforce uniqueness within one table at a time.
         checkUnique(request, null);
-        String employeeNumber = ID_PREFIX + nextSequence() + "-" + genderLetter(request.gender());
+        // The ID entered in the form, or the next STIBLN-####-M/F when left blank.
+        String employeeNumber = employeeNumber(request, null);
+        if (employeeNumber == null) {
+            employeeNumber = ID_PREFIX + nextSequence() + "-" + genderLetter(request.gender());
+        }
 
         if (department.equals(FACULTY)) {
             FacultyStaff staff = new FacultyStaff();
@@ -120,16 +126,18 @@ public class EmployeeService {
         validate(request);
         checkRank(request.instructorRank());
         checkUnique(request, eid);
+        // A changed ID is used as entered; otherwise the letter follows a corrected gender.
+        String entered = employeeNumber(request, eid);
 
         if (eid.isFaculty()) {
             FacultyStaff staff = faculty.findById(eid.number()).orElseThrow(EmployeeService::notFound);
             apply(staff, request);
-            staff.setEmployeeNumber(withGender(staff.getEmployeeNumber(), request.gender()));
+            staff.setEmployeeNumber(entered != null ? entered : withGender(staff.getEmployeeNumber(), request.gender()));
             saveOrExplain(() -> faculty.saveAndFlush(staff));
         } else {
             AdminStaff staff = admins.findById(eid.number()).orElseThrow(EmployeeService::notFound);
             apply(staff, request);
-            staff.setEmployeeNumber(withGender(staff.getEmployeeNumber(), request.gender()));
+            staff.setEmployeeNumber(entered != null ? entered : withGender(staff.getEmployeeNumber(), request.gender()));
             saveOrExplain(() -> admins.saveAndFlush(staff));
         }
     }
@@ -303,6 +311,39 @@ public class EmployeeService {
             return employeeNumber;
         }
         return employeeNumber.substring(0, employeeNumber.length() - 1) + genderLetter(gender);
+    }
+
+    /**
+     * The Employee ID entered in the form, upper-cased, or null when left blank.
+     * Format STIBLN-####-M/F (EMPLOYEE_ID: 4 or more digits, at most 20
+     * characters since the payroll table keeps it too), the letter matching
+     * the gender, and not used by any other employee, archived ones included.
+     */
+    private String employeeNumber(EmployeeRequest r, EmployeeId current) {
+        String id = r.employeeNumber() == null ? "" : r.employeeNumber().trim().toUpperCase();
+        if (id.isEmpty()) {
+            return null;
+        }
+        if (id.length() > 20 || !EMPLOYEE_ID.matcher(id).matches()) {
+            throw Validation.invalid("employeeNumber",
+                    "Employee ID must look like STIBLN-0037-M: STIBLN, a dash, at least 4 digits, a dash, then M or F.");
+        }
+        if (!id.endsWith("-" + genderLetter(r.gender()))) {
+            throw Validation.invalid("employeeNumber", "The last letter of the Employee ID must be " + genderLetter(r.gender())
+                    + " (" + r.gender() + ").");
+        }
+        boolean taken;
+        if (current == null) {
+            taken = faculty.existsByEmployeeNumber(id) || admins.existsByEmployeeNumber(id);
+        } else if (current.isFaculty()) {
+            taken = faculty.existsByEmployeeNumberAndIdNot(id, current.number()) || admins.existsByEmployeeNumber(id);
+        } else {
+            taken = admins.existsByEmployeeNumberAndIdNot(id, current.number()) || faculty.existsByEmployeeNumber(id);
+        }
+        if (taken) {
+            throw Validation.invalid("employeeNumber", "This Employee ID is already used by another employee.");
+        }
+        return id;
     }
 
     /** An Instructor Rank must be one of the ranks in Maintenance (table employee_rank). */

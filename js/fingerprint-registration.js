@@ -211,6 +211,7 @@
             PPToast.success(emp.displayName + ' is registered as device User ID ' + data.employee.fingerprintId + '.');
             // New registrations email the employee a Data Privacy Act notice.
             if (data.notice) {
+                window.dispatchEvent(new Event('pp:notifications-refresh'));
                 if (data.notice.status === 'sent') PPToast.success(data.notice.message);
                 else PPToast.error(data.notice.message);
             }

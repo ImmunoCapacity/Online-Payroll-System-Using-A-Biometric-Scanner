@@ -13,6 +13,8 @@ import java.math.BigDecimal;
  * Faculty/Admin employee has both sets: rate is their office rate per hour and
  * teachingRate their rate per hour/unit for teaching.
  * basicPay is the monthly basic pay, kept for the record only.
+ * employeeNumber is the Employee ID as entered; blank on create gets the
+ * next STIBLN-####-M/F.
  */
 public record EmployeeRequest(
         String employeeNumber,

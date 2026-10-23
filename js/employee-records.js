@@ -264,6 +264,7 @@
     function resetForm() {
         employeeForm.reset();
         employeeId.value = '';
+        idEdited = false;
         modalTitle.textContent = 'Add Employee';
         currentStatus = 'Active';
         employeeDepartmentSelect.value = '';
@@ -286,7 +287,28 @@
         return employeeGender.value === 'Female' ? 'F' : employeeGender.value === 'Male' ? 'M' : '?';
     }
 
+    // Once the Employee ID is typed in, it is kept as typed (no suggested number or letter).
+    let idEdited = false;
+    employeeNumber.addEventListener('input', function () { idEdited = true; });
+
+    // STIBLN-####-M/F (4 or more digits; M or F matching the Gender field), and
+    // unique among all employees (archived included). Same rule on the server.
+    const EMPLOYEE_ID = /^STIBLN-\d{4,}-[MF]$/;
+    employeeNumber.ppValidator = function (value) {
+        const id = value.trim().toUpperCase();
+        if (!EMPLOYEE_ID.test(id)) return 'Employee ID must look like STIBLN-0037-M: STIBLN, a dash, at least 4 digits, a dash, then M or F.';
+        const letter = genderLetter();
+        if (letter !== '?' && id.slice(-1) !== letter) {
+            return 'The last letter must be ' + letter + ' (' + employeeGender.value + ').';
+        }
+        const taken = employeeList.some(function (e) {
+            return String(e.employeeNumber).toUpperCase() === id && e.id !== employeeId.value;
+        });
+        return taken ? 'This Employee ID is already used by another employee.' : '';
+    };
+
     function showEmployeeId() {
+        if (idEdited) return;
         if (employeeId.value) {
             employeeNumber.value = employeeNumber.value.replace(/-[MF?]$/, '-' + genderLetter());
         } else {
@@ -310,7 +332,7 @@
         fetch('api/employees/next-id')
             .then(function (response) { return response.json(); })
             .then(function (data) {
-                if (!data.success || employeeId.value) return;
+                if (!data.success || employeeId.value || idEdited) return;
                 nextIdBase = data.nextId;
                 showEmployeeId();
             })
@@ -373,8 +395,9 @@
             return;
         }
 
-        // No employeeNumber: the server assigns it (STIBLN-####-M/F).
+        // Employee ID as shown (suggested STIBLN-####-M/F, or typed in).
         const payload = {
+            employeeNumber: employeeNumber.value.trim().toUpperCase(),
             firstName: employeeFirstName.value.trim(),
             lastName: employeeLastName.value.trim(),
             department: employeeDepartmentSelect.value,

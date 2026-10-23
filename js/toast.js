@@ -32,7 +32,7 @@
         toast.className = 'pp-toast pp-toast-' + (type || 'success');
         toast.setAttribute('role', 'status');
 
-        var icon = type === 'error' ? 'bi-x-circle-fill' : 'bi-check-circle-fill';
+        var icon = type === 'error' ? 'bi-x-circle-fill' : type === 'email' ? 'bi-envelope-check-fill' : 'bi-check-circle-fill';
         toast.innerHTML =
             '<i class="bi ' + icon + '"></i>' +
             '<span class="pp-toast-message"></span>' +
@@ -59,7 +59,9 @@
 
     global.PPToast = {
         success: function (message) { show(message, 'success'); },
-        error: function (message) { show(message, 'error'); }
+        error: function (message) { show(message, 'error'); },
+        // New email notification (the bell): envelope icon.
+        email: function (message) { show(message, 'email'); }
     };
 
 })(window);

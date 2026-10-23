@@ -1,7 +1,10 @@
 package com.stibalayan.payroll.fingerprint;
 
+import com.stibalayan.payroll.auth.AuthInterceptor;
 import com.stibalayan.payroll.auth.RequireModule;
 import com.stibalayan.payroll.auth.SystemModule;
+import com.stibalayan.payroll.notification.EmailLog;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,8 +28,10 @@ public class FingerprintController {
 
     private final FingerprintService fingerprints;
     private final FingerprintNoticeService notices;
+    private final EmailLog emailLog;
 
-    public FingerprintController(FingerprintService fingerprints, FingerprintNoticeService notices) {
+    public FingerprintController(FingerprintService fingerprints, FingerprintNoticeService notices, EmailLog emailLog) {
+        this.emailLog = emailLog;
         this.fingerprints = fingerprints;
         this.notices = notices;
     }
@@ -40,12 +45,17 @@ public class FingerprintController {
     }
 
     @PutMapping("/{id}")
-    public Map<String, Object> assign(@PathVariable String id, @RequestBody Map<String, String> body) {
+    public Map<String, Object> assign(@PathVariable String id, @RequestBody Map<String, String> body, HttpServletRequest http) {
         boolean newRegistration = !fingerprints.isRegistered(id);
         FingerprintEmployee employee = fingerprints.assign(id, body.get("fingerprintId"));
         // Sent after the registration is saved; a mail problem never undoes it.
         if (newRegistration) {
-            return Map.of("success", true, "employee", employee, "notice", notices.sendRegistered(id));
+            Map<String, String> notice = notices.sendRegistered(id);
+            // Shown in the bell (and Audit Trail), sent or not.
+            emailLog.log(AuthInterceptor.currentUser(http).id(),
+                    "sent".equals(notice.get("status")) ? EmailLog.FINGERPRINT : EmailLog.FINGERPRINT_FAILED,
+                    employee.displayName() + ": " + notice.get("message"));
+            return Map.of("success", true, "employee", employee, "notice", notice);
         }
         return Map.of("success", true, "employee", employee);
     }

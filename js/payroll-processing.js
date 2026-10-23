@@ -835,6 +835,7 @@
                     return;
                 }
                 run = data.run;
+                window.dispatchEvent(new Event('pp:notifications-refresh'));
                 if (data.sent === data.total) {
                     PPToast.success('Payslips emailed to all ' + data.total + ' employee' + (data.total === 1 ? '' : 's') + '.');
                 } else {

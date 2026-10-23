@@ -820,19 +820,44 @@
                 : '<div class="pp-notif-empty"><i class="bi bi-check2-circle"></i> You\'re all caught up.</div>';
         }
 
-        function load() {
+        function load(quiet) {
             fetch('api/notifications')
                 .then(function (r) { return r.json(); })
                 .then(function (data) {
                     if (!data.success) throw new Error(data.message);
                     items = data.notifications || [];
                     render();
+                    popNewEmails(quiet === true);
                 })
                 .catch(function () {
                     if (!items.length) {
                         list.innerHTML = '<div class="pp-notif-empty">Notifications aren\'t available right now.</div>';
                     }
                 });
+        }
+
+        // A new email notification (payslips, fingerprint notice, reset code) also
+        // pops up once as a toast; the ids already shown are kept in localStorage.
+        function popNewEmails(quiet) {
+            var popped;
+            try { popped = JSON.parse(localStorage.getItem('ppNotifPopped') || '[]'); } catch (e) { popped = []; }
+            var seen = seenIds();
+            var fresh = items.filter(function (n) {
+                return n.id.indexOf('email-') === 0 && popped.indexOf(n.id) === -1 && seen.indexOf(n.id) === -1;
+            });
+            if (!fresh.length) return;
+            if (!quiet && window.PPToast && dotEnabled()) fresh.slice(0, 3).forEach(function (n) {
+                if (n.level === 'danger') PPToast.error(n.title + ': ' + n.text);
+                else PPToast.email(n.title + ': ' + n.text);
+            });
+            try {
+                var current = items.map(function (n) { return n.id; });
+                localStorage.setItem('ppNotifPopped', JSON.stringify(popped.filter(function (id) {
+                    return current.indexOf(id) > -1;
+                }).concat(fresh.map(function (n) { return n.id; }))));
+            } catch (e) {
+                // storage unavailable: it may pop up again on the next page
+            }
         }
 
         function markSeen() {
@@ -873,7 +898,10 @@
         });
 
         load();
-        setInterval(load, 60000);
+        setInterval(function () { if (!document.hidden) load(); }, 30000);
+        // Pages that just sent an email ask for the bell to refresh at once.
+        // (quiet: that page already showed its own message, so no second pop-up.)
+        window.addEventListener('pp:notifications-refresh', function () { load(true); });
     }
 
     function bindUserMenu() {

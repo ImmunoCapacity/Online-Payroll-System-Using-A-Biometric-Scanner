@@ -38,6 +38,7 @@ public class NotificationController {
 
     private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("EEE, MMM d", Locale.ENGLISH);
     private static final DateTimeFormatter SHORT = DateTimeFormatter.ofPattern("MMM d", Locale.ENGLISH);
+    private static final DateTimeFormatter EMAIL_TIME = DateTimeFormatter.ofPattern("MMM d, h:mm a", Locale.ENGLISH);
 
     private final JdbcTemplate jdbc;
     private final BiometricLiveSync liveSync;
@@ -137,6 +138,28 @@ public class NotificationController {
                         "payroll-processing.html"));
             });
         }
+
+        // Emails sent (or not) in the last 7 days, newest first (EmailLog): payslips for
+        // the Payroll Master, fingerprint notices for the attendance roles, password
+        // reset codes for the System Administrator and the user they were sent to.
+        jdbc.queryForList("SELECT audit_id, user_id, action, details, created_at FROM audit_trail "
+                + "WHERE module = ? AND created_at >= NOW() - INTERVAL 7 DAY ORDER BY created_at DESC, audit_id DESC LIMIT 20",
+                EmailLog.MODULE).forEach(e -> {
+            String action = String.valueOf(e.get("action"));
+            boolean mine = e.get("user_id") != null && ((Number) e.get("user_id")).intValue() == user.id();
+            boolean visible = action.startsWith("Payslips") ? SystemModule.PAYROLL.allows(role)
+                    : action.startsWith("Fingerprint") ? SystemModule.FINGERPRINT_REGISTRATION.allows(role)
+                    : action.startsWith("Reset code") && (SystemModule.UTILITY.allows(role) || mine);
+            if (!visible) return;
+            boolean failed = action.contains(" not ");
+            java.time.LocalDateTime at = ((java.sql.Timestamp) e.get("created_at")).toLocalDateTime();
+            String href = action.startsWith("Payslips") ? "payroll-processing.html"
+                    : action.startsWith("Fingerprint") ? "fingerprint-registration.html"
+                    : SystemModule.UTILITY.allows(role) ? "audit-trail.html" : null;
+            items.add(item("email-" + e.get("audit_id"), failed ? "bi-envelope-exclamation" : "bi-envelope-check",
+                    failed ? "danger" : "success", action,
+                    e.get("details") + " · " + at.format(EMAIL_TIME), href));
+        });
 
         // Holidays in the next 7 days.
         if (SystemModule.DASHBOARD.allows(role)) {

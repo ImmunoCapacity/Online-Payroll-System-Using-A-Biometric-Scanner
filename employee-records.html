@@ -105,11 +105,12 @@
                     <div class="modal-body">
                         <input type="hidden" id="employeeId">
 
-                        <!-- Assigned by the server: STIBLN-####-M / -F (number + gender letter). -->
+                        <!-- Suggested next ID (STIBLN-####-M / -F, letter follows Gender); can be changed. -->
                         <div class="row g-3 mb-4">
                             <div class="col-md-5">
                                 <label for="employeeNumber" class="pp-form-label">Employee ID</label>
-                                <input type="text" class="form-control pp-form-control pp-employee-id" id="employeeNumber" readonly tabindex="-1">
+                                <input type="text" class="form-control pp-form-control pp-employee-id" id="employeeNumber" maxlength="20" placeholder="STIBLN-0000-M" data-label="Employee ID" autocomplete="off" required>
+                                <div class="invalid-feedback">Enter the Employee ID.</div>
                             </div>
                         </div>
 

@@ -7,6 +7,7 @@ import com.stibalayan.payroll.benefit.BenefitService;
 import com.stibalayan.payroll.common.Validation;
 import com.stibalayan.payroll.contribution.ContributionTableService;
 import com.stibalayan.payroll.loan.LoanService;
+import com.stibalayan.payroll.notification.EmailLog;
 import com.stibalayan.payroll.rate.RateService;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.HashMap;
@@ -51,10 +52,12 @@ public class PayrollController {
     private final ContributionTableService contributionTables;
     private final RateService rates;
     private final PayrollRunService runs;
+    private final EmailLog emailLog;
 
     public PayrollController(PayslipMailService payslipMail, PayrollHoursService payrollHours, LoanService loans,
                              BenefitService benefits, ContributionTableService contributionTables, RateService rates,
-                             PayrollRunService runs) {
+                             PayrollRunService runs, EmailLog emailLog) {
+        this.emailLog = emailLog;
         this.payslipMail = payslipMail;
         this.payrollHours = payrollHours;
         this.loans = loans;
@@ -132,9 +135,15 @@ public class PayrollController {
 
     /** Emails the stored payslips of a released period (Distribute Payslips). */
     @PostMapping("/runs/{id}/email")
-    public Map<String, Object> email(@PathVariable int id) {
-        List<Map<String, String>> results = payslipMail.send(runs.payslips(id));
+    public Map<String, Object> email(@PathVariable int id, HttpServletRequest http) {
+        PayslipRequest payslips = runs.payslips(id);
+        List<Map<String, String>> results = payslipMail.send(payslips);
         long sent = results.stream().filter(r -> "sent".equals(r.get("status"))).count();
+        long notSent = results.size() - sent;
+        // Shown in the bell (and Audit Trail): how many payslips went out.
+        emailLog.log(AuthInterceptor.currentUser(http).id(), sent > 0 ? EmailLog.PAYSLIPS : EmailLog.PAYSLIPS_FAILED,
+                payslips.periodLabel() + " · " + sent + " of " + results.size() + " payslip" + (results.size() == 1 ? "" : "s") + " sent"
+                        + (notSent > 0 && sent > 0 ? " · " + notSent + " not sent" : ""));
         Map<String, Object> run = runs.recordEmails(id, results, sent);
         return Map.of("success", true, "sent", sent, "total", results.size(), "results", results, "run", run);
     }

@@ -2587,15 +2587,12 @@ body.pp-sidebar-collapsed .pp-sidebar-group {
     display: none;                  /* Chrome, Edge, Safari */
 }
 
-/* Employee ID in the Add/Edit Employee form: assigned by the server, read-only. */
-.pp-form-control.pp-employee-id,
-.pp-form-control.pp-employee-id:focus {
-    background: var(--pp-surface-alt, #f4f7f9);
+/* Employee ID in the Add/Edit Employee form: suggested by the system, editable. */
+.pp-form-control.pp-employee-id {
     color: var(--pp-primary-dark, #134a61);
+    font-size: inherit;
     font-weight: 600;
     letter-spacing: 0.03em;
-    cursor: default;
-    box-shadow: none;
 }
 
 /* Number fields: no up/down arrows (values are typed in). */
@@ -2799,3 +2796,9 @@ table.report-table > tfoot > tr::before {
         color: #000 !important;
     }
 }
+
+.pp-toast-email { border-left-color: var(--pp-primary); }
+
+.pp-toast-email i { color: var(--pp-primary); }
+
+.pp-notif-success .pp-notif-icon { background: #DCFCE7; color: #166534; }
