@@ -43,10 +43,8 @@ SET @master := (SELECT user_id FROM users
 DELETE FROM payroll_run
 WHERE (pay_period_start, pay_period_end) IN
       (('2026-09-11', '2026-09-25'), ('2026-09-26', '2026-10-10'), ('2026-10-11', '2026-10-25'));
-DELETE FROM faculty_staff WHERE employee_number IN ('STIBLN-0001-M', 'STIBLN-0002-F', 'STIBLN-0003-M', 'STIBLN-0004-M', 'STIBLN-0005-M', 'STIBLN-0006-M', 'STIBLN-0007-F', 'STIBLN-0008-F', 'STIBLN-0009-F', 'STIBLN-0010-F')
-    AND email_address LIKE '%@example.com';
-DELETE FROM admin_staff   WHERE employee_number IN ('STIBLN-0001-M', 'STIBLN-0002-F', 'STIBLN-0003-M', 'STIBLN-0004-M', 'STIBLN-0005-M', 'STIBLN-0006-M', 'STIBLN-0007-F', 'STIBLN-0008-F', 'STIBLN-0009-F', 'STIBLN-0010-F')
-    AND email_address LIKE '%@example.com';
+DELETE FROM faculty_staff WHERE employee_number IN ('STIBLN-0001-M', 'STIBLN-0002-F', 'STIBLN-0003-M', 'STIBLN-0004-M', 'STIBLN-0005-M', 'STIBLN-0006-M', 'STIBLN-0007-F', 'STIBLN-0008-F', 'STIBLN-0009-F', 'STIBLN-0010-F');
+DELETE FROM admin_staff   WHERE employee_number IN ('STIBLN-0001-M', 'STIBLN-0002-F', 'STIBLN-0003-M', 'STIBLN-0004-M', 'STIBLN-0005-M', 'STIBLN-0006-M', 'STIBLN-0007-F', 'STIBLN-0008-F', 'STIBLN-0009-F', 'STIBLN-0010-F');
 
 
 -- ---------------------------------------------------------------
@@ -530,10 +528,8 @@ WHERE (pay_period_start, pay_period_end) IN
       (('2026-08-11', '2026-08-25'), ('2026-08-26', '2026-09-10'),
        ('2026-09-11', '2026-09-25'), ('2026-09-26', '2026-10-10'), ('2026-10-11', '2026-10-25'));
 SET @ids20 := "'STIBLN-0011-M', 'STIBLN-0012-F', 'STIBLN-0013-M', 'STIBLN-0014-F', 'STIBLN-0015-M', 'STIBLN-0016-F', 'STIBLN-0017-M', 'STIBLN-0018-F', 'STIBLN-0019-M', 'STIBLN-0020-F', 'STIBLN-0021-M', 'STIBLN-0022-F', 'STIBLN-0023-M', 'STIBLN-0024-F', 'STIBLN-0025-M', 'STIBLN-0026-F', 'STIBLN-0027-M', 'STIBLN-0028-F', 'STIBLN-0029-M', 'STIBLN-0030-F'";
-DELETE FROM faculty_staff WHERE employee_number IN ('STIBLN-0011-M', 'STIBLN-0012-F', 'STIBLN-0013-M', 'STIBLN-0014-F', 'STIBLN-0015-M', 'STIBLN-0016-F', 'STIBLN-0017-M', 'STIBLN-0018-F', 'STIBLN-0019-M', 'STIBLN-0020-F', 'STIBLN-0021-M', 'STIBLN-0022-F', 'STIBLN-0023-M', 'STIBLN-0024-F', 'STIBLN-0025-M', 'STIBLN-0026-F', 'STIBLN-0027-M', 'STIBLN-0028-F', 'STIBLN-0029-M', 'STIBLN-0030-F')
-    AND email_address LIKE '%@example.com';
-DELETE FROM admin_staff   WHERE employee_number IN ('STIBLN-0011-M', 'STIBLN-0012-F', 'STIBLN-0013-M', 'STIBLN-0014-F', 'STIBLN-0015-M', 'STIBLN-0016-F', 'STIBLN-0017-M', 'STIBLN-0018-F', 'STIBLN-0019-M', 'STIBLN-0020-F', 'STIBLN-0021-M', 'STIBLN-0022-F', 'STIBLN-0023-M', 'STIBLN-0024-F', 'STIBLN-0025-M', 'STIBLN-0026-F', 'STIBLN-0027-M', 'STIBLN-0028-F', 'STIBLN-0029-M', 'STIBLN-0030-F')
-    AND email_address LIKE '%@example.com';
+DELETE FROM faculty_staff WHERE employee_number IN ('STIBLN-0011-M', 'STIBLN-0012-F', 'STIBLN-0013-M', 'STIBLN-0014-F', 'STIBLN-0015-M', 'STIBLN-0016-F', 'STIBLN-0017-M', 'STIBLN-0018-F', 'STIBLN-0019-M', 'STIBLN-0020-F', 'STIBLN-0021-M', 'STIBLN-0022-F', 'STIBLN-0023-M', 'STIBLN-0024-F', 'STIBLN-0025-M', 'STIBLN-0026-F', 'STIBLN-0027-M', 'STIBLN-0028-F', 'STIBLN-0029-M', 'STIBLN-0030-F');
+DELETE FROM admin_staff   WHERE employee_number IN ('STIBLN-0011-M', 'STIBLN-0012-F', 'STIBLN-0013-M', 'STIBLN-0014-F', 'STIBLN-0015-M', 'STIBLN-0016-F', 'STIBLN-0017-M', 'STIBLN-0018-F', 'STIBLN-0019-M', 'STIBLN-0020-F', 'STIBLN-0021-M', 'STIBLN-0022-F', 'STIBLN-0023-M', 'STIBLN-0024-F', 'STIBLN-0025-M', 'STIBLN-0026-F', 'STIBLN-0027-M', 'STIBLN-0028-F', 'STIBLN-0029-M', 'STIBLN-0030-F');
 
 
 -- ---------------------------------------------------------------
@@ -1062,3 +1058,249 @@ SELECT CONCAT('Benefit: ', b.benefit_name), COUNT(*) FROM employee_benefit eb JO
     LEFT JOIN admin_staff a ON a.adminstaff_id = eb.adminstaff_id
     WHERE COALESCE(f.employee_number, a.employee_number) IN ('STIBLN-0011-M', 'STIBLN-0012-F', 'STIBLN-0013-M', 'STIBLN-0014-F', 'STIBLN-0015-M', 'STIBLN-0016-F', 'STIBLN-0017-M', 'STIBLN-0018-F', 'STIBLN-0019-M', 'STIBLN-0020-F', 'STIBLN-0021-M', 'STIBLN-0022-F', 'STIBLN-0023-M', 'STIBLN-0024-F', 'STIBLN-0025-M', 'STIBLN-0026-F', 'STIBLN-0027-M', 'STIBLN-0028-F', 'STIBLN-0029-M', 'STIBLN-0030-F')
     GROUP BY b.benefit_name;
+
+
+-- ---------------------------------------------------------------
+-- Extend the original 10 employees' attendance back to Aug 11, 2026
+-- so every pay period (Aug 11 onward) has payable hours for them, same
+-- as the 20 employees added later. Idempotent: safe to re-run.
+-- ---------------------------------------------------------------
+
+SET @master := (SELECT user_id FROM users WHERE role IN ('Payroll Master') ORDER BY user_id LIMIT 1);
+SET @masterName := (SELECT CONCAT(first_name, ' ', last_name) FROM users WHERE user_id = @master);
+
+SET @f1 := (SELECT faculty_id FROM faculty_staff WHERE employee_number = 'STIBLN-0006-M');
+SET @f2 := (SELECT faculty_id FROM faculty_staff WHERE employee_number = 'STIBLN-0009-F');
+SET @f3 := (SELECT faculty_id FROM faculty_staff WHERE employee_number = 'STIBLN-0003-M');
+SET @f4 := (SELECT faculty_id FROM faculty_staff WHERE employee_number = 'STIBLN-0010-F');
+SET @a1 := (SELECT adminstaff_id FROM admin_staff WHERE employee_number = 'STIBLN-0004-M');
+SET @a2 := (SELECT adminstaff_id FROM admin_staff WHERE employee_number = 'STIBLN-0007-F');
+SET @a3 := (SELECT adminstaff_id FROM admin_staff WHERE employee_number = 'STIBLN-0001-M');
+SET @a4 := (SELECT adminstaff_id FROM admin_staff WHERE employee_number = 'STIBLN-0008-F');
+SET @a5 := (SELECT adminstaff_id FROM admin_staff WHERE employee_number = 'STIBLN-0002-F');
+SET @a6 := (SELECT adminstaff_id FROM admin_staff WHERE employee_number = 'STIBLN-0005-M');
+
+-- Idempotency: remove anything previously generated for this backfill range.
+DELETE c FROM faculty_class_schedule c
+JOIN (SELECT @f1 AS fid UNION SELECT @f2 UNION SELECT @f3 UNION SELECT @f4) e ON c.faculty_id = e.fid
+WHERE c.class_date BETWEEN '2026-08-11' AND '2026-09-10';
+
+DELETE r FROM daily_time_record r
+WHERE r.record_date BETWEEN '2026-08-11' AND '2026-09-10'
+  AND (r.faculty_id IN (@f1, @f2, @f3, @f4)
+       OR r.adminstaff_id IN (@a1, @a2, @a3, @a4, @a5, @a6));
+
+DELETE l FROM employee_leave l
+WHERE l.date_from BETWEEN '2026-08-11' AND '2026-09-10'
+  AND l.adminstaff_id IN (@a1, @a2, @a3, @a4, @a5, @a6)
+  AND l.reason = 'Fever; medical certificate submitted.';
+
+-- ---------------------------------------------------------------
+-- Helper tables
+-- ---------------------------------------------------------------
+DROP TEMPORARY TABLE IF EXISTS tmp_emp;
+CREATE TEMPORARY TABLE tmp_emp (k INT PRIMARY KEY, faculty_id INT NULL, adminstaff_id INT NULL, kind VARCHAR(15));
+INSERT INTO tmp_emp VALUES
+    (1, @f1, NULL, 'Faculty'), (2, @f2, NULL, 'Faculty'), (3, @f3, NULL, 'Faculty'), (4, @f4, NULL, 'Faculty'),
+    (5, NULL, @a1, 'Admin'), (6, NULL, @a2, 'Admin'), (7, NULL, @a3, 'Admin'), (8, NULL, @a4, 'Admin'),
+    (9, NULL, @a5, 'Faculty/Admin'), (10, NULL, @a6, 'Faculty/Admin');
+
+DROP TEMPORARY TABLE IF EXISTS tmp_plan;
+CREATE TEMPORARY TABLE tmp_plan (k INT, wd INT, t_start TIME, t_end TIME, subject VARCHAR(100), section VARCHAR(50), room VARCHAR(50));
+INSERT INTO tmp_plan VALUES
+    (1, 0, '07:30', '09:00', 'Data Structures and Algorithms', 'BSIT 2A', 'CLAB 3'),
+    (1, 2, '07:30', '09:00', 'Data Structures and Algorithms', 'BSIT 2A', 'CLAB 3'),
+    (1, 1, '10:00', '12:00', 'Computer Programming 2', 'BSIT 1B', 'CLAB 1'),
+    (1, 3, '10:00', '12:00', 'Computer Programming 2', 'BSIT 1B', 'CLAB 1'),
+    (2, 0, '13:00', '14:30', 'Purposive Communication', 'BSBA 1A', 'Room 201'),
+    (2, 2, '13:00', '14:30', 'Purposive Communication', 'BSBA 1A', 'Room 201'),
+    (2, 4, '08:00', '11:00', 'Readings in Philippine History', 'BSHM 1A', 'Room 202'),
+    (3, 1, '13:00', '15:00', 'Database Systems', 'BSIT 3A', 'CLAB 2'),
+    (3, 3, '13:00', '15:00', 'Database Systems', 'BSIT 3A', 'CLAB 2'),
+    (3, 4, '13:00', '16:00', 'Networking 1', 'BSIT 2B', 'CLAB 2'),
+    (4, 0, '10:00', '11:00', 'Mathematics in the Modern World', 'BSTM 1A', 'Room 203'),
+    (4, 2, '10:00', '11:00', 'Mathematics in the Modern World', 'BSTM 1A', 'Room 203'),
+    (4, 4, '10:00', '11:00', 'Mathematics in the Modern World', 'BSTM 1A', 'Room 203'),
+    (4, 1, '14:00', '16:00', 'Business Statistics', 'BSBA 2A', 'Room 204'),
+    (9, 1, '08:00', '09:30', 'Ethics', 'BSHM 2A', 'Room 205'),
+    (9, 3, '08:00', '09:30', 'Ethics', 'BSHM 2A', 'Room 205'),
+    (10, 0, '15:00', '17:00', 'Web Systems and Technologies', 'BSIT 3B', 'CLAB 1'),
+    (10, 2, '15:00', '17:00', 'Web Systems and Technologies', 'BSIT 3B', 'CLAB 1');
+
+-- Every date from Aug 11 to Sep 10, 2026 (30 days) — fills the gap before
+-- the original Sep 11 – Oct 25 range this file already covers.
+DROP TEMPORARY TABLE IF EXISTS tmp_days2;
+CREATE TEMPORARY TABLE tmp_days2 AS
+    SELECT DATE('2026-08-11') + INTERVAL seq DAY AS d FROM seq_0_to_29;
+
+-- ---------------------------------------------------------------
+-- Faculty Schedule: weekly classes Aug 11 – Sep 10. Aug 21 (Ninoy Aquino
+-- Day, Special Non-Working) and Aug 31 (National Heroes Day, Regular
+-- Holiday) are stand-down days, same treatment as the Sep 25 typhoon
+-- suspension elsewhere in this file.
+-- ---------------------------------------------------------------
+INSERT INTO faculty_class_schedule (faculty_id, adminstaff_id, subject, class_section, room, class_date,
+    scheduled_start, scheduled_end, grace_period_minutes, schedule_status, status_reason,
+    created_by, updated_by, created_at, updated_at)
+SELECT e.faculty_id, e.adminstaff_id, p.subject, p.section, p.room, t.d,
+       p.t_start, p.t_end, 15,
+       IF(t.d IN ('2026-08-21', '2026-08-31'), 'Cancelled', 'Scheduled'),
+       CASE t.d WHEN '2026-08-21' THEN 'Special Non-Working Day (Ninoy Aquino Day)'
+                WHEN '2026-08-31' THEN 'Regular Holiday (National Heroes Day)'
+                ELSE NULL END,
+       @master, @master, '2026-08-07 09:00:00',
+       IF(t.d IN ('2026-08-21', '2026-08-31'), TIMESTAMP(t.d - INTERVAL 1 DAY, '18:30:00'), '2026-08-07 09:00:00')
+FROM tmp_days2 t
+JOIN tmp_plan p ON WEEKDAY(t.d) = p.wd
+JOIN tmp_emp e ON e.k = p.k
+ORDER BY t.d, p.t_start;
+
+INSERT INTO faculty_schedule_history (class_schedule_id, action, details, changed_by, changed_at)
+SELECT c.class_schedule_id, 'Created',
+       CONCAT(c.subject, ' (', c.class_section, '), ', c.room, ', ', c.class_date, ' ',
+              TIME_FORMAT(c.scheduled_start, '%H:%i'), '–', TIME_FORMAT(c.scheduled_end, '%H:%i')),
+       @master, '2026-08-07 09:00:00'
+FROM faculty_class_schedule c
+JOIN tmp_emp e ON c.faculty_id <=> e.faculty_id AND c.adminstaff_id <=> e.adminstaff_id
+WHERE c.class_date BETWEEN '2026-08-11' AND '2026-09-10';
+
+INSERT INTO faculty_schedule_history (class_schedule_id, action, details, changed_by, changed_at)
+SELECT c.class_schedule_id, 'Cancelled', c.status_reason, @master, c.updated_at
+FROM faculty_class_schedule c
+JOIN tmp_emp e ON c.faculty_id <=> e.faculty_id AND c.adminstaff_id <=> e.adminstaff_id
+WHERE c.schedule_status = 'Cancelled' AND c.class_date BETWEEN '2026-08-11' AND '2026-09-10';
+
+-- ---------------------------------------------------------------
+-- Faculty Teaching Hours: classroom checks (fully resolved — this
+-- range is well in the past, so every class is Approved or Rejected).
+-- ---------------------------------------------------------------
+DROP TEMPORARY TABLE IF EXISTS tmp_cls2;
+CREATE TEMPORARY TABLE tmp_cls2 AS
+SELECT c.class_schedule_id AS id, e.k, c.class_date AS d, c.scheduled_start AS s, c.scheduled_end AS en,
+       MOD(e.k * 7 + DAY(c.class_date) * 3 + MONTH(c.class_date) + HOUR(c.scheduled_start) * 5, 20) AS v,
+       CAST('' AS CHAR(12)) AS outcome, CAST('' AS CHAR(12)) AS final
+FROM faculty_class_schedule c
+JOIN tmp_emp e ON c.faculty_id <=> e.faculty_id AND c.adminstaff_id <=> e.adminstaff_id
+WHERE c.schedule_status = 'Scheduled' AND c.class_date BETWEEN '2026-08-11' AND '2026-09-10';
+
+UPDATE tmp_cls2 SET outcome = CASE
+    WHEN v = 0 THEN 'absent'
+    WHEN v = 2 THEN 'early'
+    WHEN v = 1 THEN 'latecheck'
+    ELSE 'ok' END;
+
+UPDATE tmp_cls2 SET final = CASE
+    WHEN outcome IN ('absent', 'early') THEN 'Rejected'
+    ELSE 'Approved' END;
+
+INSERT INTO faculty_teaching_attendance (class_schedule_id,
+    start_check_at, start_check_status, start_checked_by,
+    end_check_at, end_check_status, end_checked_by,
+    remarks, approval_status, payable_hours, approved_by, approved_at, review_note, created_at, updated_at)
+SELECT t.id,
+       TIMESTAMP(t.d, t.s) + INTERVAL IF(t.outcome = 'latecheck', 25, MOD(t.v, 8) + 1) MINUTE,
+       IF(t.outcome = 'absent', 'Absent', 'Present'),
+       @master,
+       TIMESTAMP(t.d, t.en) - INTERVAL (MOD(t.v, 6) + 1) MINUTE,
+       IF(t.outcome IN ('absent', 'early'), 'Absent', 'Present'),
+       @master,
+       CASE t.outcome
+           WHEN 'absent' THEN 'Classroom empty at both checks.'
+           WHEN 'early' THEN 'Class dismissed early; faculty not in the room at the ending check.'
+           WHEN 'latecheck' THEN 'Beginning check done late (staff meeting ran over).'
+           ELSE NULL END,
+       t.final,
+       IF(t.final = 'Approved', ROUND(TIME_TO_SEC(TIMEDIFF(t.en, t.s)) / 3600, 2), 0),
+       @master,
+       TIMESTAMP(t.d + INTERVAL 1 DAY, '16:30:00'),
+       CASE
+           WHEN t.final = 'Rejected' AND t.outcome = 'absent' THEN 'Faculty absent; no substitute arranged.'
+           WHEN t.final = 'Rejected' THEN 'Left before the end of class.'
+           WHEN t.final = 'Approved' AND t.outcome = 'latecheck' THEN 'Checked late; faculty confirmed present from the start of class.'
+           ELSE NULL END,
+       TIMESTAMP(t.d, t.s),
+       TIMESTAMP(t.d, t.en)
+FROM tmp_cls2 t;
+
+INSERT INTO faculty_attendance_audit (attendance_id, action, details, reason, performed_by, performed_at)
+SELECT a.attendance_id, 'Beginning check recorded',
+       CONCAT(TIME_FORMAT(a.start_check_at, '%H:%i'), ' ', a.start_check_status), NULL, @master, a.start_check_at
+FROM faculty_teaching_attendance a JOIN tmp_cls2 t ON t.id = a.class_schedule_id;
+
+INSERT INTO faculty_attendance_audit (attendance_id, action, details, reason, performed_by, performed_at)
+SELECT a.attendance_id, 'Ending check recorded',
+       CONCAT(TIME_FORMAT(a.end_check_at, '%H:%i'), ' ', a.end_check_status), NULL, @master, a.end_check_at
+FROM faculty_teaching_attendance a JOIN tmp_cls2 t ON t.id = a.class_schedule_id;
+
+INSERT INTO faculty_attendance_audit (attendance_id, action, details, reason, performed_by, performed_at)
+SELECT a.attendance_id, a.approval_status,
+       IF(a.approval_status = 'Approved',
+          CONCAT('Payable teaching hours: ', a.payable_hours),
+          'No teaching hours will be paid for this class.'),
+       a.review_note, @master, a.approved_at
+FROM faculty_teaching_attendance a JOIN tmp_cls2 t ON t.id = a.class_schedule_id;
+
+-- ---------------------------------------------------------------
+-- Daily Time Record: Admin / Faculty-Admin office hours, weekdays,
+-- excluding the two holidays (treated as full stand-down, like Sep 25).
+-- ---------------------------------------------------------------
+INSERT INTO daily_time_record (fingerprint_id, device_id, faculty_id, adminstaff_id, record_date,
+    time_in, time_out, status, is_manual_entry, remarks, recorded_by, created_at)
+SELECT s.fingerprint_id, NULL, NULL, x.adminstaff_id, x.d,
+       CASE WHEN x.w IN (1, 2) THEN ADDTIME('08:20:00', SEC_TO_TIME(x.w * 9 * 60))
+            WHEN x.w = 3 THEN '08:00:00'
+            ELSE ADDTIME('07:40:00', SEC_TO_TIME(MOD(x.w, 19) * 60)) END,
+       ADDTIME('17:00:00', SEC_TO_TIME(MOD(x.w * 3, 16) * 60)),
+       IF(x.w IN (1, 2), 'Late', 'Present'),
+       IF(x.w = 3, 1, 0),
+       IF(x.w = 3, 'Fingerprint not read by the scanner; time verified by the department head.', NULL),
+       IF(x.w = 3, @master, NULL),
+       TIMESTAMP(x.d, '17:30:00')
+FROM (
+    SELECT e.k, e.adminstaff_id, e.kind, t.d, MOD(e.k * 13 + DAY(t.d) * 7 + MONTH(t.d) * 3, 25) AS w
+    FROM tmp_days2 t JOIN tmp_emp e ON e.kind IN ('Admin', 'Faculty/Admin')
+    WHERE WEEKDAY(t.d) < 5 AND t.d NOT IN ('2026-08-21', '2026-08-31')
+) x
+JOIN admin_staff s ON s.adminstaff_id = x.adminstaff_id
+WHERE NOT (x.w = 0 AND x.kind = 'Admin');
+
+-- Faculty: scan in/out around classes, skipped on days with a class absence.
+INSERT INTO daily_time_record (fingerprint_id, device_id, faculty_id, adminstaff_id, record_date,
+    time_in, time_out, status, is_manual_entry, remarks, recorded_by, created_at)
+SELECT f.fingerprint_id, NULL, f.faculty_id, NULL, x.d,
+       SUBTIME(x.first_start, SEC_TO_TIME((10 + MOD(x.mv, 10)) * 60)),
+       ADDTIME(x.last_end, SEC_TO_TIME((5 + MOD(x.mv, 10)) * 60)),
+       'Present', 0, NULL, NULL, TIMESTAMP(x.d, x.last_end)
+FROM (
+    SELECT t.k, t.d, MIN(t.s) AS first_start, MAX(t.en) AS last_end, MIN(t.v) AS mv,
+           SUM(t.outcome = 'absent') AS absences
+    FROM tmp_cls2 t
+    WHERE t.k BETWEEN 1 AND 4
+    GROUP BY t.k, t.d
+) x
+JOIN tmp_emp e ON e.k = x.k
+JOIN faculty_staff f ON f.faculty_id = e.faculty_id
+WHERE x.absences = 0;
+
+-- ---------------------------------------------------------------
+-- Leave: every Admin weekday with no DTR record in this range is an
+-- approved sick leave, same convention as the rest of the file.
+-- ---------------------------------------------------------------
+SET @sick := (SELECT leave_category_id FROM leave_category WHERE category_name = 'Sick Leave');
+
+INSERT INTO employee_leave (adminstaff_id, leave_category, leave_category_id, is_paid, reason, status,
+    date_requested, date_approved, approved_by, recorded_by, date_from, date_to, remarks, total_days, total_leave_credit)
+SELECT e.adminstaff_id, 'Sick Leave', @sick, 1, 'Fever; medical certificate submitted.', 'Approved',
+       TIMESTAMP(t.d, '07:30:00'), TIMESTAMP(t.d + INTERVAL 1 DAY, '09:00:00'), @masterName, @master,
+       t.d, t.d, 'Medical certificate on file.', 1, 15
+FROM tmp_days2 t
+JOIN tmp_emp e ON e.kind = 'Admin'
+WHERE WEEKDAY(t.d) < 5 AND t.d NOT IN ('2026-08-21', '2026-08-31')
+  AND NOT EXISTS (SELECT 1 FROM daily_time_record r WHERE r.adminstaff_id = e.adminstaff_id AND r.record_date = t.d);
+
+DROP TEMPORARY TABLE IF EXISTS tmp_cls2;
+DROP TEMPORARY TABLE IF EXISTS tmp_days2;
+DROP TEMPORARY TABLE IF EXISTS tmp_plan;
+DROP TEMPORARY TABLE IF EXISTS tmp_emp;
+
+SELECT 'Original 10 backfilled for Aug 11 - Sep 10, 2026' AS result;
