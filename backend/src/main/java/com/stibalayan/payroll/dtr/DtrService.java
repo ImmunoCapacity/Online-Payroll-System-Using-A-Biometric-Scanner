@@ -160,6 +160,40 @@ public class DtrService {
         return result;
     }
 
+    /**
+     * Records with a time-in but no time-out. Payroll pays nothing for that
+     * day (hoursWorked and PayrollHoursService both skip them) until
+     * corrected here with a manual entry, so Payroll Staff can review them
+     * before computing a period instead of a day silently going unpaid.
+     */
+    @Transactional(readOnly = true)
+    public List<DtrRow> incompleteEntries(String fromText, String toText) {
+        LocalDate from = parseDate(fromText);
+        LocalDate to = parseDate(toText);
+        if (to.isBefore(from)) {
+            throw unprocessable("The end date can't be before the start date.");
+        }
+
+        Map<Integer, FacultyStaff> facultyById = new HashMap<>();
+        faculty.findAll().forEach(f -> facultyById.put(f.getId(), f));
+        Map<Integer, AdminStaff> adminById = new HashMap<>();
+        admins.findAll().forEach(a -> adminById.put(a.getId(), a));
+
+        List<DtrRow> rows = new ArrayList<>();
+        for (DailyTimeRecord r : dtr.findByRecordDateBetween(from, to)) {
+            if (r.getTimeIn() == null || r.getTimeOut() != null) {
+                continue;
+            }
+            if (r.getFacultyId() != null && facultyById.containsKey(r.getFacultyId())) {
+                rows.add(row(r, EmployeeId.faculty(r.getFacultyId()), facultyById.get(r.getFacultyId())));
+            } else if (r.getAdminstaffId() != null && adminById.containsKey(r.getAdminstaffId())) {
+                rows.add(row(r, EmployeeId.admin(r.getAdminstaffId()), adminById.get(r.getAdminstaffId())));
+            }
+        }
+        rows.sort(Comparator.comparing(DtrRow::date).thenComparing(DtrRow::employeeName, String.CASE_INSENSITIVE_ORDER));
+        return rows;
+    }
+
     /** A time-in after this is late (start time plus the grace period, Maintenance → Grace Period). */
     public LocalTime lateAfter() {
         return settings.lateAfter();

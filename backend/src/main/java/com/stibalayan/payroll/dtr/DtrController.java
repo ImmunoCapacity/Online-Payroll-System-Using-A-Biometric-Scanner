@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * GET  /api/dtr?date=YYYY-MM-DD   attendance for a day (Daily Time Record)
  * GET  /api/dtr/hours?from=&to=   hours worked per employee in a pay period (Payroll)
+ * GET  /api/dtr/incomplete?from=&to= time-in with no time-out: unpaid until corrected (Payroll)
  * GET  /api/dtr/employees         employees that can be picked for a manual entry
  * POST /api/dtr/manual            save a manual entry (Attendance Recording)
  * GET  /api/dtr/summary?from=&to= present / late / absent / on-leave days per employee (Attendance Report)
@@ -60,6 +61,13 @@ public class DtrController {
     @RequireModule(SystemModule.PAYROLL)
     public Map<String, Object> hoursWorked(@RequestParam String from, @RequestParam String to) {
         return Map.of("success", true, "hours", dtrService.hoursWorked(from, to));
+    }
+
+    /** Time-in with no time-out between two dates: unpaid until corrected — used before computing payroll. */
+    @GetMapping("/incomplete")
+    @RequireModule(SystemModule.PAYROLL)
+    public Map<String, Object> incompleteEntries(@RequestParam String from, @RequestParam String to) {
+        return Map.of("success", true, "records", dtrService.incompleteEntries(from, to));
     }
 
     @GetMapping("/employees")

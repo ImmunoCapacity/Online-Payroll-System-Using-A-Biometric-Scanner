@@ -362,6 +362,8 @@
     // then Admin Staff who are also Faculty Staff (Faculty/Admin).
     var TYPE_ORDER = { Admin: 0, Faculty: 1, 'Faculty/Admin': 2 };
 
+    var lastIncomplete = [];
+
     function computePayroll(period) {
         return Promise.all([
             api('api/employees'),
@@ -370,8 +372,11 @@
             api('api/payroll/benefits'),
             api('api/payroll/contribution-tables'),
             api('api/payroll/rates?date=' + period.to),
-            api('api/payroll/adjustments/period?from=' + period.from + '&to=' + period.to)
+            api('api/payroll/adjustments/period?from=' + period.from + '&to=' + period.to),
+            api('api/dtr/incomplete?from=' + period.from + '&to=' + period.to)
         ]).then(function (results) {
+            var incompleteData = results[7];
+            lastIncomplete = (incompleteData && incompleteData.success) ? (incompleteData.records || []) : [];
             var employeesData = results[0];
             var hoursData = results[1];
             var loanData = results[2];
@@ -493,6 +498,15 @@
                 PPToast.error(unapproved + ' scheduled class' + (unapproved === 1 ? ' is' : 'es are') +
                     ' not yet checked or approved in Faculty Teaching Hours and ' + (unapproved === 1 ? 'is' : 'are') +
                     ' not paid. Approve them, then click Recompute.');
+            }
+            if (lastIncomplete.length) {
+                var byEmp = {};
+                lastIncomplete.forEach(function (r) { byEmp[r.employeeName] = true; });
+                var names = Object.keys(byEmp);
+                PPToast.error(lastIncomplete.length + ' day' + (lastIncomplete.length === 1 ? '' : 's') +
+                    ' with a time-in but no time-out (' + names.slice(0, 3).join(', ') +
+                    (names.length > 3 ? ', +' + (names.length - 3) + ' more' : '') +
+                    ') are paid ₱0 for that day. Correct them in Attendance Recording, then click Recompute.');
             }
             showSkippedLoans(employees, run.label);
         }).catch(function (error) {
