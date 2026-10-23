@@ -158,11 +158,17 @@
                     employee: r.employee + (year ? '' : ' (' + y + ')'),
                     employeeType: r.employeeType,
                     gross: 0,
-                    benefits: 0
+                    benefits: 0,
+                    // One entry per calendar month (Jan–Dec); null until a released
+                    // cut-off ending in that month contributes gross pay to it.
+                    months: [null, null, null, null, null, null, null, null, null, null, null, null]
                 };
                 order.push(key);
             }
-            groups[key].gross += number(r.gross);
+            var row = groups[key];
+            row.gross += number(r.gross);
+            var m = Number(r.periodEnd.slice(5, 7)) - 1;
+            row.months[m] = round2((row.months[m] || 0) + number(r.gross));
         });
         return order.map(function (key) {
             var row = groups[key];
@@ -263,13 +269,14 @@
     var exportData = null;
 
     var TEXT = 'text', MONEY = 'money', NUM = 'number';
+    var MONTH_ABBR = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 
     function col(label, kind, strong) {
         return { label: label, kind: kind || TEXT, strong: !!strong };
     }
 
     function cellHtml(column, value) {
-        var html = column.kind === MONEY ? peso(value)
+        var html = column.kind === MONEY ? (value == null ? '' : peso(value))
             : column.kind === NUM ? escapeHtml(value == null ? '—' : value)
             : escapeHtml(value == null || value === '' ? '—' : value);
         if (column.strong) { html = '<strong>' + html + '</strong>'; }
@@ -367,9 +374,12 @@
             extra: function (r, v) { return [v.gross, v.deductions, v.net]; }
         },
         thirteenth: {
-            columns: [col('GROSS PAY', MONEY), col('13TH MONTH PAY', MONEY, true)],
+            columns: MONTH_ABBR.map(function (m) { return col(m, MONEY); })
+                .concat([col('GROSS PAY', MONEY), col('13TH MONTH PAY', MONEY, true)]),
             extra: function (r, v) {
-                return [v.gross, number(getValue(r, ['thirteenthMonth', 'thirteenthMonthPay', '13thMonthPay'], 0))];
+                var months = (r.months || []).map(function (m) { return m == null ? null : number(m); });
+                while (months.length < 12) { months.push(null); }
+                return months.concat([v.gross, number(getValue(r, ['thirteenthMonth', 'thirteenthMonthPay', '13thMonthPay'], 0))]);
             }
         },
         sss: {
