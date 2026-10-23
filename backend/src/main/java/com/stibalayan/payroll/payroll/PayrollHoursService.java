@@ -9,6 +9,7 @@ import com.stibalayan.payroll.employee.EmployeeDirectory;
 import com.stibalayan.payroll.employee.EmployeeId;
 import com.stibalayan.payroll.employee.StaffMember;
 import com.stibalayan.payroll.leave.LeaveService;
+import com.stibalayan.payroll.settings.SettingsService;
 import com.stibalayan.payroll.teaching.TeachingHoursService;
 import com.stibalayan.payroll.teaching.TeachingHoursService.ApprovedHours;
 import com.stibalayan.payroll.teaching.TeachingHoursService.ClassPeriod;
@@ -67,10 +68,11 @@ public class PayrollHoursService {
     private final LeaveService leave;
     private final JdbcTemplate jdbc;
     private final EmployeeDirectory employees;
+    private final SettingsService settings;
     private final boolean excludeOverlap;
 
     public PayrollHoursService(DailyTimeRecordRepository dtr, AdminStaffRepository admins, TeachingHoursService teaching,
-                               LeaveService leave, JdbcTemplate jdbc, EmployeeDirectory employees,
+                               LeaveService leave, JdbcTemplate jdbc, EmployeeDirectory employees, SettingsService settings,
                                @Value("${payroll.exclude-teaching-from-office-hours:true}") boolean excludeOverlap) {
         this.dtr = dtr;
         this.admins = admins;
@@ -78,6 +80,7 @@ public class PayrollHoursService {
         this.leave = leave;
         this.jdbc = jdbc;
         this.employees = employees;
+        this.settings = settings;
         this.excludeOverlap = excludeOverlap;
     }
 
@@ -95,6 +98,7 @@ public class PayrollHoursService {
         Set<LocalDate> doublePay = new HashSet<>(jdbc.query(
                 "SELECT holiday_date FROM holiday WHERE double_pay = 1 AND holiday_date BETWEEN ? AND ?",
                 (rs, i) -> rs.getDate(1).toLocalDate(), Date.valueOf(from), Date.valueOf(to)));
+        LocalTime officeStart = settings.officeStart();
 
         // Biometric minutes per employee, less any overlap with approved classes (Faculty/Admin only).
         // employeeId -> {minutes, days, overlapMinutes, minutes on double-pay holidays (less overlap)}
@@ -106,8 +110,11 @@ public class PayrollHoursService {
             if (employeeId == null || r.getTimeIn() == null || r.getTimeOut() == null || !r.getTimeOut().isAfter(r.getTimeIn())) {
                 continue;
             }
+            // Pay never starts before the official office start time, even if the
+            // employee clocked in earlier.
+            LocalTime payableIn = r.getTimeIn().isBefore(officeStart) ? officeStart : r.getTimeIn();
             long[] t = office.computeIfAbsent(employeeId, k -> new long[4]);
-            long minutes = Duration.between(r.getTimeIn(), r.getTimeOut()).toMinutes();
+            long minutes = r.getTimeOut().isAfter(payableIn) ? Duration.between(payableIn, r.getTimeOut()).toMinutes() : 0;
             long overlap = 0;
             t[0] += minutes;
             t[1]++;
@@ -116,7 +123,7 @@ public class PayrollHoursService {
             if (excludeOverlap && facultyAdmin && taught.containsKey(employeeId)) {
                 for (ClassPeriod p : taught.get(employeeId).periods) {
                     if (p.date().equals(r.getRecordDate())) {
-                        overlap += overlapMinutes(r.getTimeIn(), r.getTimeOut(), p.start(), p.end());
+                        overlap += overlapMinutes(payableIn, r.getTimeOut(), p.start(), p.end());
                     }
                 }
             }
