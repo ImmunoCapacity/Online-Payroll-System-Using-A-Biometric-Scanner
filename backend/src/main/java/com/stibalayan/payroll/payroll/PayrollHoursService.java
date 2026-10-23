@@ -40,8 +40,12 @@ import org.springframework.transaction.annotation.Transactional;
  *   paidLeaveDays — approved paid leave days not also worked (Leave Management),
  *                   paid as office days (Admin, Faculty/Admin)
  *   paidLeaveTeachingHours — scheduled classes on paid leave days that were
- *                   not taught: paid leave pays them at the teaching rate
- *                   (Faculty, Faculty/Admin)
+ *                   not taught, at the teaching rate. Computed here for
+ *                   Faculty and Faculty/Admin alike, but js/payroll-processing.js
+ *                   (buildEarnings) only pays it to pure Faculty — a
+ *                   Faculty/Admin employee's leave day is already paid in full
+ *                   as a normal office day via paidLeaveDays, so paying the
+ *                   teaching side too would pay that same day twice
  *   teachingLateMinutes — minutes late at the beginning check of those classes
  *   teachingHours — APPROVED payable hours from Faculty Teaching Hours, never
  *                   straight from the Faculty Schedule

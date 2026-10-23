@@ -306,11 +306,13 @@
                 -Math.round(lateMinutes / 60 * 10000) / 10000, teachRate);
         }
         // Approved paid leave on days with classes: the classes missed are paid
-        // at the teaching rate (their scheduled hours).
+        // at the teaching rate (their scheduled hours) — Faculty only. A
+        // Faculty/Admin employee's leave day is already paid above as a full
+        // office day (Paid leave, N days); paying the teaching side too would
+        // pay the same leave day twice.
         var leaveClasses = Number(h.paidLeaveClasses) || 0;
-        if (leaveClasses > 0 && (e.department === 'Faculty' || e.department === 'Faculty/Admin')) {
-            add('Paid leave (' + leaveClasses + ' class' + (leaveClasses === 1 ? '' : 'es') + ')', h.paidLeaveTeachingHours,
-                e.department === 'Faculty/Admin' ? e.teachingRate : e.rate);
+        if (leaveClasses > 0 && e.department === 'Faculty') {
+            add('Paid leave (' + leaveClasses + ' class' + (leaveClasses === 1 ? '' : 'es') + ')', h.paidLeaveTeachingHours, e.rate);
         }
         // Regular holidays not worked (Monday–Friday) are still paid: a normal
         // office day, and the classes scheduled that day at the teaching rate.
