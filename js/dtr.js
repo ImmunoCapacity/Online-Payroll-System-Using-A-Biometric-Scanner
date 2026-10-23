@@ -1137,6 +1137,36 @@
     }
 
 
+    /* Live refresh: a scan is synced from the K40 into the database within
+       ~2s (BiometricLiveSync), so poll today's records at the same cadence —
+       a new punch then shows up here without a manual reload. Only while
+       today is the selected date and the tab is visible, so this doesn't
+       refetch while browsing a past date or in a background tab. */
+
+    var LIVE_REFRESH_MS = 3000;
+
+    if (filterDate) {
+
+        setInterval(
+            function () {
+
+                if (document.hidden) {
+                    return;
+                }
+
+                if (filterDate.value !== today) {
+                    return;
+                }
+
+                loadDtrRecords();
+
+            },
+            LIVE_REFRESH_MS
+        );
+
+    }
+
+
     /* Initialize */
 
     loadManualEmployees();
