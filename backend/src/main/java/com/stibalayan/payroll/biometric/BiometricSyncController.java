@@ -11,7 +11,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * POST /api/biometric/sync — pull attendance from the K40 into the DTR.
- * Utility (System Administrator); called by the "Sync Device" button on biometric-devices.html.
+ * Device Sync (Payroll Master, Payroll Staff, System Administrator); called
+ * by the "Sync Device" button on dtr.html and biometric-devices.html.
  *
  * GET /api/biometric/status — live sync state; dtr.html and biometric-devices.html poll it; dtr.html reloads
  * the table when "changes" goes up.
@@ -29,7 +30,7 @@ public class BiometricSyncController {
     }
 
     @PostMapping("/sync")
-    @RequireModule(SystemModule.UTILITY)
+    @RequireModule(SystemModule.DEVICE_SYNC)
     public Map<String, Object> sync() {
         return liveSync.syncNow();
     }

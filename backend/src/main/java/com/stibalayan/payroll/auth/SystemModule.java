@@ -32,6 +32,8 @@ public enum SystemModule {
     UTILITY(Roles.SYSTEM_ADMINISTRATOR),
     /** Whether the biometric scanner is connected (DTR live badge, Biometric Device page). */
     SCANNER_STATUS(Roles.PAYROLL_MASTER, Roles.PAYROLL_STAFF, Roles.SYSTEM_ADMINISTRATOR),
+    /** Pulling attendance from the K40 on demand ("Sync Device"), apart from UTILITY's device management. */
+    DEVICE_SYNC(Roles.PAYROLL_MASTER, Roles.PAYROLL_STAFF, Roles.SYSTEM_ADMINISTRATOR),
     /** Reading the grace period and payroll periods (every page that shows cut-offs needs them). */
     SETTINGS_READ(Roles.PAYROLL_MASTER, Roles.PAYROLL_STAFF, Roles.SYSTEM_ADMINISTRATOR);
 
