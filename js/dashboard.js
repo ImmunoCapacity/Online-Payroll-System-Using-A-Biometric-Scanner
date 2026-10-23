@@ -34,6 +34,19 @@
         return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
     }
 
+    function timeAgo(isoInstant) {
+        if (!isoInstant) return '—';
+        var diffSec = Math.max(0, Math.floor((Date.now() - new Date(isoInstant).getTime()) / 1000));
+        if (diffSec < 5) return 'Just now';
+        if (diffSec < 60) return diffSec + ' sec ago';
+        var min = Math.floor(diffSec / 60);
+        if (min < 60) return min + ' min ago';
+        var hr = Math.floor(min / 60);
+        if (hr < 24) return hr + ' hr' + (hr === 1 ? '' : 's') + ' ago';
+        var day = Math.floor(hr / 24);
+        return day + ' day' + (day === 1 ? '' : 's') + ' ago';
+    }
+
     var period = periodContaining(new Date());
 
     var currentPayroll = {
@@ -473,10 +486,13 @@
     (function renderBiometricDevice() {
         var nameEl = document.getElementById('biometricDeviceName');
         var statusEl = document.getElementById('biometricStatus');
+        var syncEl = document.getElementById('biometricLastSync');
 
         if (!nameEl || !statusEl) {
             return;
         }
+
+        var hasDevice = false;
 
         fetch('api/devices/status')
             .then(function (response) { return response.json(); })
@@ -485,6 +501,7 @@
 
         function show(devices) {
         var device = devices.find(function (d) { return d.status === 'Active'; }) || devices[0];
+        hasDevice = !!device;
 
         if (!device) {
             // No scanner added yet (System Administrator → Biometric Devices).
@@ -492,7 +509,6 @@
             statusEl.classList.remove('pp-device-status-connected');
             statusEl.classList.add('pp-device-status-disconnected');
             statusEl.innerHTML = '<span class="pp-device-dot"></span>Not set up';
-            var syncEl = document.getElementById('biometricLastSync');
             if (syncEl) syncEl.textContent = '—';
             return;
         }
@@ -503,7 +519,24 @@
         statusEl.classList.toggle('pp-device-status-connected', isOnline);
         statusEl.classList.toggle('pp-device-status-disconnected', !isOnline);
         statusEl.innerHTML = '<span class="pp-device-dot"></span>' + (isOnline ? 'Active' : 'Inactive');
+
+        refreshLastSync();
         }
+
+        // When the device was last read (a manual sync, or the live sync seeing
+        // a new punch) — api/biometric/status, same source as the live badge
+        // elsewhere. Refreshed periodically so "X sec/min ago" stays current.
+        function refreshLastSync() {
+            if (!syncEl || !hasDevice || document.hidden) return;
+            fetch('api/biometric/status')
+                .then(function (response) { return response.ok ? response.json() : null; })
+                .then(function (status) {
+                    if (status) syncEl.textContent = timeAgo(status.lastSyncAt);
+                })
+                .catch(function () {});
+        }
+
+        setInterval(refreshLastSync, 10000);
     })();
 
 

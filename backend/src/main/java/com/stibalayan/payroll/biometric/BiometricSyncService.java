@@ -8,6 +8,7 @@ import com.stibalayan.payroll.dtr.DailyTimeRecord;
 import com.stibalayan.payroll.dtr.DailyTimeRecordRepository;
 import com.stibalayan.payroll.employee.AdminStaffRepository;
 import com.stibalayan.payroll.employee.FacultyStaffRepository;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -41,6 +42,7 @@ public class BiometricSyncService {
     private final TransactionTemplate transaction;
     private final SettingsService settings;
     private final AtomicLong changes = new AtomicLong();
+    private volatile Instant lastSyncAt;
 
     public BiometricSyncService(BiometricDevice biometricDevice, DeviceProperties deviceProperties,
                                 DeviceRepository devices, FacultyStaffRepository faculty, AdminStaffRepository admins,
@@ -73,6 +75,7 @@ public class BiometricSyncService {
                                 + ". Add this scanner on the Biometric Devices page first."));
 
         Map<String, Object> result = transaction.execute(status -> record(logs, device.getId()));
+        lastSyncAt = Instant.now();
         if (!"0".equals(String.valueOf(result.get("inserted")))
                 || !"0".equals(String.valueOf(result.get("updated_time_out")))) {
             changes.incrementAndGet();
@@ -83,6 +86,11 @@ public class BiometricSyncService {
     /** Goes up each time a sync adds or changes DTR rows; the DTR page reloads when it does. */
     public long changeCount() {
         return changes.get();
+    }
+
+    /** When logs from the device were last read and recorded — a manual sync, or a live-sync change. Null if never. */
+    public Instant lastSyncAt() {
+        return lastSyncAt;
     }
 
     private Map<String, Object> record(List<AttendanceLog> logs, Integer deviceId) {

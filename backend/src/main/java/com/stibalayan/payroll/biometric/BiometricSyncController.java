@@ -42,6 +42,7 @@ public class BiometricSyncController {
         status.put("live", liveSync.isEnabled());
         status.put("connected", liveSync.isConnected());
         status.put("changes", syncService.changeCount());
+        status.put("lastSyncAt", syncService.lastSyncAt() == null ? null : syncService.lastSyncAt().toString());
         return status;
     }
 }
