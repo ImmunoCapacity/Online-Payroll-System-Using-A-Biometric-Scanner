@@ -58,7 +58,7 @@ INSERT INTO faculty_staff (employee_number, fingerprint_id, firstname, middlenam
     contact_number, address, email_address, civil_status, dependent_number, employment_status, employee_type, date_hired,
     load_units, lecture_hours, rate_per_hour_unit, sss_id, philhealth_id, pagibig_id, tin_id, instructor_rank, notes)
 VALUES ('STIBLN-0006-M', '101', 'Jose', 'Marquez', 'Ramirez', 'Male', 38, '1988-03-14',
-    '09171234501', 'Brgy. Caloocan, Balayan, Batangas', 'jose.ramirez@example.com', 'Married', 2, 'Active', 'Full-time', '2019-06-03',
+    '09171234501', 'Brgy. Caloocan, Balayan, Batangas', 'mikeyyy.tagle28+13@gmail.com', 'Married', 2, 'Active', 'Full-time', '2019-06-03',
     18, 7.0, 420.00, '34-1234501-1', '12-345678901-1', '1234-5678-9101', '123-456-701-000', 'Instructor II', 'IT department; adviser of BSIT 2A.');
 SET @f1 := LAST_INSERT_ID();
 
@@ -66,7 +66,7 @@ INSERT INTO faculty_staff (employee_number, fingerprint_id, firstname, middlenam
     contact_number, address, email_address, civil_status, dependent_number, employment_status, employee_type, date_hired,
     load_units, lecture_hours, rate_per_hour_unit, sss_id, philhealth_id, pagibig_id, tin_id, instructor_rank, notes)
 VALUES ('STIBLN-0009-F', '102', 'Angela', 'Cruz', 'Dizon', 'Female', 29, '1997-07-22',
-    '09171234502', 'Brgy. Gimalas, Balayan, Batangas', 'angela.dizon@example.com', 'Single', 0, 'Active', 'Part-time', '2023-08-07',
+    '09171234502', 'Brgy. Gimalas, Balayan, Batangas', 'mikeyyy.tagle28+2@gmail.com', 'Single', 0, 'Active', 'Part-time', '2023-08-07',
     9, 6.0, 380.00, '34-1234502-2', '12-345678902-2', '1234-5678-9102', '123-456-702-000', 'Instructor I', 'General Education.');
 SET @f2 := LAST_INSERT_ID();
 
@@ -74,7 +74,7 @@ INSERT INTO faculty_staff (employee_number, fingerprint_id, firstname, middlenam
     contact_number, address, email_address, civil_status, dependent_number, employment_status, employee_type, date_hired,
     load_units, lecture_hours, rate_per_hour_unit, sss_id, philhealth_id, pagibig_id, tin_id, instructor_rank, notes)
 VALUES ('STIBLN-0003-M', '103', 'Paolo', 'Santos', 'Villareal', 'Male', 45, '1981-11-02',
-    '09171234503', 'Brgy. Calzada, Calaca, Batangas', 'paolo.villareal@example.com', 'Married', 3, 'Active', 'Full-time', '2014-06-16',
+    '09171234503', 'Brgy. Calzada, Calaca, Batangas', 'mikeyyy.tagle28+23@gmail.com', 'Married', 3, 'Active', 'Full-time', '2014-06-16',
     15, 7.0, 450.00, '34-1234503-3', '12-345678903-3', '1234-5678-9103', '123-456-703-000', 'Instructor III', 'Senior faculty, networking and databases.');
 SET @f3 := LAST_INSERT_ID();
 
@@ -82,7 +82,7 @@ INSERT INTO faculty_staff (employee_number, fingerprint_id, firstname, middlenam
     contact_number, address, email_address, civil_status, dependent_number, employment_status, employee_type, date_hired,
     load_units, lecture_hours, rate_per_hour_unit, sss_id, philhealth_id, pagibig_id, tin_id, instructor_rank, notes)
 VALUES ('STIBLN-0010-F', '104', 'Kristine', 'Lopez', 'Bautista', 'Female', 27, '1999-01-30',
-    '09171234504', 'Brgy. Sampaga, Balayan, Batangas', 'kristine.bautista@example.com', 'Single', 0, 'Active', 'Contractual', '2025-06-09',
+    '09171234504', 'Brgy. Sampaga, Balayan, Batangas', 'mikeyyy.tagle28+15@gmail.com', 'Single', 0, 'Active', 'Contractual', '2025-06-09',
     9, 5.0, 360.00, '34-1234504-4', '12-345678904-4', '1234-5678-9104', '123-456-704-000', 'Instructor I', 'Mathematics.');
 SET @f4 := LAST_INSERT_ID();
 
@@ -91,7 +91,7 @@ INSERT INTO admin_staff (employee_number, fingerprint_id, firstname, middlename,
     contact_number, address, email_address, civil_status, dependent_number, employment_status, employee_type, date_hired,
     department, position, office_hours, rate_per_hour, is_faculty, sss_id, philhealth_id, pagibig_id, tin_id, notes)
 VALUES ('STIBLN-0004-M', '105', 'Ramon', 'Aguilar', 'Castillo', 'Male', 41, '1985-05-18',
-    '09171234505', 'Brgy. Poblacion 3, Balayan, Batangas', 'ramon.castillo@example.com', 'Married', 2, 'Active', 'Full-time', '2016-02-01',
+    '09171234505', 'Brgy. Poblacion 3, Balayan, Batangas', 'mikeyyy.tagle28+25@gmail.com', 'Married', 2, 'Active', 'Full-time', '2016-02-01',
     'Registrar', 'Registrar Officer', 8.0, 130.00, 0, '34-1234505-5', '12-345678905-5', '1234-5678-9105', '123-456-705-000', NULL);
 SET @a1 := LAST_INSERT_ID();
 
@@ -99,7 +99,7 @@ INSERT INTO admin_staff (employee_number, fingerprint_id, firstname, middlename,
     contact_number, address, email_address, civil_status, dependent_number, employment_status, employee_type, date_hired,
     department, position, office_hours, rate_per_hour, is_faculty, sss_id, philhealth_id, pagibig_id, tin_id, notes)
 VALUES ('STIBLN-0007-F', '106', 'Liza', 'Flores', 'Mercado', 'Female', 34, '1992-09-09',
-    '09171234506', 'Brgy. Lanatan, Balayan, Batangas', 'liza.mercado@example.com', 'Married', 1, 'Active', 'Full-time', '2020-07-13',
+    '09171234506', 'Brgy. Lanatan, Balayan, Batangas', 'mikeyyy.tagle28+17@gmail.com', 'Married', 1, 'Active', 'Full-time', '2020-07-13',
     'Accounting', 'Cashier', 8.0, 110.00, 0, '34-1234506-6', '12-345678906-6', '1234-5678-9106', '123-456-706-000', NULL);
 SET @a2 := LAST_INSERT_ID();
 
@@ -107,7 +107,7 @@ INSERT INTO admin_staff (employee_number, fingerprint_id, firstname, middlename,
     contact_number, address, email_address, civil_status, dependent_number, employment_status, employee_type, date_hired,
     department, position, office_hours, rate_per_hour, is_faculty, sss_id, philhealth_id, pagibig_id, tin_id, notes)
 VALUES ('STIBLN-0001-M', '107', 'Danilo', 'Perez', 'Ocampo', 'Male', 50, '1976-12-05',
-    '09171234507', 'Brgy. Langgangan, Balayan, Batangas', 'danilo.ocampo@example.com', 'Widowed', 1, 'Active', 'Full-time', '2010-03-22',
+    '09171234507', 'Brgy. Langgangan, Balayan, Batangas', 'mikeyyy.tagle28+5@gmail.com', 'Widowed', 1, 'Active', 'Full-time', '2010-03-22',
     'Facilities', 'Maintenance Staff', 8.0, 95.00, 0, '34-1234507-7', '12-345678907-7', '1234-5678-9107', '123-456-707-000', NULL);
 SET @a3 := LAST_INSERT_ID();
 
@@ -115,7 +115,7 @@ INSERT INTO admin_staff (employee_number, fingerprint_id, firstname, middlename,
     contact_number, address, email_address, civil_status, dependent_number, employment_status, employee_type, date_hired,
     department, position, office_hours, rate_per_hour, is_faculty, sss_id, philhealth_id, pagibig_id, tin_id, notes)
 VALUES ('STIBLN-0008-F', '108', 'Joanna', 'Reyes', 'Salazar', 'Female', 31, '1995-04-27',
-    '09171234508', 'Brgy. Navotas, Balayan, Batangas', 'joanna.salazar@example.com', 'Single', 0, 'Active', 'Full-time', '2021-09-01',
+    '09171234508', 'Brgy. Navotas, Balayan, Batangas', 'mikeyyy.tagle28+11@gmail.com', 'Single', 0, 'Active', 'Full-time', '2021-09-01',
     'Admissions', 'Admissions Officer', 8.0, 120.00, 0, '34-1234508-8', '12-345678908-8', '1234-5678-9108', '123-456-708-000', NULL);
 SET @a4 := LAST_INSERT_ID();
 
@@ -126,7 +126,7 @@ INSERT INTO admin_staff (employee_number, fingerprint_id, firstname, middlename,
     department, position, office_hours, rate_per_hour, is_faculty, instructor_rank, rate_per_hour_unit, load_units, lecture_hours,
     sss_id, philhealth_id, pagibig_id, tin_id, notes)
 VALUES ('STIBLN-0002-F', '109', 'Teresa', 'Mendoza', 'Aquino', 'Female', 47, '1979-08-11',
-    '09171234509', 'Brgy. Dalig, Balayan, Batangas', 'teresa.aquino@example.com', 'Married', 2, 'Active', 'Full-time', '2012-06-04',
+    '09171234509', 'Brgy. Dalig, Balayan, Batangas', 'mikeyyy.tagle28+29@gmail.com', 'Married', 2, 'Active', 'Full-time', '2012-06-04',
     'Academic Affairs', 'Program Head', 8.0, 160.00, 1, 'Instructor III', 400.00, 3, 3.0,
     '34-1234509-9', '12-345678909-9', '1234-5678-9109', '123-456-709-000', 'Also teaches Ethics.');
 SET @a5 := LAST_INSERT_ID();
@@ -136,7 +136,7 @@ INSERT INTO admin_staff (employee_number, fingerprint_id, firstname, middlename,
     department, position, office_hours, rate_per_hour, is_faculty, instructor_rank, rate_per_hour_unit, load_units, lecture_hours,
     sss_id, philhealth_id, pagibig_id, tin_id, notes)
 VALUES ('STIBLN-0005-M', '110', 'Vincent', 'Torres', 'Gomez', 'Male', 36, '1990-02-17',
-    '09171234510', 'Brgy. Magabe, Balayan, Batangas', 'vincent.gomez@example.com', 'Married', 1, 'Active', 'Full-time', '2018-01-15',
+    '09171234510', 'Brgy. Magabe, Balayan, Batangas', 'mikeyyy.tagle28+30@gmail.com', 'Married', 1, 'Active', 'Full-time', '2018-01-15',
     'IT Department', 'IT Coordinator', 8.0, 140.00, 1, 'Instructor II', 380.00, 3, 4.0,
     '34-1234510-0', '12-345678910-0', '1234-5678-9110', '123-456-710-000', 'Also teaches Web Development.');
 SET @a6 := LAST_INSERT_ID();
@@ -545,7 +545,7 @@ INSERT INTO faculty_staff (employee_number, fingerprint_id, firstname, middlenam
     contact_number, address, email_address, civil_status, dependent_number, employment_status, employee_type, date_hired,
     load_units, lecture_hours, rate_per_hour_unit, sss_id, philhealth_id, pagibig_id, tin_id, instructor_rank, notes)
 VALUES ('STIBLN-0011-M', '111', 'Marco', 'Ilagan', 'Dimaculangan', 'Male', 32, '1994-02-10',
-    '09171234511', 'Brgy. Poblacion 1, Balayan, Batangas', 'marco.dimaculangan@example.com', 'Single', 0, 'Active', 'Full-time', '2022-06-01',
+    '09171234511', 'Brgy. Poblacion 1, Balayan, Batangas', 'mikeyyy.tagle28+18@gmail.com', 'Single', 0, 'Active', 'Full-time', '2022-06-01',
     12, 3.0, 400.00, '34-1234511-11', '12-345678911-11', '1234-5678-9111', '123-456-711-000', 'Instructor I', 'Computer Science department.');
 SET @nf1 := LAST_INSERT_ID();
 
@@ -553,7 +553,7 @@ INSERT INTO faculty_staff (employee_number, fingerprint_id, firstname, middlenam
     contact_number, address, email_address, civil_status, dependent_number, employment_status, employee_type, date_hired,
     load_units, lecture_hours, rate_per_hour_unit, sss_id, philhealth_id, pagibig_id, tin_id, instructor_rank, notes)
 VALUES ('STIBLN-0012-F', '112', 'Jasmine', 'Alano', 'Rosales', 'Female', 35, '1991-05-20',
-    '09171234512', 'Brgy. Calzada, Calaca, Batangas', 'jasmine.rosales@example.com', 'Married', 1, 'Active', 'Full-time', '2017-07-10',
+    '09171234512', 'Brgy. Calzada, Calaca, Batangas', 'mikeyyy.tagle28+10@gmail.com', 'Married', 1, 'Active', 'Full-time', '2017-07-10',
     9, 3.0, 410.00, '34-1234512-12', '12-345678912-12', '1234-5678-9112', '123-456-712-000', 'Instructor II', 'General Education; approved vacation Aug 24-26.');
 SET @nf2 := LAST_INSERT_ID();
 
@@ -561,7 +561,7 @@ INSERT INTO faculty_staff (employee_number, fingerprint_id, firstname, middlenam
     contact_number, address, email_address, civil_status, dependent_number, employment_status, employee_type, date_hired,
     load_units, lecture_hours, rate_per_hour_unit, sss_id, philhealth_id, pagibig_id, tin_id, instructor_rank, notes)
 VALUES ('STIBLN-0013-M', '113', 'Edgar', 'Buenaventura', 'Manalo', 'Male', 44, '1982-01-15',
-    '09171234513', 'Brgy. Sampaga, Balayan, Batangas', 'edgar.manalo@example.com', 'Married', 3, 'Active', 'Full-time', '2013-03-05',
+    '09171234513', 'Brgy. Sampaga, Balayan, Batangas', 'mikeyyy.tagle28+7@gmail.com', 'Married', 3, 'Active', 'Full-time', '2013-03-05',
     15, 4.0, 450.00, '34-1234513-13', '12-345678913-13', '1234-5678-9113', '123-456-713-000', 'Instructor III', 'Information Systems; Pag-IBIG Calamity Loan on file.');
 SET @nf3 := LAST_INSERT_ID();
 
@@ -569,7 +569,7 @@ INSERT INTO faculty_staff (employee_number, fingerprint_id, firstname, middlenam
     contact_number, address, email_address, civil_status, dependent_number, employment_status, employee_type, date_hired,
     load_units, lecture_hours, rate_per_hour_unit, sss_id, philhealth_id, pagibig_id, tin_id, instructor_rank, notes)
 VALUES ('STIBLN-0014-F', '114', 'Mariel', 'Corpuz', 'Santiago', 'Female', 27, '1999-09-02',
-    '09171234514', 'Brgy. Lanatan, Balayan, Batangas', 'mariel.santiago@example.com', 'Single', 0, 'Active', 'Part-time', '2024-08-12',
+    '09171234514', 'Brgy. Lanatan, Balayan, Batangas', 'mikeyyy.tagle28+20@gmail.com', 'Single', 0, 'Active', 'Part-time', '2024-08-12',
     3, 3.0, 370.00, '34-1234514-14', '12-345678914-14', '1234-5678-9114', '123-456-714-000', 'Instructor I', 'Humanities; part-time, one weekly meeting.');
 SET @nf4 := LAST_INSERT_ID();
 
@@ -577,7 +577,7 @@ INSERT INTO faculty_staff (employee_number, fingerprint_id, firstname, middlenam
     contact_number, address, email_address, civil_status, dependent_number, employment_status, employee_type, date_hired,
     load_units, lecture_hours, rate_per_hour_unit, sss_id, philhealth_id, pagibig_id, tin_id, instructor_rank, notes)
 VALUES ('STIBLN-0015-M', '115', 'Noel', 'Peralta', 'Marasigan', 'Male', 39, '1987-04-18',
-    '09171234515', 'Brgy. Gimalas, Balayan, Batangas', 'noel.marasigan@example.com', 'Married', 2, 'Active', 'Full-time', '2015-01-20',
+    '09171234515', 'Brgy. Gimalas, Balayan, Batangas', 'mikeyyy.tagle28+21@gmail.com', 'Married', 2, 'Active', 'Full-time', '2015-01-20',
     9, 3.0, 420.00, '34-1234515-15', '12-345678915-15', '1234-5678-9115', '123-456-715-000', 'Instructor II', 'Statistics; leave request pending approval.');
 SET @nf5 := LAST_INSERT_ID();
 
@@ -585,7 +585,7 @@ INSERT INTO faculty_staff (employee_number, fingerprint_id, firstname, middlenam
     contact_number, address, email_address, civil_status, dependent_number, employment_status, employee_type, date_hired,
     load_units, lecture_hours, rate_per_hour_unit, sss_id, philhealth_id, pagibig_id, tin_id, instructor_rank, notes)
 VALUES ('STIBLN-0016-F', '116', 'Charisse', 'Ballon', 'Trinidad', 'Female', 26, '2000-03-09',
-    '09171234516', 'Brgy. Navotas, Balayan, Batangas', 'charisse.trinidad@example.com', 'Single', 0, 'Active', 'Contractual', '2025-01-06',
+    '09171234516', 'Brgy. Navotas, Balayan, Batangas', 'mikeyyy.tagle28+4@gmail.com', 'Single', 0, 'Active', 'Contractual', '2025-01-06',
     6, 3.0, 360.00, '34-1234516-16', '12-345678916-16', '1234-5678-9116', '123-456-716-000', 'Instructor I', 'Hospitality Management; one leave request rejected.');
 SET @nf6 := LAST_INSERT_ID();
 
@@ -593,7 +593,7 @@ INSERT INTO faculty_staff (employee_number, fingerprint_id, firstname, middlenam
     contact_number, address, email_address, civil_status, dependent_number, employment_status, employee_type, date_hired,
     load_units, lecture_hours, rate_per_hour_unit, sss_id, philhealth_id, pagibig_id, tin_id, instructor_rank, notes)
 VALUES ('STIBLN-0017-M', '117', 'Ferdinand', 'Lontoc', 'Dela Cruz', 'Male', 47, '1979-06-25',
-    '09171234517', 'Brgy. Caloocan, Balayan, Batangas', 'ferdinand.delacruz@example.com', 'Married', 2, 'Active', 'Full-time', '2011-09-15',
+    '09171234517', 'Brgy. Caloocan, Balayan, Batangas', 'mikeyyy.tagle28+8@gmail.com', 'Married', 2, 'Active', 'Full-time', '2011-09-15',
     12, 3.0, 440.00, '34-1234517-17', '12-345678917-17', '1234-5678-9117', '123-456-717-000', 'Instructor III', 'IT department; Monday class falls on National Heroes Day (Aug 31), paid double.');
 SET @nf7 := LAST_INSERT_ID();
 
@@ -601,7 +601,7 @@ INSERT INTO faculty_staff (employee_number, fingerprint_id, firstname, middlenam
     contact_number, address, email_address, civil_status, dependent_number, employment_status, employee_type, date_hired,
     load_units, lecture_hours, rate_per_hour_unit, sss_id, philhealth_id, pagibig_id, tin_id, instructor_rank, notes)
 VALUES ('STIBLN-0018-F', '118', 'Precious Anne', 'Navarro', 'Gatdula', 'Female', 30, '1996-07-30',
-    '09171234518', 'Brgy. Dalig, Balayan, Batangas', 'precious.gatdula@example.com', 'Married', 1, 'Active', 'Full-time', '2019-10-02',
+    '09171234518', 'Brgy. Dalig, Balayan, Batangas', 'mikeyyy.tagle28+24@gmail.com', 'Married', 1, 'Active', 'Full-time', '2019-10-02',
     9, 3.0, 400.00, '34-1234518-18', '12-345678918-18', '1234-5678-9118', '123-456-718-000', 'Instructor II', 'Business department; unpaid leave Sep 18-19.');
 SET @nf8 := LAST_INSERT_ID();
 
@@ -610,7 +610,7 @@ INSERT INTO admin_staff (employee_number, fingerprint_id, firstname, middlename,
     contact_number, address, email_address, civil_status, dependent_number, employment_status, employee_type, date_hired,
     department, position, office_hours, rate_per_hour, is_faculty, sss_id, philhealth_id, pagibig_id, tin_id, notes)
 VALUES ('STIBLN-0019-M', '119', 'Allan', 'Basilio', 'Jimenez', 'Male', 40, '1986-02-11',
-    '09171234519', 'Brgy. Poblacion 2, Balayan, Batangas', 'allan.jimenez@example.com', 'Married', 2, 'Active', 'Full-time', '2014-05-19',
+    '09171234519', 'Brgy. Poblacion 2, Balayan, Batangas', 'mikeyyy.tagle28+1@gmail.com', 'Married', 2, 'Active', 'Full-time', '2014-05-19',
     'Human Resources', 'HR Officer', 8.0, 130.00, 0, '34-1234519-19', '12-345678919-19', '1234-5678-9119', '123-456-719-000', NULL);
 SET @na1 := LAST_INSERT_ID();
 
@@ -618,7 +618,7 @@ INSERT INTO admin_staff (employee_number, fingerprint_id, firstname, middlename,
     contact_number, address, email_address, civil_status, dependent_number, employment_status, employee_type, date_hired,
     department, position, office_hours, rate_per_hour, is_faculty, sss_id, philhealth_id, pagibig_id, tin_id, notes)
 VALUES ('STIBLN-0020-F', '120', 'Sheila Marie', 'Antazo', 'Bagsic', 'Female', 33, '1993-08-14',
-    '09171234520', 'Brgy. Lucban, Balayan, Batangas', 'sheila.bagsic@example.com', 'Single', 0, 'Active', 'Full-time', '2019-03-11',
+    '09171234520', 'Brgy. Lucban, Balayan, Batangas', 'mikeyyy.tagle28+28@gmail.com', 'Single', 0, 'Active', 'Full-time', '2019-03-11',
     'Library', 'Librarian', 8.0, 110.00, 0, '34-1234520-20', '12-345678920-20', '1234-5678-9120', '123-456-720-000', 'SSS Salary Loan on file.');
 SET @na2 := LAST_INSERT_ID();
 
@@ -626,7 +626,7 @@ INSERT INTO admin_staff (employee_number, fingerprint_id, firstname, middlename,
     contact_number, address, email_address, civil_status, dependent_number, employment_status, employee_type, date_hired,
     department, position, office_hours, rate_per_hour, is_faculty, sss_id, philhealth_id, pagibig_id, tin_id, notes)
 VALUES ('STIBLN-0021-M', '121', 'Rolando', 'Estrella', 'Panganiban', 'Male', 48, '1978-12-01',
-    '09171234521', 'Brgy. Munting Indang, Balayan, Batangas', 'rolando.panganiban@example.com', 'Married', 3, 'Active', 'Full-time', '2009-11-03',
+    '09171234521', 'Brgy. Munting Indang, Balayan, Batangas', 'mikeyyy.tagle28+26@gmail.com', 'Married', 3, 'Active', 'Full-time', '2009-11-03',
     'Security', 'Security Head', 8.0, 120.00, 0, '34-1234521-21', '12-345678921-21', '1234-5678-9121', '123-456-721-000', NULL);
 SET @na3 := LAST_INSERT_ID();
 
@@ -634,7 +634,7 @@ INSERT INTO admin_staff (employee_number, fingerprint_id, firstname, middlename,
     contact_number, address, email_address, civil_status, dependent_number, employment_status, employee_type, date_hired,
     department, position, office_hours, rate_per_hour, is_faculty, sss_id, philhealth_id, pagibig_id, tin_id, notes)
 VALUES ('STIBLN-0022-F', '122', 'Maricel', 'Dungo', 'Esguerra', 'Female', 37, '1989-10-05',
-    '09171234522', 'Brgy. Santa Ana, Balayan, Batangas', 'maricel.esguerra@example.com', 'Married', 2, 'Active', 'Full-time', '2016-04-20',
+    '09171234522', 'Brgy. Santa Ana, Balayan, Batangas', 'mikeyyy.tagle28+19@gmail.com', 'Married', 2, 'Active', 'Full-time', '2016-04-20',
     'Guidance Office', 'Guidance Counselor', 8.0, 125.00, 0, '34-1234522-22', '12-345678922-22', '1234-5678-9122', '123-456-722-000', 'Hospitalized Sep 1-3; sick leave approved.');
 SET @na4 := LAST_INSERT_ID();
 
@@ -642,7 +642,7 @@ INSERT INTO admin_staff (employee_number, fingerprint_id, firstname, middlename,
     contact_number, address, email_address, civil_status, dependent_number, employment_status, employee_type, date_hired,
     department, position, office_hours, rate_per_hour, is_faculty, sss_id, philhealth_id, pagibig_id, tin_id, notes)
 VALUES ('STIBLN-0023-M', '123', 'Johnny', 'Rivera', 'Maranan', 'Male', 29, '1997-01-27',
-    '09171234523', 'Brgy. Gumamela, Balayan, Batangas', 'johnny.maranan@example.com', 'Single', 0, 'Active', 'Contractual', '2023-10-16',
+    '09171234523', 'Brgy. Gumamela, Balayan, Batangas', 'mikeyyy.tagle28+12@gmail.com', 'Single', 0, 'Active', 'Contractual', '2023-10-16',
     'Procurement', 'Procurement Officer', 8.0, 100.00, 0, '34-1234523-23', '12-345678923-23', '1234-5678-9123', '123-456-723-000', 'Personal loan on file.');
 SET @na5 := LAST_INSERT_ID();
 
@@ -650,7 +650,7 @@ INSERT INTO admin_staff (employee_number, fingerprint_id, firstname, middlename,
     contact_number, address, email_address, civil_status, dependent_number, employment_status, employee_type, date_hired,
     department, position, office_hours, rate_per_hour, is_faculty, sss_id, philhealth_id, pagibig_id, tin_id, notes)
 VALUES ('STIBLN-0024-F', '124', 'Divina Gracia', 'Olivar', 'Lumbres', 'Female', 42, '1984-05-09',
-    '09171234524', 'Brgy. Sulok, Balayan, Batangas', 'divina.lumbres@example.com', 'Widowed', 1, 'Resigned', 'Full-time', '2012-02-13',
+    '09171234524', 'Brgy. Sulok, Balayan, Batangas', 'mikeyyy.tagle28+6@gmail.com', 'Widowed', 1, 'Resigned', 'Full-time', '2012-02-13',
     'Clinic', 'School Nurse', 8.0, 115.00, 0, '34-1234524-24', '12-345678924-24', '1234-5678-9124', '123-456-724-000', 'Resigned effective Sep 16, 2026.');
 SET @na6 := LAST_INSERT_ID();
 
@@ -658,7 +658,7 @@ INSERT INTO admin_staff (employee_number, fingerprint_id, firstname, middlename,
     contact_number, address, email_address, civil_status, dependent_number, employment_status, employee_type, date_hired,
     department, position, office_hours, rate_per_hour, is_faculty, sss_id, philhealth_id, pagibig_id, tin_id, notes)
 VALUES ('STIBLN-0025-M', '125', 'Kevin', 'Montalbo', 'Abrigo', 'Male', 25, '2001-11-19',
-    '09171234525', 'Brgy. Niyugan, Balayan, Batangas', 'kevin.abrigo@example.com', 'Single', 0, 'Active', 'Full-time', '2024-02-05',
+    '09171234525', 'Brgy. Niyugan, Balayan, Batangas', 'mikeyyy.tagle28+14@gmail.com', 'Single', 0, 'Active', 'Full-time', '2024-02-05',
     'IT Department', 'IT Support Staff', 8.0, 105.00, 0, '34-1234525-25', '12-345678925-25', '1234-5678-9125', '123-456-725-000', NULL);
 SET @na7 := LAST_INSERT_ID();
 
@@ -666,7 +666,7 @@ INSERT INTO admin_staff (employee_number, fingerprint_id, firstname, middlename,
     contact_number, address, email_address, civil_status, dependent_number, employment_status, employee_type, date_hired,
     department, position, office_hours, rate_per_hour, is_faculty, sss_id, philhealth_id, pagibig_id, tin_id, notes)
 VALUES ('STIBLN-0026-F', '126', 'Rowena', 'Faustino', 'Katigbak', 'Female', 36, '1990-06-08',
-    '09171234526', 'Brgy. Tangos, Balayan, Batangas', 'rowena.katigbak@example.com', 'Married', 1, 'Active', 'Part-time', '2021-08-23',
+    '09171234526', 'Brgy. Tangos, Balayan, Batangas', 'mikeyyy.tagle28+27@gmail.com', 'Married', 1, 'Active', 'Part-time', '2021-08-23',
     'Admissions', 'Admissions Staff', 4.0, 95.00, 0, '34-1234526-26', '12-345678926-26', '1234-5678-9126', '123-456-726-000', 'Part-time, half-day schedule.');
 SET @na8 := LAST_INSERT_ID();
 
@@ -676,7 +676,7 @@ INSERT INTO admin_staff (employee_number, fingerprint_id, firstname, middlename,
     department, position, office_hours, rate_per_hour, is_faculty, instructor_rank, rate_per_hour_unit, load_units, lecture_hours,
     sss_id, philhealth_id, pagibig_id, tin_id, notes)
 VALUES ('STIBLN-0027-M', '127', 'Arnel', 'Bautista', 'Rosario', 'Male', 45, '1981-03-02',
-    '09171234527', 'Brgy. Dilao, Balayan, Batangas', 'arnel.rosario@example.com', 'Married', 2, 'Active', 'Full-time', '2010-06-21',
+    '09171234527', 'Brgy. Dilao, Balayan, Batangas', 'mikeyyy.tagle28+3@gmail.com', 'Married', 2, 'Active', 'Full-time', '2010-06-21',
     'Academic Affairs', 'Program Head', 8.0, 165.00, 1, 'Instructor III', 400.00, 3, 2.0,
     '34-1234527-27', '12-345678927-27', '1234-5678-9127', '123-456-727-000', 'Business program; Pag-IBIG MPL loan on file.');
 SET @na9 := LAST_INSERT_ID();
@@ -686,7 +686,7 @@ INSERT INTO admin_staff (employee_number, fingerprint_id, firstname, middlename,
     department, position, office_hours, rate_per_hour, is_faculty, instructor_rank, rate_per_hour_unit, load_units, lecture_hours,
     sss_id, philhealth_id, pagibig_id, tin_id, notes)
 VALUES ('STIBLN-0028-F', '128', 'Grace', 'Villamor', 'Nepomuceno', 'Female', 34, '1992-02-27',
-    '09171234528', 'Brgy. Calabuso, Balayan, Batangas', 'grace.nepomuceno@example.com', 'Married', 1, 'Active', 'Full-time', '2018-09-17',
+    '09171234528', 'Brgy. Calabuso, Balayan, Batangas', 'mikeyyy.tagle28+9@gmail.com', 'Married', 1, 'Active', 'Full-time', '2018-09-17',
     'Academic Affairs', 'Department Coordinator', 8.0, 150.00, 1, 'Instructor II', 390.00, 3, 1.5,
     '34-1234528-28', '12-345678928-28', '1234-5678-9128', '123-456-728-000', 'IT program; maternity leave approved starting Nov 2.');
 SET @na10 := LAST_INSERT_ID();
@@ -696,7 +696,7 @@ INSERT INTO admin_staff (employee_number, fingerprint_id, firstname, middlename,
     department, position, office_hours, rate_per_hour, is_faculty, instructor_rank, rate_per_hour_unit, load_units, lecture_hours,
     sss_id, philhealth_id, pagibig_id, tin_id, notes)
 VALUES ('STIBLN-0029-M', '129', 'Oliver', 'Tagle', 'Macaraeg', 'Male', 38, '1988-08-08',
-    '09171234529', 'Brgy. Sta. Maria, Balayan, Batangas', 'oliver.macaraeg@example.com', 'Married', 2, 'Active', 'Full-time', '2014-10-13',
+    '09171234529', 'Brgy. Sta. Maria, Balayan, Batangas', 'mikeyyy.tagle28+22@gmail.com', 'Married', 2, 'Active', 'Full-time', '2014-10-13',
     'Guidance Office', 'Guidance Head', 8.0, 155.00, 1, 'Instructor II', 380.00, 3, 1.5,
     '34-1234529-29', '12-345678929-29', '1234-5678-9129', '123-456-729-000', 'Also teaches Values Education.');
 SET @na11 := LAST_INSERT_ID();
@@ -706,7 +706,7 @@ INSERT INTO admin_staff (employee_number, fingerprint_id, firstname, middlename,
     department, position, office_hours, rate_per_hour, is_faculty, instructor_rank, rate_per_hour_unit, load_units, lecture_hours,
     sss_id, philhealth_id, pagibig_id, tin_id, notes)
 VALUES ('STIBLN-0030-F', '130', 'Len', 'Hernandez', 'Aldave', 'Female', 31, '1995-04-16',
-    '09171234530', 'Brgy. Santo Nino, Balayan, Batangas', 'len.aldave@example.com', 'Single', 0, 'Active', 'Full-time', '2020-05-04',
+    '09171234530', 'Brgy. Santo Nino, Balayan, Batangas', 'mikeyyy.tagle28+16@gmail.com', 'Single', 0, 'Active', 'Full-time', '2020-05-04',
     'Registrar', 'Registrar Supervisor', 8.0, 145.00, 1, 'Instructor I', 360.00, 3, 2.0,
     '34-1234530-30', '12-345678930-30', '1234-5678-9130', '123-456-730-000', 'Also teaches Office Systems; other loan on file.');
 SET @na12 := LAST_INSERT_ID();
