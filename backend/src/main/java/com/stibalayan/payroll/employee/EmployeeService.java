@@ -42,10 +42,10 @@ public class EmployeeService {
     private static final String UTILITY = AdminStaff.UTILITY;
     private static final String SECURITY_GUARD = AdminStaff.SECURITY_GUARD;
 
-    // Paper, Tables 1 and 2: "active, inactive, resigned, terminated, on leave".
-    private static final Set<String> STATUSES = Set.of("Active", "Inactive", "On Leave", "Resigned", "Terminated");
-    // Only employees who no longer work here can be archived.
-    private static final Set<String> ARCHIVABLE = Set.of("Inactive", "Resigned", "Terminated");
+    // Paper, Tables 1 and 2: "active, inactive, resigned, terminated, on leave",
+    // plus Archived — picking it here is now how an employee is archived (see apply()).
+    private static final Set<String> STATUSES =
+            Set.of("Active", "On Leave", "Inactive", "Resigned", "Terminated", "Archived");
 
     // The choices offered by the form's select boxes.
     private static final Set<String> GENDERS = new LinkedHashSet<>(List.of("Male", "Female"));
@@ -127,7 +127,6 @@ public class EmployeeService {
     @Transactional
     public void update(String id, EmployeeRequest request) {
         EmployeeId eid = EmployeeId.parse(id);
-        requireNotArchived(find(id));
         validate(request);
         checkRank(request.instructorRank());
         checkUnique(request, eid);
@@ -148,46 +147,21 @@ public class EmployeeService {
     }
 
     /**
-     * Archives an employee. Employees are never deleted: their payroll, DTR,
-     * leave, loan and schedule history stays; they are only hidden from
-     * lists and pickers. Only employees who no longer work here (Inactive,
-     * Resigned or Terminated) can be archived; reason, when given, sets that
-     * status first (Employee Records asks for it). Returns the employee's name.
+     * If this employee is Active and the given leave period covers today,
+     * marks them On Leave. Employees already On Leave, archived, or in some
+     * other status (e.g. already Resigned) are left alone.
      */
     @Transactional
-    public String archive(String id, String reason) {
+    public void markOnLeaveIfCurrent(String id, LocalDate from, LocalDate to) {
+        LocalDate today = LocalDate.now();
+        if (today.isBefore(from) || today.isAfter(to)) {
+            return;
+        }
         StaffMember staff = find(id);
-        if (staff.isArchived()) {
-            throw unprocessable(staff.getFullName() + " is already archived.");
+        if (!staff.isArchived() && "Active".equals(staff.getEmploymentStatus())) {
+            staff.setEmploymentStatus("On Leave");
+            save(staff);
         }
-        if (reason != null && !reason.isBlank()) {
-            if (!ARCHIVABLE.contains(reason.trim())) {
-                throw Validation.invalid("reason", "Choose why: Resigned, Terminated or Inactive.");
-            }
-            staff.setEmploymentStatus(reason.trim());
-        }
-        if (!ARCHIVABLE.contains(staff.getEmploymentStatus())) {
-            throw Validation.invalid("employmentStatus", "Only employees who are Inactive, Resigned or Terminated can be archived. "
-                    + "Change " + staff.getFullName() + "'s employment status first.");
-        }
-        staff.setArchived(true);
-        staff.setArchivedAt(LocalDateTime.now());
-        save(staff);
-        return staff.getFullName();
-    }
-
-    /** Brings an archived employee back to the lists, as Active again. Returns the employee's name. */
-    @Transactional
-    public String restore(String id) {
-        StaffMember staff = find(id);
-        if (!staff.isArchived()) {
-            throw unprocessable(staff.getFullName() + " is not archived.");
-        }
-        staff.setEmploymentStatus("Active");
-        staff.setArchived(false);
-        staff.setArchivedAt(null);
-        save(staff);
-        return staff.getFullName();
     }
 
     private StaffMember find(String id) {
@@ -202,12 +176,6 @@ public class EmployeeService {
             faculty.saveAndFlush(f);
         } else {
             admins.saveAndFlush((AdminStaff) staff);
-        }
-    }
-
-    private static void requireNotArchived(StaffMember staff) {
-        if (staff.isArchived()) {
-            throw unprocessable(staff.getFullName() + " is archived. Restore the employee before editing.");
         }
     }
 
@@ -262,7 +230,8 @@ public class EmployeeService {
             throw Validation.invalid("dateHired", "Date hired must be at least " + MIN_AGE + " years after the birthdate.");
         }
         if (r.status() != null && !r.status().isBlank() && !STATUSES.contains(r.status())) {
-            throw Validation.invalid("status", "Employment status must be Active, Inactive, On Leave, Resigned, or Terminated.");
+            throw Validation.invalid("status",
+                    "Employment status must be Active, On Leave, Inactive, Resigned, Terminated, or Archived.");
         }
         if (r.employeeType() == null || r.employeeType().isBlank()) {
             throw Validation.invalid("employeeType", "Employee type is required.");
@@ -461,7 +430,19 @@ public class EmployeeService {
         staff.setLastname(trim(r.lastName()));
         staff.setEmailAddress(trim(r.email()));
         staff.setContactNumber(trim(r.phone()));
-        staff.setEmploymentStatus(r.status() == null || r.status().isBlank() ? "Active" : r.status());
+        String status = r.status() == null || r.status().isBlank() ? "Active" : r.status();
+        staff.setEmploymentStatus(status);
+        // "Archived" is just another status choice on the form now; keep the
+        // is_archived flag (used to hide/show the employee) in sync with it.
+        if ("Archived".equals(status)) {
+            if (!staff.isArchived()) {
+                staff.setArchived(true);
+                staff.setArchivedAt(LocalDateTime.now());
+            }
+        } else if (staff.isArchived()) {
+            staff.setArchived(false);
+            staff.setArchivedAt(null);
+        }
         staff.setDateHired(parseDate(r.dateHired(), "Date hired"));
         // Notes are no longer on the form; keep any saved ones unless notes are sent.
         if (r.notes() != null) {

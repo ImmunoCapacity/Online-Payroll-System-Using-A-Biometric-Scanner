@@ -197,7 +197,7 @@
                         </div>
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
-                                <label for="employeeType" class="pp-form-label">Employment Status</label>
+                                <label for="employeeType" class="pp-form-label">Employment Type</label>
                                 <select class="form-select pp-form-select" id="employeeType" required>
                                     <option value="" hidden data-hint>—</option>
                                     <option value="Full-time">Full-time</option>
@@ -208,6 +208,24 @@
                             <div class="col-md-6 d-none" id="basicPayField">
                                 <label for="employeeBasicPay" class="pp-form-label">Basic Pay (₱, monthly)</label>
                                 <input type="number" class="form-control pp-form-control" id="employeeBasicPay" min="0" max="10000000" step="0.01" data-validate="number" data-decimals="2" inputmode="decimal" placeholder="e.g. 18000.00" required>
+                            </div>
+                        </div>
+                        <!-- Only shown when editing; new employees always start Active. -->
+                        <div class="row g-3 mb-3 d-none" id="employeeStatusRow">
+                            <div class="col-md-6">
+                                <label for="employeeStatusSelect" class="pp-form-label">Employment Status</label>
+                                <select class="form-select pp-form-select" id="employeeStatusSelect">
+                                    <option value="Active">Active</option>
+                                    <option value="On Leave">On Leave</option>
+                                    <option value="Inactive">Inactive</option>
+                                    <option value="Resigned">Resigned</option>
+                                    <option value="Terminated">Terminated</option>
+                                    <option value="Archived">Archived</option>
+                                </select>
+                                <div class="form-text d-none" id="employeeStatusHint">
+                                    Archived employees are hidden from lists and can no longer be scheduled or paid. Their payroll, DTR,
+                                    leave and loan records are kept, and this can be undone by changing the status again.
+                                </div>
                             </div>
                         </div>
 
@@ -275,37 +293,10 @@
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-danger me-auto d-none" id="archiveEmployeeBtn"><i class="bi bi-archive me-1"></i> Archive Employee</button>
-                        <button type="button" class="btn btn-pp-outline me-auto d-none" id="restoreEmployeeBtn"><i class="bi bi-arrow-counterclockwise me-1"></i> Restore Employee</button>
                         <button type="button" class="btn btn-pp-outline" data-bs-dismiss="modal">Cancel</button>
                         <button type="submit" class="btn btn-pp-primary">Save Employee</button>
                     </div>
                 </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- Archive: why the employee is leaving (sets their status, then archives) -->
-    <div class="modal fade pp-modal" id="archiveModal" tabindex="-1" aria-labelledby="archiveTitle" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2 class="modal-title" id="archiveTitle">Archive Employee</h2>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <p class="mb-3" id="archiveMessage"></p>
-                    <label for="archiveReason" class="pp-form-label">Reason</label>
-                    <select class="form-select pp-form-select" id="archiveReason">
-                        <option value="Resigned">Resigned</option>
-                        <option value="Terminated">Terminated</option>
-                        <option value="Inactive">Inactive</option>
-                    </select>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-pp-outline" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-danger" id="confirmArchiveBtn">Archive Employee</button>
-                </div>
             </div>
         </div>
     </div>

@@ -33,13 +33,14 @@
     const employeeDepartmentSelect = document.getElementById('employeeDepartmentSelect');
     const employeeEmail = document.getElementById('employeeEmail');
     const employeePhone = document.getElementById('employeePhone');
-    // Active / On Leave / Inactive / Resigned / Terminated: not on the form; kept as
-    // loaded (new employees are Active) and set by Archive (reason) and Restore.
-    let currentStatus = 'Active';
     const employeeJoined = document.getElementById('employeeJoined');
     const saveButton = employeeForm.querySelector('button[type="submit"]');
-    const archiveEmployeeBtn = document.getElementById('archiveEmployeeBtn');
-    const restoreEmployeeBtn = document.getElementById('restoreEmployeeBtn');
+    // Employment Status: hidden on Add (new employees always start Active),
+    // shown on Edit. "Archived" is a status choice like any other — the
+    // server hides/shows the employee based on it (see EmployeeService.apply()).
+    const employeeStatusRow = document.getElementById('employeeStatusRow');
+    const employeeStatusSelect = document.getElementById('employeeStatusSelect');
+    const employeeStatusHint = document.getElementById('employeeStatusHint');
     const facultyFields = document.getElementById('facultyFields');
     const adminFields = document.getElementById('adminFields');
 
@@ -270,25 +271,30 @@
             : SERVER_FIELDS;
     }
 
-    // Archived records can be viewed but not edited.
+    // Archived records can be viewed but not edited — except Employment
+    // Status itself, so they can still be un-archived from here.
     function setReadOnly(readOnly) {
         employeeForm.querySelectorAll('input, select, textarea').forEach(function (field) {
-            if (field.id === 'employeeDepartmentSelect') return;   // handled by openModal
+            if (field.id === 'employeeDepartmentSelect' || field.id === 'employeeStatusSelect') return;
             field.disabled = readOnly;
         });
         saveButton.classList.toggle('d-none', readOnly);
     }
+
+    employeeStatusSelect.addEventListener('change', function () {
+        employeeStatusHint.classList.toggle('d-none', employeeStatusSelect.value !== 'Archived');
+    });
 
     function resetForm() {
         employeeForm.reset();
         employeeId.value = '';
         idEdited = false;
         modalTitle.textContent = 'Add Employee';
-        currentStatus = 'Active';
         employeeDepartmentSelect.value = '';
         employeeDepartmentSelect.disabled = false;
-        archiveEmployeeBtn.classList.add('d-none');
-        restoreEmployeeBtn.classList.add('d-none');
+        employeeStatusRow.classList.add('d-none');
+        employeeStatusSelect.value = 'Active';
+        employeeStatusHint.classList.add('d-none');
         setReadOnly(false);
         employeeJoined.value = new Date().toISOString().slice(0, 10);
         toggleTypeFields('');
@@ -377,18 +383,18 @@
             employeeDepartmentSelect.disabled = true;
             employeeEmail.value = employee.email;
             employeePhone.value = employee.phone;
-            currentStatus = employee.status || 'Active';
             employeeJoined.value = employee.dateHired;
             // Older records may hold e.g. "0917-000-0000"; keep only the allowed characters.
             PPValidate.sanitize(employeeForm);
 
-            // Archived records are read-only until restored.
+            employeeStatusRow.classList.remove('d-none');
+            employeeStatusSelect.value = employee.archived ? 'Archived' : (employee.status || 'Active');
+            employeeStatusHint.classList.toggle('d-none', !employee.archived);
+            // Archived records are read-only except Employment Status itself,
+            // so changing it away from Archived is how they're brought back.
             if (employee.archived) {
                 modalTitle.textContent = 'Archived Employee';
-                restoreEmployeeBtn.classList.remove('d-none');
                 setReadOnly(true);
-            } else {
-                archiveEmployeeBtn.classList.remove('d-none');
             }
         } else {
             loadNextId();
@@ -421,7 +427,7 @@
             department: employeeDepartmentSelect.value,
             email: employeeEmail.value.trim(),
             phone: employeePhone.value.trim(),
-            status: currentStatus,
+            status: editingId ? employeeStatusSelect.value : 'Active',
             dateHired: employeeJoined.value
         };
         readFields(PROFILE_FIELDS, payload);
@@ -476,90 +482,10 @@
         }
     });
 
-    // Employees are never deleted, only archived: their payroll, DTR, leave
-    // and loan history is kept, and they are hidden from lists and pickers.
-    // Only employees who no longer work here (Inactive, Resigned or
-    // Terminated) can be archived.
-    const ARCHIVABLE = ['Inactive', 'Resigned', 'Terminated'];
-
-    function postAction(id, action) {
-        return fetch('api/employees/' + encodeURIComponent(id) + '/' + action, { method: 'POST' })
-            .then(function (response) { return response.json(); });
-    }
-
-    // Archive: asks why the employee is leaving (Resigned / Terminated /
-    // Inactive); the server sets that status and archives them.
-    const archiveModal = new bootstrap.Modal(document.getElementById('archiveModal'));
-    let archiving = null;
-
-    archiveEmployeeBtn.addEventListener('click', function () {
-        const id = employeeId.value;
-        const match = employeeList.find(function (item) { return item.id === id; });
-        if (!match) return;
-        archiving = match;
-        document.getElementById('archiveMessage').textContent = 'Archive ' + match.displayName + ' (' + match.employeeNumber +
-            ')? They will be hidden from lists and can no longer be scheduled or paid. Their payroll, DTR, leave and loan ' +
-            'records are kept, and they can be restored from Status: Archived.';
-        document.getElementById('archiveReason').value =
-            ARCHIVABLE.indexOf(match.status) !== -1 ? match.status : 'Resigned';
-        bootstrap.Modal.getInstance(employeeModal).hide();
-        archiveModal.show();
-    });
-
-    document.getElementById('confirmArchiveBtn').addEventListener('click', function () {
-        if (!archiving) return;
-        const match = archiving;
-        const reason = document.getElementById('archiveReason').value;
-        const button = document.getElementById('confirmArchiveBtn');
-        button.disabled = true;
-        fetch('api/employees/' + encodeURIComponent(match.id) + '/archive', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ reason: reason })
-        })
-            .then(function (response) { return response.json(); })
-            .then(function (data) {
-                if (!data.success) {
-                    PPToast.error(data.message || 'Could not archive the employee.');
-                    return;
-                }
-                archiveModal.hide();
-                PPToast.success(match.displayName + ' archived (' + reason + ').');
-                loadEmployees();
-            })
-            .catch(function (error) {
-                PPToast.error('Could not reach the server. Is the Spring Boot backend running?');
-                console.error('[Employee Records]', error);
-            })
-            .then(function () {
-                button.disabled = false;
-            });
-    });
-
-    restoreEmployeeBtn.addEventListener('click', function () {
-        const id = employeeId.value;
-        const match = employeeList.find(function (item) { return item.id === id; });
-        if (!match) return;
-
-        restoreEmployeeBtn.disabled = true;
-        postAction(id, 'restore')
-            .then(function (data) {
-                if (!data.success) {
-                    PPToast.error(data.message || 'Could not restore the employee.');
-                    return;
-                }
-                bootstrap.Modal.getInstance(employeeModal).hide();
-                PPToast.success(match.displayName + ' restored and active again.');
-                loadEmployees();
-            })
-            .catch(function (error) {
-                PPToast.error('Could not reach the server. Is the Spring Boot backend running?');
-                console.error('[Employee Records]', error);
-            })
-            .then(function () {
-                restoreEmployeeBtn.disabled = false;
-            });
-    });
+    // Employees are never deleted, only archived (Employment Status:
+    // Archived): their payroll, DTR, leave and loan history is kept, and
+    // they are hidden from lists and pickers. Changing the status again —
+    // the only editable field once archived — brings them back.
 
     addEmployeeBtn.addEventListener('click', function () {
         openModal(null);

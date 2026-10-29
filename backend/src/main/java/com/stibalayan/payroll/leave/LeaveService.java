@@ -4,6 +4,7 @@ import com.stibalayan.payroll.common.ApiException;
 import com.stibalayan.payroll.common.Validation;
 import com.stibalayan.payroll.employee.EmployeeDirectory;
 import com.stibalayan.payroll.employee.EmployeeId;
+import com.stibalayan.payroll.employee.EmployeeService;
 import com.stibalayan.payroll.employee.StaffMember;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -36,17 +37,20 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class LeaveService {
 
-    private static final Set<String> INACTIVE = Set.of("Inactive", "Resigned", "Terminated");
+    private static final Set<String> INACTIVE = Set.of("Inactive", "Resigned", "Terminated", "Archived");
     private static final int MAX_PAID_DAYS = 366;
 
     private final LeaveCategoryRepository categories;
     private final EmployeeLeaveRepository leaves;
     private final EmployeeDirectory employees;
+    private final EmployeeService employeeService;
 
-    public LeaveService(LeaveCategoryRepository categories, EmployeeLeaveRepository leaves, EmployeeDirectory employees) {
+    public LeaveService(LeaveCategoryRepository categories, EmployeeLeaveRepository leaves, EmployeeDirectory employees,
+                        EmployeeService employeeService) {
         this.categories = categories;
         this.leaves = leaves;
         this.employees = employees;
+        this.employeeService = employeeService;
     }
 
     // ---------------------------------------------------------------
@@ -139,7 +143,9 @@ public class LeaveService {
         l.setRecordedBy(userId);
         apply(l, r, staff);
         markApproved(l, recordedBy);
-        return view(leaves.saveAndFlush(l), employees.all());
+        Map<String, Object> saved = view(leaves.saveAndFlush(l), employees.all());
+        employeeService.markOnLeaveIfCurrent(r.employeeId(), l.getDateFrom(), l.getDateTo());
+        return saved;
     }
 
     /** Corrects a recorded leave (type, dates or paid); the employee can't change. */
@@ -152,7 +158,9 @@ public class LeaveService {
         }
         apply(l, r, employees.require(employeeId));
         markApproved(l, recordedBy);
-        return view(leaves.saveAndFlush(l), employees.all());
+        Map<String, Object> saved = view(leaves.saveAndFlush(l), employees.all());
+        employeeService.markOnLeaveIfCurrent(employeeId, l.getDateFrom(), l.getDateTo());
+        return saved;
     }
 
     /** Validates a request against the rules and copies it onto the entity. */

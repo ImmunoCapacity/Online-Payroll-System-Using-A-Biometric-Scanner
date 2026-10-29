@@ -20,9 +20,8 @@ import org.springframework.web.bind.annotation.RestController;
  * GET    /api/employees        list faculty + admin staff
  * POST   /api/employees        create
  * GET    /api/employees/next-id  the ID the next new employee gets (STIBLN-####, before M/F)
- * PUT    /api/employees/{id}   update ("F3" / "A5")
- * POST   /api/employees/{id}/archive   archive (employees are never deleted)
- * POST   /api/employees/{id}/restore   bring an archived employee back
+ * PUT    /api/employees/{id}   update ("F3" / "A5"); status: "Archived" archives (never
+ *                               deleted, just hidden), any other status un-archives
  * GET    /api/employees?archived=true    include archived employees
  *
  * A new or changed rate is also written to the rate history (Employee Rates).
@@ -67,24 +66,6 @@ public class EmployeeController {
         audit.log(AuthInterceptor.currentUser(http).id(), "Employee Records", "Updated employee",
                 request.firstName() + " " + request.lastName() + " · " + employees.employeeNumberOf(id));
         rates.syncEmployee(id, AuthInterceptor.currentUser(http).id());
-        return Map.of("success", true);
-    }
-
-    /** Body (optional): { reason: "Resigned" | "Terminated" | "Inactive" }. */
-    @PostMapping("/{id}/archive")
-    public Map<String, Object> archive(@PathVariable String id, @RequestBody(required = false) Map<String, String> body,
-                                       HttpServletRequest http) {
-        String reason = body == null ? null : body.get("reason");
-        String name = employees.archive(id, reason);
-        audit.log(AuthInterceptor.currentUser(http).id(), "Employee Records", "Archived employee",
-                name + (reason == null || reason.isBlank() ? "" : " · " + reason.trim()));
-        return Map.of("success", true);
-    }
-
-    @PostMapping("/{id}/restore")
-    public Map<String, Object> restore(@PathVariable String id, HttpServletRequest http) {
-        String name = employees.restore(id);
-        audit.log(AuthInterceptor.currentUser(http).id(), "Employee Records", "Restored employee", name);
         return Map.of("success", true);
     }
 }
