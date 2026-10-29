@@ -11,12 +11,12 @@
  *
  * Role-based access control — the system has exactly three roles:
  *
- *   Payroll Master        Dashboard, Fingerprint Registration,
- *                         Daily Time Record, Attendance Recording,
- *                         Maintenance, Deduction Tables, Payroll,
+ *   Payroll Master        Dashboard, Faculty Schedule, Faculty Teaching
+ *                         Hours, Maintenance, Deduction Tables, Payroll,
  *                         Reports, Employee Record Management
  *   Attendance Monitoring Staff         Dashboard, Fingerprint Registration,
- *                         Daily Time Record, Attendance Recording
+ *                         Daily Time Record, Attendance Recording,
+ *                         Faculty Schedule, Faculty Teaching Hours
  *   System Administrator  Utility
  *
  * PAGE_ACCESS below maps every page to the roles that may open it.
@@ -42,11 +42,11 @@
         'dashboard.html': [MASTER],
         'attendance-monitoring-staff.html': [STAFF],
 
-        // Fingerprint Registration
-        'fingerprint-registration.html': [MASTER, STAFF],
+        // Fingerprint Registration (Attendance Monitoring Staff only)
+        'fingerprint-registration.html': [STAFF],
 
-        // Daily Time Record + Attendance Recording (Manual Entry section)
-        'dtr.html': [MASTER, STAFF],
+        // Daily Time Record + Attendance Recording (Manual Entry section) — Attendance Monitoring Staff only
+        'dtr.html': [STAFF],
         // Faculty Schedule (planned classes; editing is Payroll Master only)
         'faculty-schedule.html': [MASTER, STAFF],
         // Faculty Teaching Hours (classroom checks; approval is Payroll Master only)

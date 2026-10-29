@@ -105,28 +105,6 @@
         },
 
         {
-            id: 'fingerprint',
-            label: 'Fingerprint Registration',
-            icon: 'bi-fingerprint',
-            href: 'fingerprint-registration.html'
-        },
-
-        {
-            id: 'dtr',
-            label: 'Daily Time Record',
-            icon: 'bi-clock-history',
-            href: 'dtr.html',
-            submenu: DTR_SUBMENU
-        },
-
-        {
-            id: 'attendance-recording',
-            label: 'Attendance Recording',
-            icon: 'bi-pencil-square',
-            href: 'dtr.html?section=manual'
-        },
-
-        {
             id: 'employees',
             label: 'Employee Records',
             icon: 'bi-people',

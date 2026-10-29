@@ -12,9 +12,10 @@ import java.util.Set;
 public enum SystemModule {
 
     DASHBOARD(Roles.PAYROLL_MASTER, Roles.ATTENDANCE_MONITORING_STAFF),
-    FINGERPRINT_REGISTRATION(Roles.PAYROLL_MASTER, Roles.ATTENDANCE_MONITORING_STAFF),
-    DAILY_TIME_RECORD(Roles.PAYROLL_MASTER, Roles.ATTENDANCE_MONITORING_STAFF),
-    ATTENDANCE_RECORDING(Roles.PAYROLL_MASTER, Roles.ATTENDANCE_MONITORING_STAFF),
+    /** Attendance Monitoring Staff only — day-to-day attendance work, not Payroll Master's job. */
+    FINGERPRINT_REGISTRATION(Roles.ATTENDANCE_MONITORING_STAFF),
+    DAILY_TIME_RECORD(Roles.ATTENDANCE_MONITORING_STAFF),
+    ATTENDANCE_RECORDING(Roles.ATTENDANCE_MONITORING_STAFF),
     /** Viewing planned faculty classes (part of the Daily Time Record). */
     FACULTY_SCHEDULE(Roles.PAYROLL_MASTER, Roles.ATTENDANCE_MONITORING_STAFF),
     /** Creating, editing and cancelling faculty classes. */
