@@ -28,6 +28,16 @@
 (function (global) {
     'use strict';
 
+    // Dark mode: applied here (the first script on every page) so the
+    // saved preference takes effect before anything paints — no flash of
+    // the light theme. js/payrollpro-layout.js owns the toggle button
+    // and keeps this in sync after the page has loaded.
+    try {
+        if (localStorage.getItem('ppTheme') === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        }
+    } catch (e) { /* localStorage unavailable (private mode, etc.) — default to light */ }
+
     var MASTER = 'Payroll Master';
     var STAFF = 'Attendance Monitoring Staff';
     var ADMIN = 'System Administrator';

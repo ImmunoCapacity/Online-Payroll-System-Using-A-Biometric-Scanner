@@ -27,9 +27,39 @@
     --pp-success-bg: #ecfdf5;
     --pp-info: #1d4ed8;
     --pp-info-bg: #eff6ff;
+    --pp-surface-hover: #f8f9fa;
+    --pp-primary-soft: rgba(26, 95, 122, 0.08);
     --pp-radius: 10px;
     --pp-radius-sm: 8px;
     --pp-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 4px 16px rgba(26, 95, 122, 0.08);
+}
+
+/* Dark mode: toggled via #ppThemeToggle (js/payrollpro-layout.js), applied
+   early by js/auth-guard.js to avoid a flash of the light theme. Overrides
+   the tokens above; components built from var(--pp-*) re-theme for free —
+   a few older spots still use hardcoded colors and won't. */
+:root[data-theme="dark"] {
+    --pp-primary: #4fa8c9;
+    --pp-primary-dark: #cdeefb;
+    --pp-primary-light: #163142;
+    --pp-accent: #4fbf96;
+    --pp-accent-light: #163228;
+    --pp-surface: #1b222c;
+    --pp-bg: #11161d;
+    --pp-text: #e5e9ef;
+    --pp-text-muted: #94a3b8;
+    --pp-border: #2d3745;
+    --pp-error: #f87171;
+    --pp-error-bg: #3b1818;
+    --pp-warning: #fbbf24;
+    --pp-warning-bg: #3a2c0c;
+    --pp-success: #4ade80;
+    --pp-success-bg: #10311f;
+    --pp-info: #60a5fa;
+    --pp-info-bg: #122a4d;
+    --pp-surface-hover: #242e3a;
+    --pp-primary-soft: rgba(79, 168, 201, 0.15);
+    --pp-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.35);
 }
 
 * {

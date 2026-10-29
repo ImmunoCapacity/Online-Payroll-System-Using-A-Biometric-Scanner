@@ -523,6 +523,16 @@
 
                 '<div class="pp-topbar-actions">' +
 
+                    '<button type="button" ' +
+                            'class="pp-topbar-btn" ' +
+                            'id="ppThemeToggle" ' +
+                            'aria-label="Switch to dark mode" ' +
+                            'aria-pressed="false">' +
+
+                        '<i class="bi bi-moon-stars" id="ppThemeToggleIcon"></i>' +
+
+                    '</button>' +
+
                     '<div class="pp-notif-wrapper">' +
 
                         '<button type="button" ' +
@@ -741,6 +751,42 @@
     // ============================================================
     // USER MENU
     // ============================================================
+
+    // ============================================================
+    // DARK MODE TOGGLE
+    // auth-guard.js applies the saved preference before first paint;
+    // this just wires the button up to flip it and keep it in sync.
+    // ============================================================
+
+    function bindThemeToggle() {
+
+        var button = document.getElementById('ppThemeToggle');
+        var icon = document.getElementById('ppThemeToggleIcon');
+
+        if (!button) {
+            return;
+        }
+
+        function isDark() {
+            return document.documentElement.getAttribute('data-theme') === 'dark';
+        }
+
+        function applyState() {
+            var dark = isDark();
+            if (icon) icon.className = 'bi ' + (dark ? 'bi-sun' : 'bi-moon-stars');
+            button.setAttribute('aria-pressed', dark ? 'true' : 'false');
+            button.setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode');
+        }
+
+        button.addEventListener('click', function () {
+            var dark = !isDark();
+            document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+            try { localStorage.setItem('ppTheme', dark ? 'dark' : 'light'); } catch (e) { /* storage unavailable */ }
+            applyState();
+        });
+
+        applyState();
+    }
 
     // ============================================================
     // NOTIFICATIONS (api/notifications)
@@ -1467,6 +1513,7 @@
 
             bindUserMenu();
             bindNotifications();
+            bindThemeToggle();
 
             bindAccountModals(config);
 
