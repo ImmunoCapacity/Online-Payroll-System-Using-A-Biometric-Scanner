@@ -34,13 +34,13 @@
 
     var ROLE_HOME = {};
     ROLE_HOME[MASTER] = 'dashboard.html';
-    ROLE_HOME[STAFF] = 'payroll-staff.html';
+    ROLE_HOME[STAFF] = 'attendance-monitoring-staff.html';
     ROLE_HOME[ADMIN] = 'system-admin.html';
 
     var PAGE_ACCESS = {
         // Dashboard
         'dashboard.html': [MASTER],
-        'payroll-staff.html': [STAFF],
+        'attendance-monitoring-staff.html': [STAFF],
 
         // Fingerprint Registration
         'fingerprint-registration.html': [MASTER, STAFF],

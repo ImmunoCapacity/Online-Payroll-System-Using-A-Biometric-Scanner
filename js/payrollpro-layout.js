@@ -229,13 +229,13 @@
     // PAYROLL STAFF NAVIGATION
     // ============================================================
 
-    var PAYROLL_STAFF_NAV_ITEMS = [
+    var ATTENDANCE_MONITORING_STAFF_NAV_ITEMS = [
 
         {
             id: 'dashboard',
             label: 'Dashboard',
             icon: 'bi-speedometer2',
-            href: 'payroll-staff.html'
+            href: 'attendance-monitoring-staff.html'
         },
 
         {
@@ -320,7 +320,7 @@
 
     if (navMode === 'payrollStaff') {
 
-        return PAYROLL_STAFF_NAV_ITEMS;
+        return ATTENDANCE_MONITORING_STAFF_NAV_ITEMS;
 
     }
 
@@ -1431,7 +1431,7 @@
             } else if (config.navMode === 'payrollStaff') {
 
                 config.brandHref =
-                    'payroll-staff.html';
+                    'attendance-monitoring-staff.html';
 
             } else {
 
@@ -1522,8 +1522,8 @@
         ADMIN_NAV_ITEMS:
             SYSTEM_ADMIN_NAV_ITEMS,
 
-        PAYROLL_STAFF_NAV_ITEMS:
-            PAYROLL_STAFF_NAV_ITEMS
+        ATTENDANCE_MONITORING_STAFF_NAV_ITEMS:
+            ATTENDANCE_MONITORING_STAFF_NAV_ITEMS
 
     };
 
