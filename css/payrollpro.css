@@ -1937,46 +1937,52 @@ body.pp-app-shell .pp-content {
     gap: 18px;
 }
 
-.pp-widget {
+/* Dashboard quick-stat cards: scoped to .pp-dash-grid so this doesn't
+   clobber the shared, variable-based .pp-widget styling used on every
+   other page (it used to be an unscoped duplicate — same selector,
+   later in the file, so it silently won on every page, hardcoded
+   colors and all, which is why dark mode looked broken almost
+   everywhere .pp-widget appears). */
+.pp-dash-grid .pp-widget {
     overflow: hidden;
-    background: #ffffff;
-    border: 1px solid #d9e5ed;
+    background: var(--pp-surface);
+    border: 1px solid var(--pp-border);
     border-radius: 14px;
     box-shadow: 0 5px 16px rgba(30, 78, 110, 0.07);
 }
 
-.pp-widget-header {
+.pp-dash-grid .pp-widget-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 14px;
     padding: 16px 18px;
-    background: #f8fbfd;
-    border-bottom: 1px solid #dce7ee;
+    background: var(--pp-surface-hover);
+    border-bottom: 1px solid var(--pp-border);
 }
 
-.pp-widget-title {
+.pp-dash-grid .pp-widget-title {
     margin: 0;
-    color: #0c4f70;
+    color: var(--pp-primary-dark);
     font-size: 15px;
     font-weight: 700;
 }
 
-.pp-widget-title i {
-    color: #1681ad;
+.pp-dash-grid .pp-widget-title i {
+    color: var(--pp-primary);
 }
 
-.pp-widget-body {
+.pp-dash-grid .pp-widget-body {
     padding: 18px;
 }
 
-.pp-widget-body > .pp-card {
-    background: #f3f8fc;
-    border: 1px solid #dbe8f0;
+.pp-dash-grid .pp-widget-body > .pp-card {
+    background: var(--pp-bg);
+    border: 1px solid var(--pp-border);
     box-shadow: none;
 }
 
-.pp-widget-body > .pp-card .pp-card-body {
+.pp-dash-grid .pp-widget-body > .pp-card .pp-card-body {
     padding: 18px;
 }
 
@@ -1988,20 +1994,20 @@ body.pp-app-shell .pp-content {
     height: 46px;
     flex: 0 0 46px;
     border-radius: 11px;
-    background: #e1f1f8;
-    color: #0878a5;
+    background: var(--pp-primary-light);
+    color: var(--pp-primary);
     font-size: 30px;
     line-height: 2;
 }
 
-.pp-widget:first-child .pp-icon-box {
-    background: #e8efff;
-    color: #2f64c7;
+.pp-dash-grid .pp-widget:first-child .pp-icon-box {
+    background: var(--pp-primary-light);
+    color: var(--pp-primary);
 }
 
-.pp-widget:nth-child(2) .pp-icon-box {
-    background: #e4f6ed;
-    color: #168456;
+.pp-dash-grid .pp-widget:nth-child(2) .pp-icon-box {
+    background: var(--pp-accent-light);
+    color: var(--pp-accent);
 }
 
 .pp-device-status {
@@ -2015,8 +2021,8 @@ body.pp-app-shell .pp-content {
 }
 
 .pp-device-status-connected {
-    background: #e1f6e9;
-    color: #178248;
+    background: var(--pp-success-bg);
+    color: var(--pp-success);
 }
 
 .pp-device-status-disconnected {
