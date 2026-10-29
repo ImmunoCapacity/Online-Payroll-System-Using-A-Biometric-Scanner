@@ -173,6 +173,7 @@
                                 <thead>
                                     <tr>
                                         <th>Rank Name</th>
+                                        <th class="col-money">Rate per Hour</th>
                                         <th class="col-num">Employees</th>
                                     </tr>
                                 </thead>
@@ -567,8 +568,14 @@
                 </div>
                 <form id="rankForm" novalidate>
                     <div class="modal-body">
-                        <label for="rankName" class="pp-form-label">Rank Name</label>
-                        <input type="text" class="form-control pp-form-control" id="rankName" maxlength="20" data-validate="text" data-label="Rank name" placeholder="e.g. Assistant Professor" required>
+                        <div class="mb-3">
+                            <label for="rankName" class="pp-form-label">Rank Name</label>
+                            <input type="text" class="form-control pp-form-control" id="rankName" maxlength="20" data-validate="text" data-label="Rank name" placeholder="e.g. Assistant Professor" required>
+                        </div>
+                        <div>
+                            <label for="rankRate" class="pp-form-label">Rate per Hour (₱)</label>
+                            <input type="number" class="form-control pp-form-control" id="rankRate" min="0" max="100000" step="0.01" data-validate="number" data-decimals="2" inputmode="decimal" placeholder="e.g. 250.00">
+                        </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-pp-modal-remove me-auto d-none" id="rankRemoveBtn">Remove</button>

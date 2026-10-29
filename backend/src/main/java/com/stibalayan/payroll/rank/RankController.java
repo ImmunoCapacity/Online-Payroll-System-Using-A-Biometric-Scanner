@@ -7,6 +7,8 @@ import com.stibalayan.payroll.auth.SystemModule;
 import com.stibalayan.payroll.common.ApiException;
 import com.stibalayan.payroll.common.Validation;
 import jakarta.servlet.http.HttpServletRequest;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +41,8 @@ public class RankController {
     private static final String USAGE = "(SELECT COUNT(*) FROM faculty_staff f WHERE f.instructor_rank = r.rank_name)"
             + " + (SELECT COUNT(*) FROM admin_staff a WHERE a.instructor_rank = r.rank_name)";
 
+    private static final BigDecimal MAX_RATE = new BigDecimal("100000.00");
+
     private final JdbcTemplate jdbc;
     private final AuditService audit;
 
@@ -54,19 +58,21 @@ public class RankController {
 
     @PostMapping
     @Transactional
-    public Map<String, Object> add(@RequestBody Map<String, String> body, HttpServletRequest http) {
-        String name = name(body.get("name"), null);
-        jdbc.update("INSERT INTO employee_rank (rank_name) VALUES (?)", name);
+    public Map<String, Object> add(@RequestBody Map<String, Object> body, HttpServletRequest http) {
+        String name = name(str(body.get("name")), null);
+        BigDecimal rate = rate(body.get("ratePerHour"));
+        jdbc.update("INSERT INTO employee_rank (rank_name, rate_per_hour) VALUES (?, ?)", name, rate);
         audit.log(AuthInterceptor.currentUser(http).id(), "Instructor Ranks", "Added", name);
         return Map.of("success", true, "ranks", ranks());
     }
 
     @PutMapping("/{id}")
     @Transactional
-    public Map<String, Object> rename(@PathVariable int id, @RequestBody Map<String, String> body, HttpServletRequest http) {
+    public Map<String, Object> rename(@PathVariable int id, @RequestBody Map<String, Object> body, HttpServletRequest http) {
         String old = find(id);
-        String name = name(body.get("name"), id);
-        jdbc.update("UPDATE employee_rank SET rank_name = ? WHERE rank_id = ?", name, id);
+        String name = name(str(body.get("name")), id);
+        BigDecimal rate = rate(body.get("ratePerHour"));
+        jdbc.update("UPDATE employee_rank SET rank_name = ?, rate_per_hour = ? WHERE rank_id = ?", name, rate, id);
         // Employees store the rank by name, so they follow the rename.
         jdbc.update("UPDATE faculty_staff SET instructor_rank = ? WHERE instructor_rank = ?", name, old);
         jdbc.update("UPDATE admin_staff SET instructor_rank = ? WHERE instructor_rank = ?", name, old);
@@ -91,11 +97,12 @@ public class RankController {
     // ---------------------------------------------------------------
 
     private List<Map<String, Object>> ranks() {
-        return jdbc.query("SELECT r.rank_id, r.rank_name, " + USAGE + " AS used FROM employee_rank r ORDER BY r.rank_name",
+        return jdbc.query("SELECT r.rank_id, r.rank_name, r.rate_per_hour, " + USAGE + " AS used FROM employee_rank r ORDER BY r.rank_name",
                 (rs, i) -> {
                     Map<String, Object> m = new LinkedHashMap<>();
                     m.put("id", rs.getInt("rank_id"));
                     m.put("name", rs.getString("rank_name"));
+                    m.put("ratePerHour", rs.getBigDecimal("rate_per_hour"));
                     m.put("employees", rs.getInt("used"));
                     return m;
                 });
@@ -118,5 +125,24 @@ public class RankController {
             throw Validation.invalid("name", name + " already exists.");
         }
         return name;
+    }
+
+    /** Optional standard rate per hour, prefilled into Employee Records when this rank is picked. */
+    private BigDecimal rate(Object value) {
+        if (value == null || String.valueOf(value).trim().isEmpty()) {
+            return null;
+        }
+        BigDecimal amount;
+        try {
+            amount = new BigDecimal(String.valueOf(value));
+        } catch (NumberFormatException e) {
+            throw Validation.invalid("ratePerHour", "Rate per hour must be a number.");
+        }
+        amount = Validation.money(amount, "ratePerHour", "Rate per hour", MAX_RATE);
+        return amount == null ? null : amount.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private static String str(Object value) {
+        return value == null ? null : String.valueOf(value);
     }
 }

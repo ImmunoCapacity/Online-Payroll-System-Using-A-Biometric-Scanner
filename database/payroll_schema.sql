@@ -453,8 +453,9 @@ CREATE TABLE IF NOT EXISTS employee_benefit (
 
 -- 15. Employee Rank management ("add new ranks as needed")
 CREATE TABLE IF NOT EXISTS employee_rank (
-    rank_id   INT AUTO_INCREMENT PRIMARY KEY,
-    rank_name VARCHAR(20) NOT NULL UNIQUE           -- Instructor I, Instructor II, Instructor III, ...
+    rank_id        INT AUTO_INCREMENT PRIMARY KEY,
+    rank_name      VARCHAR(20) NOT NULL UNIQUE,     -- Instructor I, Instructor II, Instructor III, ...
+    rate_per_hour  DECIMAL(10,2) NULL               -- standard teaching rate; prefills Employee Records
 ) ENGINE=InnoDB;
 
 INSERT IGNORE INTO employee_rank (rank_name) VALUES ('Instructor I'), ('Instructor II'), ('Instructor III');
@@ -740,3 +741,6 @@ INSERT IGNORE INTO payroll_period_rule (effective_date, first_start_day, second_
 
 -- Faculty Teaching Hours: minutes late at the beginning check (deducted from pay).
 ALTER TABLE faculty_teaching_attendance ADD COLUMN IF NOT EXISTS late_minutes INT NOT NULL DEFAULT 0 AFTER start_checked_by;
+
+-- Instructor ranks: standard rate per hour (databases created before this existed).
+ALTER TABLE employee_rank ADD COLUMN IF NOT EXISTS rate_per_hour DECIMAL(10,2) NULL AFTER rank_name;

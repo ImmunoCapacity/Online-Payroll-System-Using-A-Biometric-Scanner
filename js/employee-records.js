@@ -116,11 +116,16 @@
     }
 
     // Instructor Rank choices: Maintenance → Instructor Ranks (api/ranks).
+    // Each rank's standard rate per hour, so picking one can fill in the
+    // Rate per Hour/Unit field below it.
+    let rankRates = {};
     function loadRanks() {
         return fetch('api/ranks')
             .then(function (response) { return response.json(); })
             .then(function (data) {
                 if (!data.success) return;
+                rankRates = {};
+                data.ranks.forEach(function (r) { rankRates[r.name] = r.ratePerHour; });
                 document.getElementById('employeeRank').innerHTML = '<option value="">—</option>' +
                     data.ranks.map(function (r) {
                         return '<option value="' + escapeHtml(r.name) + '">' + escapeHtml(r.name) + '</option>';
@@ -128,6 +133,14 @@
             })
             .catch(function () { /* the field just offers no ranks */ });
     }
+
+    // Picking a rank fills in its standard rate (the user can still change it).
+    // Bound to 'change', not programmatic value-setting, so loading an existing
+    // employee for editing keeps their actual saved rate.
+    document.getElementById('employeeRank').addEventListener('change', function () {
+        const rate = rankRates[this.value];
+        if (rate != null) document.getElementById('employeeRateUnit').value = rate;
+    });
 
     // Faculty and Admin staff have different employment fields; Faculty/Admin get both.
     function toggleTypeFields(department) {

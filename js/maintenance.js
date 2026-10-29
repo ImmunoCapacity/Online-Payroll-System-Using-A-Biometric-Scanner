@@ -790,19 +790,20 @@
             renderRanks();
         }).catch(function () {
             document.getElementById('ranksBody').innerHTML =
-                '<tr><td colspan="2" class="text-center text-muted py-4">Could not load instructor ranks from the server.</td></tr>';
+                '<tr><td colspan="3" class="text-center text-muted py-4">Could not load instructor ranks from the server.</td></tr>';
         });
     }
 
     function renderRanks() {
         var body = document.getElementById('ranksBody');
         if (!ranks.length) {
-            body.innerHTML = '<tr><td colspan="2" class="text-center text-muted py-4">No ranks yet. Click Add Rank.</td></tr>';
+            body.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-4">No ranks yet. Click Add Rank.</td></tr>';
             return;
         }
         body.innerHTML = ranks.map(function (r) {
             return '<tr ' + rowAttrs(r.id, 'Edit ' + r.name) + '>' +
                 '<td><strong>' + escapeHtml(r.name) + '</strong></td>' +
+                '<td class="col-money">' + peso(r.ratePerHour) + '</td>' +
                 '<td class="col-num">' + r.employees + '</td>' +
             '</tr>';
         }).join('');
@@ -813,6 +814,7 @@
         document.getElementById('rankModalTitle').textContent = rank ? 'Rename Instructor Rank' : 'Add Instructor Rank';
         document.getElementById('rankForm').reset();
         document.getElementById('rankName').value = rank ? rank.name : '';
+        document.getElementById('rankRate').value = rank && rank.ratePerHour != null ? rank.ratePerHour : '';
         setRemoveButton('rankRemoveBtn', 'Remove', !!rank);
         // A rank can only be removed when nobody has it.
         var removeBtn = document.getElementById('rankRemoveBtn');
@@ -862,10 +864,12 @@
         var form = e.target;
         if (!PPValidate.validateForm(form)) return;
         var name = document.getElementById('rankName').value.trim();
-        api(rankEditId ? 'api/ranks/' + rankEditId : 'api/ranks', rankEditId ? 'PUT' : 'POST', { name: name })
+        var rate = document.getElementById('rankRate').value.trim();
+        api(rankEditId ? 'api/ranks/' + rankEditId : 'api/ranks', rankEditId ? 'PUT' : 'POST',
+            { name: name, ratePerHour: rate === '' ? null : Number(rate) })
             .then(function (data) {
                 if (!data.success) {
-                    if (!PPValidate.showServerError(form, data, { name: 'rankName' })) PPToast.error(data.message);
+                    if (!PPValidate.showServerError(form, data, { name: 'rankName', ratePerHour: 'rankRate' })) PPToast.error(data.message);
                     return;
                 }
                 bootstrap.Modal.getInstance(document.getElementById('rankModal')).hide();
