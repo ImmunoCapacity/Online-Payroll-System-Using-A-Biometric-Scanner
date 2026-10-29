@@ -235,6 +235,50 @@ body.pp-app {
     box-shadow: 0 0 0 3px rgba(26, 95, 122, 0.12);
 }
 
+/* Native date/time inputs: themed icon (hover highlight, bigger target),
+   muted separators, and a picker popup that follows light/dark mode. The
+   ::-webkit-* pseudo-elements only exist in Chromium/WebKit — Firefox just
+   keeps the plain .pp-form-control look above, which is fine. */
+.pp-form-control[type="date"],
+.pp-form-control[type="time"] {
+    color-scheme: light;
+}
+
+:root[data-theme="dark"] .pp-form-control[type="date"],
+:root[data-theme="dark"] .pp-form-control[type="time"] {
+    color-scheme: dark;
+}
+
+.pp-form-control[type="date"]::-webkit-calendar-picker-indicator,
+.pp-form-control[type="time"]::-webkit-calendar-picker-indicator {
+    margin-left: 0.5rem;
+    padding: 0.3rem;
+    border-radius: 6px;
+    opacity: 0.6;
+    cursor: pointer;
+    transform: scale(1.1);
+    transition: opacity 0.15s ease, background-color 0.15s ease;
+}
+
+.pp-form-control[type="date"]:hover::-webkit-calendar-picker-indicator,
+.pp-form-control[type="date"]:focus::-webkit-calendar-picker-indicator,
+.pp-form-control[type="time"]:hover::-webkit-calendar-picker-indicator,
+.pp-form-control[type="time"]:focus::-webkit-calendar-picker-indicator {
+    opacity: 1;
+    background-color: var(--pp-primary-soft);
+}
+
+.pp-form-control[type="date"]::-webkit-datetime-edit-text,
+.pp-form-control[type="time"]::-webkit-datetime-edit-text {
+    color: var(--pp-text-muted);
+    padding: 0 0.125rem;
+}
+
+.pp-form-control[type="date"]::-webkit-datetime-edit-fields-wrapper,
+.pp-form-control[type="time"]::-webkit-datetime-edit-fields-wrapper {
+    letter-spacing: 0.02em;
+}
+
 /* Dropdown hints (js/select-hint.js): "Select type" / "All leave types"
    shows in grey and is not one of the choices. */
 select.pp-select-is-hint {
