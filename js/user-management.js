@@ -10,7 +10,7 @@
     // ================================================================
     // User Account Management (Utility module) — accounts live in the
     // database's users table (api/users). These are the only accounts
-    // that can log in: Payroll Master, Payroll Staff, System Administrator.
+    // that can log in: Payroll Master, Attendance Monitoring Staff, System Administrator.
     // ================================================================
 
     var users = [];
@@ -137,7 +137,7 @@
         userForm.reset();
         userId.value = '';
         userModalTitle.textContent = 'Add User';
-        userRole.value = 'Payroll Staff';
+        userRole.value = 'Attendance Monitoring Staff';
         userActive.checked = true;
         setPasswordMode(false);
         clearUsernameError();

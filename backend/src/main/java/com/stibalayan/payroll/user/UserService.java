@@ -16,7 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * User Account Management (Utility module): the System Administrator creates,
- * edits, deactivates and deletes Payroll Master, Payroll Staff and System
+ * edits, deactivates and deletes Payroll Master, Attendance Monitoring Staff and System
  * Administrator accounts.
  *
  * Guard rails so the system can't be locked out:
@@ -144,7 +144,7 @@ public class UserService {
                     "Username must be 3–50 characters: letters, digits, periods (.), underscores (_) or hyphens (-).");
         }
         if (blank(r.role()) || !Roles.ALL.contains(r.role())) {
-            throw Validation.invalid("role", "Role must be Payroll Master, Payroll Staff or System Administrator.");
+            throw Validation.invalid("role", "Role must be Payroll Master, Attendance Monitoring Staff or System Administrator.");
         }
         String email = Validation.email(r.email(), "email", "Email");
         Validation.phone(r.contactNumber(), "contactNumber", "Contact number");

@@ -24,7 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Faculty Teaching Hours module: the Payroll Staff or Payroll Master checks
+ * Faculty Teaching Hours module: the Attendance Monitoring Staff or Payroll Master checks
  * the classroom at the beginning and at the end of each scheduled class and
  * records what they saw. Teaching attendance does not come from the
  * biometric scanner.

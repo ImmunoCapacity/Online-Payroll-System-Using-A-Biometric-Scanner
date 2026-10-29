@@ -10,7 +10,7 @@ import java.util.Set;
 public final class Roles {
 
     public static final String PAYROLL_MASTER = "Payroll Master";
-    public static final String PAYROLL_STAFF = "Payroll Staff";
+    public static final String PAYROLL_STAFF = "Attendance Monitoring Staff";
     public static final String SYSTEM_ADMINISTRATOR = "System Administrator";
 
     public static final Set<String> ALL = Set.of(PAYROLL_MASTER, PAYROLL_STAFF, SYSTEM_ADMINISTRATOR);

@@ -9,7 +9,7 @@ import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 
 /**
- * System accounts: System Administrator, Payroll Master, Payroll Staff
+ * System accounts: System Administrator, Payroll Master, Attendance Monitoring Staff
  * (paper, Table 5 — Users).
  */
 @Entity
@@ -37,7 +37,7 @@ public class User {
     /** BCrypt hash. */
     private String password;
 
-    /** "System Administrator", "Payroll Master" or "Payroll Staff". */
+    /** "System Administrator", "Payroll Master" or "Attendance Monitoring Staff". */
     private String role;
 
     @Column(name = "is_active")

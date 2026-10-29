@@ -42,7 +42,7 @@
     var ROLES = [
         { name: 'System Administrator', icon: 'bi-shield-check' },
         { name: 'Payroll Master', icon: 'bi-cash-stack' },
-        { name: 'Payroll Staff', icon: 'bi-fingerprint' }
+        { name: 'Attendance Monitoring Staff', icon: 'bi-fingerprint' }
     ];
 
 

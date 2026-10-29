@@ -163,7 +163,7 @@ public class DtrService {
     /**
      * Records with a time-in but no time-out. Payroll pays nothing for that
      * day (hoursWorked and PayrollHoursService both skip them) until
-     * corrected here with a manual entry, so Payroll Staff can review them
+     * corrected here with a manual entry, so Attendance Monitoring Staff can review them
      * before computing a period instead of a day silently going unpaid.
      */
     @Transactional(readOnly = true)

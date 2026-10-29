@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * POST /api/biometric/sync — pull attendance from the K40 into the DTR.
- * Device Sync (Payroll Master, Payroll Staff, System Administrator); called
+ * Device Sync (Payroll Master, Attendance Monitoring Staff, System Administrator); called
  * by the "Sync Device" button on dtr.html and biometric-devices.html.
  *
  * GET /api/biometric/status — live sync state; dtr.html and biometric-devices.html poll it; dtr.html reloads

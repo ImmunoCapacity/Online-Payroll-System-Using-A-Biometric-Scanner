@@ -5,7 +5,7 @@
     var ROLE_HOME = {
         'System Administrator': 'system-admin.html',
         'Payroll Master': 'dashboard.html',
-        'Payroll Staff': 'payroll-staff.html'
+        'Attendance Monitoring Staff': 'payroll-staff.html'
     };
 
     // ============================================================

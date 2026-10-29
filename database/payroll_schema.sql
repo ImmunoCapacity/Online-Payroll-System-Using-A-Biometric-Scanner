@@ -35,7 +35,7 @@ CREATE DATABASE IF NOT EXISTS Payroll_DB CHARACTER SET utf8mb4 COLLATE utf8mb4_u
 USE Payroll_DB;
 
 -- Table 5. Users — the only accounts that can log in.
--- role is exactly one of: Payroll Master | Payroll Staff | System Administrator
+-- role is exactly one of: Payroll Master | Attendance Monitoring Staff | System Administrator
 CREATE TABLE IF NOT EXISTS users (
     user_id        INT AUTO_INCREMENT PRIMARY KEY,
     first_name     VARCHAR(50)  NOT NULL,
@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS users (
     username       VARCHAR(50)  UNIQUE,
     password       VARCHAR(255) NOT NULL,
     role           VARCHAR(50)  NOT NULL
-                   CHECK (role IN ('Payroll Master', 'Payroll Staff', 'System Administrator')),
+                   CHECK (role IN ('Payroll Master', 'Attendance Monitoring Staff', 'System Administrator')),
     email          VARCHAR(100) NOT NULL UNIQUE,
     contact_number VARCHAR(50),
     is_active      TINYINT(1)   NOT NULL DEFAULT 1,
@@ -711,6 +711,15 @@ ALTER TABLE bir_table ADD COLUMN IF NOT EXISTS archived_at DATETIME NULL;
 ALTER TABLE philhealth_table ADD COLUMN IF NOT EXISTS archived_at DATETIME NULL;
 ALTER TABLE pagibig_table ADD COLUMN IF NOT EXISTS archived_at DATETIME NULL;
 ALTER TABLE sss_table ADD COLUMN IF NOT EXISTS archived_at DATETIME NULL;
+-- "Payroll Staff" renamed to "Attendance Monitoring Staff" (role unchanged otherwise).
+-- CHANGE COLUMN clears an old-style inline CHECK (DROP CONSTRAINT does not
+-- reach it on this MariaDB version); DROP CONSTRAINT IF EXISTS then clears a
+-- CHECK already migrated by an earlier run of this file. Together they leave
+-- the column with no CHECK either way, so the ADD below never collides.
+ALTER TABLE users CHANGE COLUMN role role VARCHAR(50) NOT NULL;
+ALTER TABLE users DROP CONSTRAINT IF EXISTS role;
+UPDATE users SET role = 'Attendance Monitoring Staff' WHERE role = 'Payroll Staff';
+ALTER TABLE users ADD CONSTRAINT role CHECK (role IN ('Payroll Master', 'Attendance Monitoring Staff', 'System Administrator'));
 -- Maintenance → Grace Period (key/value settings; application.properties holds the defaults).
 CREATE TABLE IF NOT EXISTS system_setting (
     setting_key   VARCHAR(60)  PRIMARY KEY,

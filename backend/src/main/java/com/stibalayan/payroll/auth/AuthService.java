@@ -14,7 +14,7 @@ import org.springframework.stereotype.Service;
 
 /**
  * Checks credentials against the users table — the only accounts that can
- * log in (Payroll Master, Payroll Staff, System Administrator). Faculty and
+ * log in (Payroll Master, Attendance Monitoring Staff, System Administrator). Faculty and
  * administrative staff are employee records, not users.
  */
 @Service

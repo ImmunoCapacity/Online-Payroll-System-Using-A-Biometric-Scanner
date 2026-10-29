@@ -1,7 +1,7 @@
 /**
  * Faculty Teaching Hours — manual classroom checks (api/teaching-hours).
  *
- * For each scheduled class (from Faculty Schedule) the Payroll Staff or
+ * For each scheduled class (from Faculty Schedule) the Attendance Monitoring Staff or
  * Payroll Master records a beginning and an ending classroom check. Records
  * with both checks wait for approval by the Payroll Master; only approved
  * classes are paid. Corrections need a reason and are kept in the audit

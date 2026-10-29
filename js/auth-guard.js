@@ -15,7 +15,7 @@
  *                         Daily Time Record, Attendance Recording,
  *                         Maintenance, Deduction Tables, Payroll,
  *                         Reports, Employee Record Management
- *   Payroll Staff         Dashboard, Fingerprint Registration,
+ *   Attendance Monitoring Staff         Dashboard, Fingerprint Registration,
  *                         Daily Time Record, Attendance Recording
  *   System Administrator  Utility
  *
@@ -29,7 +29,7 @@
     'use strict';
 
     var MASTER = 'Payroll Master';
-    var STAFF = 'Payroll Staff';
+    var STAFF = 'Attendance Monitoring Staff';
     var ADMIN = 'System Administrator';
 
     var ROLE_HOME = {};

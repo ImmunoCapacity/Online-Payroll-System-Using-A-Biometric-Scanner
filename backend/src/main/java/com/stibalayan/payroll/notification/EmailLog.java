@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
  * concerns:
  *
  *   Payslips emailed / not emailed         Payroll Master
- *   Fingerprint notice emailed / not sent  Payroll Master and Payroll Staff
+ *   Fingerprint notice emailed / not sent  Payroll Master and Attendance Monitoring Staff
  *   Reset code emailed                     System Administrator, and the user it was sent to
  *   Login credentials emailed / not sent   System Administrator
  */

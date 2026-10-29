@@ -17,7 +17,7 @@
     //                         Attendance Recording, Maintenance,
     //                         Benefits Table, Payroll, Reports,
     //                         Employee Record Management
-    //   Payroll Staff         Dashboard, Fingerprint Registration, DTR,
+    //   Attendance Monitoring Staff         Dashboard, Fingerprint Registration, DTR,
     //                         Attendance Recording
     //   System Administrator  Utility
     // ============================================================
@@ -301,7 +301,7 @@
 
     'Payroll Master': 'master',
 
-    'Payroll Staff': 'payrollStaff'
+    'Attendance Monitoring Staff': 'payrollStaff'
 
 };
 

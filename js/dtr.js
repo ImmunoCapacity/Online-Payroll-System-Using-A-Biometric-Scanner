@@ -8,7 +8,7 @@
 
         user: {
             name: 'Maria Elena Reyes',
-            role: 'Payroll Staff',
+            role: 'Attendance Monitoring Staff',
             initials: 'MR'
         },
 

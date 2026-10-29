@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
  * Faculty Teaching Hours module: the manual classroom checks of one
  * scheduled class (class_schedule_id → Faculty Schedule).
  *
- * The check times are when the Payroll Staff/Master verified the classroom —
+ * The check times are when the Attendance Monitoring Staff/Master verified the classroom —
  * never the faculty member's time-in or time-out. payableHours is set only
  * when the record is approved; payroll reads approved records only.
  */

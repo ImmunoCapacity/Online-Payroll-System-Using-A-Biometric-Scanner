@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * PayrollPro
- * Payroll Staff Dashboard
+ * Attendance Monitoring Staff Dashboard
  * ============================================================
  */
 
@@ -71,7 +71,7 @@
                         '<td><span class="pp-badge pp-badge-' + esc(status) + '">' + esc(status.toUpperCase()) + '</span></td></tr>';
                 }).join('');
             })
-            .catch(function (error) { console.error('[Payroll Staff Dashboard] Could not load today\'s records:', error); });
+            .catch(function (error) { console.error('[Attendance Monitoring Staff Dashboard] Could not load today\'s records:', error); });
     }
 
     // Recent Activity: the latest attendance-related changes from the audit trail.
@@ -94,7 +94,7 @@
                         '</div></div>';
                 }).join('');
             })
-            .catch(function (error) { console.error('[Payroll Staff Dashboard] Could not load activity:', error); });
+            .catch(function (error) { console.error('[Attendance Monitoring Staff Dashboard] Could not load activity:', error); });
     }
 
 
@@ -138,9 +138,9 @@
 
             user: {
 
-                name: 'Payroll Staff',
+                name: 'Attendance Monitoring Staff',
 
-                role: 'Payroll Staff',
+                role: 'Attendance Monitoring Staff',
 
                 initials: 'PS'
 
@@ -226,7 +226,7 @@
                 showAttendance(data.employees);
             })
             .catch(function (error) {
-                console.error('[Payroll Staff Dashboard] Could not load attendance:', error);
+                console.error('[Attendance Monitoring Staff Dashboard] Could not load attendance:', error);
                 setText('presentPercentage', 'Could not load attendance');
             });
 
