@@ -523,9 +523,12 @@
 
                 '<div class="pp-topbar-actions">' +
 
+                    // Hidden for now — dark mode isn't visually consistent across every
+                    // page yet. Drop the inline style to bring the button back.
                     '<button type="button" ' +
                             'class="pp-topbar-btn" ' +
                             'id="ppThemeToggle" ' +
+                            'style="display:none" ' +
                             'aria-label="Switch to dark mode" ' +
                             'aria-pressed="false">' +
 
