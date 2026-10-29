@@ -93,6 +93,7 @@
                     '<td>' + escapeHtml(u.email) + '</td>' +
                     '<td>' + passwordChanged(u.passwordChangedAt) + '</td>' +
                     '<td class="col-actions text-center">' +
+                        '<button type="button" class="btn btn-sm btn-pp-outline me-2" data-action="send-email" data-id="' + u.id + '" aria-label="Email a new password to ' + fullName + '" title="Send Email"><i class="bi bi-envelope"></i></button>' +
                         '<button type="button" class="btn btn-sm btn-pp-outline me-2" data-action="edit" data-id="' + u.id + '" aria-label="Edit ' + fullName + '"><i class="bi bi-pencil"></i></button>' +
                         // System Administrator accounts can't be deleted (only deactivated).
                         (u.role === 'System Administrator'
@@ -172,6 +173,33 @@
             userModal.show();
         }
 
+        if (btn.dataset.action === 'send-email') {
+            ConfirmModal.show({
+                title: 'Send Email',
+                message: 'Email a new password to ' + user.firstName + ' ' + user.lastName + ' (' + user.email + ')? ' +
+                    'Their current password stops working as soon as this is sent.',
+                confirmText: 'Send Email',
+                tone: 'danger'
+            }).then(function (confirmed) {
+                if (!confirmed) return;
+                btn.disabled = true;
+                api('api/users/' + id + '/send-credentials', { method: 'POST' })
+                    .then(function (data) {
+                        btn.disabled = false;
+                        if (!data.success) {
+                            PPToast.error(data.message || 'Could not send the email.');
+                            return;
+                        }
+                        PPToast.success('New password emailed to ' + user.email + '.');
+                        loadUsers();
+                    })
+                    .catch(function () {
+                        btn.disabled = false;
+                        PPToast.error('Could not reach the server. Is the Spring Boot backend running?');
+                    });
+            });
+        }
+
         if (btn.dataset.action === 'delete') {
             ConfirmModal.show({
                 title: 'Delete User Account',
@@ -247,7 +275,15 @@
                     return;
                 }
                 userModal.hide();
-                PPToast.success(editingId ? 'User updated.' : 'User added.');
+                if (editingId) {
+                    PPToast.success('User updated.');
+                } else if (data.emailSent) {
+                    PPToast.success('User added. Login details emailed to ' + payload.email + '.');
+                } else if (data.mailConfigured) {
+                    PPToast.error('User added, but the login email could not be sent. Use "Send Email" to try again.');
+                } else {
+                    PPToast.success('User added. Email isn’t set up on this server, so share the password with them directly.');
+                }
                 loadUsers();
             })
             .catch(function () {

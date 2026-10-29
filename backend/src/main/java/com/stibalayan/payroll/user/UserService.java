@@ -1,8 +1,11 @@
 package com.stibalayan.payroll.user;
 
+import com.stibalayan.payroll.audit.AuditService;
 import com.stibalayan.payroll.auth.Roles;
 import com.stibalayan.payroll.common.ApiException;
 import com.stibalayan.payroll.common.Validation;
+import com.stibalayan.payroll.notification.EmailLog;
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -27,13 +30,21 @@ public class UserService {
     private static final int MIN_PASSWORD_LENGTH = 8;
     private static final int MAX_PASSWORD_LENGTH = 72;
     private static final Pattern USERNAME = Pattern.compile("^[A-Za-z0-9._-]{3,50}$");
+    private static final String GENERATED_LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz";
+    private static final String GENERATED_DIGITS = "23456789";
 
     private final UserRepository users;
     private final BCryptPasswordEncoder passwordEncoder;
+    private final UserCredentialsMailService credentialsMail;
+    private final AuditService audit;
+    private final SecureRandom random = new SecureRandom();
 
-    public UserService(UserRepository users, BCryptPasswordEncoder passwordEncoder) {
+    public UserService(UserRepository users, BCryptPasswordEncoder passwordEncoder,
+                       UserCredentialsMailService credentialsMail, AuditService audit) {
         this.users = users;
         this.passwordEncoder = passwordEncoder;
+        this.credentialsMail = credentialsMail;
+        this.audit = audit;
     }
 
     @Transactional(readOnly = true)
@@ -42,7 +53,7 @@ public class UserService {
     }
 
     @Transactional
-    public UserResponse create(UserRequest request) {
+    public UserCreateResult create(UserRequest request, Integer createdBy) {
         validate(request, null);
         String password = request.password() == null ? "" : request.password();
         if (password.isEmpty()) {
@@ -54,7 +65,33 @@ public class UserService {
         apply(user, request);
         user.setPassword(passwordEncoder.encode(password));
         user.setPasswordChangedAt(LocalDateTime.now());
-        return UserResponse.of(users.save(user));
+        User saved = users.save(user);
+
+        boolean sent = credentialsMail.send(saved, password, true);
+        audit.log(createdBy, EmailLog.MODULE, sent ? EmailLog.CREDENTIALS : EmailLog.CREDENTIALS_FAILED,
+                "New account for " + saved.getEmail());
+        return new UserCreateResult(UserResponse.of(saved), sent, credentialsMail.isConfigured());
+    }
+
+    /**
+     * "Send Email" (User Management): a fresh random password, emailed to the
+     * account. The password is never shown in the UI or logged — only the
+     * account holder receives it, by email.
+     */
+    @Transactional
+    public boolean sendCredentials(int id, int currentUserId) {
+        User user = users.findById(id).orElseThrow(UserService::notFound);
+        String password = generatePassword();
+        user.setPassword(passwordEncoder.encode(password));
+        user.setPasswordChangedAt(LocalDateTime.now());
+        boolean sent = credentialsMail.send(user, password, false);
+        audit.log(currentUserId, EmailLog.MODULE, sent ? EmailLog.CREDENTIALS : EmailLog.CREDENTIALS_FAILED,
+                (sent ? "New password emailed to " : "Could not email a new password to ") + user.getEmail());
+        if (!sent) {
+            throw unprocessable("The account's password was reset, but the email could not be sent. "
+                    + "Check the mail settings, then try again or tell them the account needs a new password.");
+        }
+        return true;
     }
 
     @Transactional
@@ -124,6 +161,24 @@ public class UserService {
         if (emailTaken) {
             throw Validation.invalid("email", "This email address is already used by another account.");
         }
+    }
+
+    /** A 10-character random password: readable (no 0/O/1/l/I), a letter and a digit guaranteed. */
+    private String generatePassword() {
+        char[] chars = new char[10];
+        chars[0] = GENERATED_LETTERS.charAt(random.nextInt(GENERATED_LETTERS.length()));
+        chars[1] = GENERATED_DIGITS.charAt(random.nextInt(GENERATED_DIGITS.length()));
+        String pool = GENERATED_LETTERS + GENERATED_DIGITS;
+        for (int i = 2; i < chars.length; i++) {
+            chars[i] = pool.charAt(random.nextInt(pool.length()));
+        }
+        for (int i = chars.length - 1; i > 0; i--) {
+            int j = random.nextInt(i + 1);
+            char tmp = chars[i];
+            chars[i] = chars[j];
+            chars[j] = tmp;
+        }
+        return new String(chars);
     }
 
     /** At least 8 characters, at most 72 (BCrypt ignores anything longer), with a letter and a digit. */

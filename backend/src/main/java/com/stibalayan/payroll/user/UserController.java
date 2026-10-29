@@ -15,10 +15,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * GET    /api/users        list system accounts
- * POST   /api/users        create
- * PUT    /api/users/{id}   update (empty password = keep current)
- * DELETE /api/users/{id}   delete
+ * GET    /api/users                    list system accounts
+ * POST   /api/users                    create — emails the password to the new account
+ * PUT    /api/users/{id}                update (empty password = keep current)
+ * DELETE /api/users/{id}                delete
+ * POST   /api/users/{id}/send-credentials  new random password, emailed ("Send Email")
  */
 @RestController
 @RequestMapping("/api/users")
@@ -37,8 +38,16 @@ public class UserController {
     }
 
     @PostMapping
-    public Map<String, Object> create(@RequestBody UserRequest request) {
-        return Map.of("success", true, "user", userService.create(request));
+    public Map<String, Object> create(@RequestBody UserRequest request, HttpServletRequest http) {
+        UserCreateResult result = userService.create(request, AuthInterceptor.currentUser(http).id());
+        return Map.of("success", true, "user", result.user(), "emailSent", result.emailSent(),
+                "mailConfigured", result.mailConfigured());
+    }
+
+    @PostMapping("/{id}/send-credentials")
+    public Map<String, Object> sendCredentials(@PathVariable int id, HttpServletRequest http) {
+        userService.sendCredentials(id, AuthInterceptor.currentUser(http).id());
+        return Map.of("success", true);
     }
 
     @PutMapping("/{id}")

@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
  *   Payslips emailed / not emailed         Payroll Master
  *   Fingerprint notice emailed / not sent  Payroll Master and Payroll Staff
  *   Reset code emailed                     System Administrator, and the user it was sent to
+ *   Login credentials emailed / not sent   System Administrator
  */
 @Service
 public class EmailLog {
@@ -23,6 +24,8 @@ public class EmailLog {
     public static final String FINGERPRINT = "Fingerprint notice emailed";
     public static final String FINGERPRINT_FAILED = "Fingerprint notice not sent";
     public static final String RESET_CODE = "Reset code emailed";
+    public static final String CREDENTIALS = "Login credentials emailed";
+    public static final String CREDENTIALS_FAILED = "Login credentials not sent";
 
     private final AuditService audit;
 
