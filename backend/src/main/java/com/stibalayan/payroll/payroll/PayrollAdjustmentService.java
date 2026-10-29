@@ -43,7 +43,8 @@ public class PayrollAdjustmentService {
     public static final String PENDING = "Pending";
     public static final String APPLIED = "Applied";
     private static final BigDecimal MAX_HOURS = new BigDecimal("24");
-    private static final Map<String, Integer> TYPE_ORDER = Map.of("Admin", 0, "Faculty", 1, "Faculty/Admin", 2);
+    private static final Map<String, Integer> TYPE_ORDER =
+            Map.of("Admin", 0, "Utility", 1, "Security Guard", 2, "Faculty", 3, "Faculty/Admin", 4);
 
     /** One grid row as sent by the page; empty hours = no adjustment. */
     public record Row(String employeeId, String dateFrom, String dateTo, BigDecimal addHours, BigDecimal deductHours,

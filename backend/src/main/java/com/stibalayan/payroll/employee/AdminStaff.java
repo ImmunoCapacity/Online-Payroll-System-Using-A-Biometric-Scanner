@@ -19,6 +19,8 @@ public class AdminStaff extends StaffMember {
 
     public static final String ADMIN = "Admin";
     public static final String FACULTY_ADMIN = "Faculty/Admin";
+    public static final String UTILITY = "Utility";
+    public static final String SECURITY_GUARD = "Security Guard";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -39,6 +41,10 @@ public class AdminStaff extends StaffMember {
     @Column(name = "is_faculty", nullable = false)
     private boolean faculty;
 
+    /** NULL for plain Admin/Faculty-Admin; UTILITY or SECURITY_GUARD for those types. */
+    @Column(name = "staff_role")
+    private String staffRole;
+
     @Column(name = "instructor_rank")
     private String instructorRank;
 
@@ -54,9 +60,10 @@ public class AdminStaff extends StaffMember {
     @Override
     public Integer getId() { return id; }
 
-    /** "Faculty/Admin" for admin staff who also teach, otherwise "Admin". */
+    /** staffRole when set (Utility/Security Guard); otherwise "Faculty/Admin" for
+     *  admin staff who also teach, or "Admin". */
     @Override
-    public String staffType() { return faculty ? FACULTY_ADMIN : ADMIN; }
+    public String staffType() { return staffRole != null ? staffRole : (faculty ? FACULTY_ADMIN : ADMIN); }
 
     public String getDepartment() { return department; }
     public void setDepartment(String department) { this.department = department; }
@@ -68,6 +75,8 @@ public class AdminStaff extends StaffMember {
     public void setRatePerHour(BigDecimal ratePerHour) { this.ratePerHour = ratePerHour; }
     public boolean isFaculty() { return faculty; }
     public void setFaculty(boolean faculty) { this.faculty = faculty; }
+    public String getStaffRole() { return staffRole; }
+    public void setStaffRole(String staffRole) { this.staffRole = staffRole; }
     public String getInstructorRank() { return instructorRank; }
     public void setInstructorRank(String instructorRank) { this.instructorRank = instructorRank; }
     public BigDecimal getRatePerHourUnit() { return ratePerHourUnit; }

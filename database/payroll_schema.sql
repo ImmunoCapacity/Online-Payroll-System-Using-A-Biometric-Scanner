@@ -110,6 +110,9 @@ CREATE TABLE IF NOT EXISTS admin_staff (
     -- "Faculty/Admin": admin staff who also teach (paper, Payroll Module).
     -- They carry the faculty fields of Table 1 as well.
     is_faculty         TINYINT(1)    NOT NULL DEFAULT 0,
+    -- NULL for plain Admin/Faculty-Admin; "Utility" or "Security Guard" for
+    -- those staff types (same table/fields as Admin, different label only).
+    staff_role         VARCHAR(20),
     instructor_rank    VARCHAR(20),
     rate_per_hour_unit DECIMAL(10,2),
     load_units         INT,
@@ -744,3 +747,6 @@ ALTER TABLE faculty_teaching_attendance ADD COLUMN IF NOT EXISTS late_minutes IN
 
 -- Instructor ranks: standard rate per hour (databases created before this existed).
 ALTER TABLE employee_rank ADD COLUMN IF NOT EXISTS rate_per_hour DECIMAL(10,2) NULL AFTER rank_name;
+
+-- Utility and Security Guard employee types (admin_staff, databases created before this existed).
+ALTER TABLE admin_staff ADD COLUMN IF NOT EXISTS staff_role VARCHAR(20) NULL AFTER is_faculty;

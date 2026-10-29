@@ -39,6 +39,8 @@ public class EmployeeService {
     private static final String FACULTY = "Faculty";
     private static final String ADMIN = AdminStaff.ADMIN;
     private static final String FACULTY_ADMIN = AdminStaff.FACULTY_ADMIN;
+    private static final String UTILITY = AdminStaff.UTILITY;
+    private static final String SECURITY_GUARD = AdminStaff.SECURITY_GUARD;
 
     // Paper, Tables 1 and 2: "active, inactive, resigned, terminated, on leave".
     private static final Set<String> STATUSES = Set.of("Active", "Inactive", "On Leave", "Resigned", "Terminated");
@@ -92,8 +94,10 @@ public class EmployeeService {
     @Transactional
     public synchronized String create(EmployeeRequest request) {
         String department = request.department() == null ? "" : request.department();
-        if (!department.equals(FACULTY) && !department.equals(ADMIN) && !department.equals(FACULTY_ADMIN)) {
-            throw Validation.invalid("department", "Choose a staff type: Faculty, Admin or Faculty/Admin.");
+        if (!department.equals(FACULTY) && !department.equals(ADMIN) && !department.equals(FACULTY_ADMIN)
+                && !department.equals(UTILITY) && !department.equals(SECURITY_GUARD)) {
+            throw Validation.invalid("department",
+                    "Choose a staff type: Faculty, Admin, Faculty/Admin, Utility or Security Guard.");
         }
         validate(request);
         checkRank(request.instructorRank());
@@ -114,6 +118,7 @@ public class EmployeeService {
         }
         AdminStaff staff = new AdminStaff();
         staff.setFaculty(department.equals(FACULTY_ADMIN));
+        staff.setStaffRole(department.equals(UTILITY) ? UTILITY : department.equals(SECURITY_GUARD) ? SECURITY_GUARD : null);
         apply(staff, request);
         staff.setEmployeeNumber(employeeNumber);
         return "A" + saveOrExplain(() -> admins.saveAndFlush(staff)).getId();
@@ -268,7 +273,8 @@ public class EmployeeService {
         // required) follows the same rule as which ones the form shows.
         String department = r.department() == null ? "" : r.department();
         boolean faculty = department.equals(FACULTY) || department.equals(FACULTY_ADMIN);
-        boolean admin = department.equals(ADMIN) || department.equals(FACULTY_ADMIN);
+        boolean admin = department.equals(ADMIN) || department.equals(FACULTY_ADMIN)
+                || department.equals(UTILITY) || department.equals(SECURITY_GUARD);
 
         if (faculty && (r.instructorRank() == null || r.instructorRank().isBlank())) {
             throw Validation.invalid("instructorRank", "Instructor rank is required.");

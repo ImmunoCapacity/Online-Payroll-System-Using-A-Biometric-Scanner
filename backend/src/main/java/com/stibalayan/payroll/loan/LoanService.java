@@ -352,6 +352,8 @@ public class LoanService {
         return switch (staffType) {
             case "Faculty" -> "Faculty Staff";
             case "Faculty/Admin" -> "Administrative and Faculty Staff";
+            case "Utility" -> "Utility Staff";
+            case "Security Guard" -> "Security Staff";
             default -> "Administrative Staff";
         };
     }

@@ -89,9 +89,13 @@
         lectureHours: FACULTY_FIELDS.lectureHours
     });
 
+    // Utility and Security Guard are non-teaching staff like Admin: same
+    // table (admin_staff) and the same field set, just their own label.
+    const ADMIN_LIKE = ['Admin', 'Utility', 'Security Guard'];
+
     function typeFields(department) {
         if (department === 'Faculty') return FACULTY_FIELDS;
-        if (department === 'Admin') return ADMIN_FIELDS;
+        if (ADMIN_LIKE.indexOf(department) !== -1) return ADMIN_FIELDS;
         if (department === 'Faculty/Admin') return FACULTY_ADMIN_FIELDS;
         return {};
     }
@@ -145,10 +149,11 @@
     // Faculty and Admin staff have different employment fields; Faculty/Admin get both.
     function toggleTypeFields(department) {
         const both = department === 'Faculty/Admin';
+        const adminLike = ADMIN_LIKE.indexOf(department) !== -1;
         facultyFields.classList.toggle('d-none', department !== 'Faculty' && !both);
-        adminFields.classList.toggle('d-none', department !== 'Admin' && !both);
-        // Basic Pay: Admin and Faculty/Admin only (Faculty have none).
-        const hasBasicPay = department === 'Admin' || both;
+        adminFields.classList.toggle('d-none', !adminLike && !both);
+        // Basic Pay: Admin (and its Utility/Security Guard variants) and Faculty/Admin only (Faculty have none).
+        const hasBasicPay = adminLike || both;
         document.getElementById('basicPayField').classList.toggle('d-none', !hasBasicPay);
         if (!hasBasicPay) document.getElementById('employeeBasicPay').value = '';
         document.getElementById('employeeRateUnitLabel').textContent =
