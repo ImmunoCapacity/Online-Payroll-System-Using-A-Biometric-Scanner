@@ -240,10 +240,12 @@
     function feedbackFor(input) {
         if (input._ppFeedback) return input._ppFeedback;
         // Reuse an .invalid-feedback that already sits after the field.
-        var anchor = input.closest('.input-group') || input;
+        // .pp-date-wrap (js/date-picker.js) wraps date/time inputs the same
+        // way .input-group wraps others, so climb out of it too.
+        var anchor = input.closest('.input-group, .pp-date-wrap') || input;
         var node = anchor.nextElementSibling;
         while (node && !node.classList.contains('invalid-feedback')) {
-            if (node.matches('input:not([type="hidden"]), select, textarea, label, .input-group')) { node = null; break; }
+            if (node.matches('input:not([type="hidden"]), select, textarea, label, .input-group, .pp-date-wrap')) { node = null; break; }
             node = node.nextElementSibling;
         }
         if (!node) {
