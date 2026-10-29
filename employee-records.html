@@ -212,21 +212,21 @@
                             <div class="col-md-3">
                                 <label for="employeeRank" class="pp-form-label">Instructor Rank</label>
                                 <!-- Choices come from Maintenance → Instructor Ranks (api/ranks). -->
-                                <select class="form-select pp-form-select" id="employeeRank">
-                                    <option value="">—</option>
+                                <select class="form-select pp-form-select" id="employeeRank" required>
+                                    <option value="" hidden data-hint>—</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
                                 <label for="employeeRateUnit" class="pp-form-label" id="employeeRateUnitLabel">Rate per Hour/Unit (₱)</label>
-                                <input type="number" class="form-control pp-form-control" id="employeeRateUnit" min="0" max="100000" step="0.01" data-validate="number" data-decimals="2" inputmode="decimal">
+                                <input type="number" class="form-control pp-form-control" id="employeeRateUnit" min="0" max="100000" step="0.01" data-validate="number" data-decimals="2" inputmode="decimal" required>
                             </div>
                             <div class="col-md-3">
-                                <label for="employeeLoadUnits" class="pp-form-label">Load Units</label>
-                                <input type="number" class="form-control pp-form-control" id="employeeLoadUnits" min="0" max="99" step="1" data-validate="number" data-decimals="0" inputmode="numeric">
+                                <label for="employeeLoadUnits" class="pp-form-label">Load Units per Semester</label>
+                                <input type="number" class="form-control pp-form-control" id="employeeLoadUnits" min="0" max="99" step="1" data-validate="number" data-decimals="0" inputmode="numeric" required>
                             </div>
                             <div class="col-md-3">
-                                <label for="employeeLectureHours" class="pp-form-label">Lecture Hours</label>
-                                <input type="number" class="form-control pp-form-control" id="employeeLectureHours" min="0" max="999.9" step="0.5" data-validate="number" data-decimals="1" inputmode="decimal">
+                                <label for="employeeLectureHours" class="pp-form-label">Lecture Hours per week</label>
+                                <input type="number" class="form-control pp-form-control" id="employeeLectureHours" min="0" max="999.9" step="0.5" data-validate="number" data-decimals="1" inputmode="decimal" required>
                             </div>
                         </div>
 
@@ -234,19 +234,19 @@
                         <div class="row g-3 mb-3 d-none" id="adminFields">
                             <div class="col-md-3">
                                 <label for="employeeOfficeDept" class="pp-form-label">Department</label>
-                                <input type="text" class="form-control pp-form-control" id="employeeOfficeDept" maxlength="50" data-validate="text" placeholder="e.g. Registrar">
+                                <input type="text" class="form-control pp-form-control" id="employeeOfficeDept" maxlength="50" data-validate="text" placeholder="e.g. Registrar" required>
                             </div>
                             <div class="col-md-3">
                                 <label for="employeePosition" class="pp-form-label">Position</label>
-                                <input type="text" class="form-control pp-form-control" id="employeePosition" maxlength="50" data-validate="text">
+                                <input type="text" class="form-control pp-form-control" id="employeePosition" maxlength="50" data-validate="text" required>
                             </div>
                             <div class="col-md-3">
                                 <label for="employeeRateHour" class="pp-form-label">Rate per Hour (₱)</label>
-                                <input type="number" class="form-control pp-form-control" id="employeeRateHour" min="0" max="100000" step="0.01" data-validate="number" data-decimals="2" inputmode="decimal">
+                                <input type="number" class="form-control pp-form-control" id="employeeRateHour" min="0" max="100000" step="0.01" data-validate="number" data-decimals="2" inputmode="decimal" required>
                             </div>
                             <div class="col-md-3">
                                 <label for="employeeOfficeHours" class="pp-form-label">Office Hours</label>
-                                <input type="number" class="form-control pp-form-control" id="employeeOfficeHours" min="0" max="24" step="0.5" data-validate="number" data-decimals="1" inputmode="decimal">
+                                <input type="number" class="form-control pp-form-control" id="employeeOfficeHours" min="0" max="24" step="0.5" data-validate="number" data-decimals="1" inputmode="decimal" required>
                             </div>
                         </div>
 
@@ -254,19 +254,19 @@
                         <div class="row g-3 mb-3">
                             <div class="col-md-3">
                                 <label for="employeeSssId" class="pp-form-label">SSS No.</label>
-                                <input type="text" class="form-control pp-form-control" id="employeeSssId" maxlength="50" data-validate="gov-id" data-digits="10" placeholder="XX-XXXXXXX-X">
+                                <input type="text" class="form-control pp-form-control" id="employeeSssId" maxlength="50" data-validate="gov-id" data-digits="10" placeholder="XX-XXXXXXX-X" required>
                             </div>
                             <div class="col-md-3">
                                 <label for="employeePhilhealthId" class="pp-form-label">PhilHealth No.</label>
-                                <input type="text" class="form-control pp-form-control" id="employeePhilhealthId" maxlength="50" data-validate="gov-id" data-digits="12" placeholder="XX-XXXXXXXXX-X">
+                                <input type="text" class="form-control pp-form-control" id="employeePhilhealthId" maxlength="50" data-validate="gov-id" data-digits="12" placeholder="XX-XXXXXXXXX-X" required>
                             </div>
                             <div class="col-md-3">
                                 <label for="employeePagibigId" class="pp-form-label">Pag-IBIG No.</label>
-                                <input type="text" class="form-control pp-form-control" id="employeePagibigId" maxlength="50" data-validate="gov-id" data-digits="12" placeholder="XXXX-XXXX-XXXX">
+                                <input type="text" class="form-control pp-form-control" id="employeePagibigId" maxlength="50" data-validate="gov-id" data-digits="12" placeholder="XXXX-XXXX-XXXX" required>
                             </div>
                             <div class="col-md-3">
                                 <label for="employeeTinId" class="pp-form-label">TIN</label>
-                                <input type="text" class="form-control pp-form-control" id="employeeTinId" maxlength="50" data-validate="gov-id" data-digits="9,12,14" placeholder="XXX-XXX-XXX-XXX">
+                                <input type="text" class="form-control pp-form-control" id="employeeTinId" maxlength="50" data-validate="gov-id" data-digits="9,12,14" placeholder="XXX-XXX-XXX-XXX" required>
                             </div>
                         </div>
                     </div>

@@ -255,25 +255,81 @@ public class EmployeeService {
         }
         oneOf(r.employeeType(), EMPLOYEE_TYPES, "employeeType", "Employee type");
 
-        Validation.optionalText(r.instructorRank(), "instructorRank", "Instructor rank", 20);
-        Validation.money(r.rate(), "rate", "Rate", MAX_RATE);
-        Validation.money(r.teachingRate(), "teachingRate", "Teaching rate", MAX_RATE);
-        // Faculty have no basic pay (see apply()); Admin and Faculty/Admin must enter one.
+        // Which of the Faculty/Admin section's fields apply (and so are
+        // required) follows the same rule as which ones the form shows.
         String department = r.department() == null ? "" : r.department();
-        if (!department.equals(FACULTY) && r.basicPay() == null) {
+        boolean faculty = department.equals(FACULTY) || department.equals(FACULTY_ADMIN);
+        boolean admin = department.equals(ADMIN) || department.equals(FACULTY_ADMIN);
+
+        if (faculty && (r.instructorRank() == null || r.instructorRank().isBlank())) {
+            throw Validation.invalid("instructorRank", "Instructor rank is required.");
+        }
+        Validation.optionalText(r.instructorRank(), "instructorRank", "Instructor rank", 20);
+
+        // rate is the one rate field every department always shows (Faculty's
+        // Rate per Hour/Unit, or Admin/Faculty-Admin's Rate per Hour).
+        if (r.rate() == null) {
+            throw Validation.invalid("rate", "Rate is required.");
+        }
+        Validation.money(r.rate(), "rate", "Rate", MAX_RATE);
+
+        // teachingRate only exists as its own field for Faculty/Admin.
+        if (department.equals(FACULTY_ADMIN) && r.teachingRate() == null) {
+            throw Validation.invalid("teachingRate", "Teaching rate is required.");
+        }
+        Validation.money(r.teachingRate(), "teachingRate", "Teaching rate", MAX_RATE);
+
+        // Faculty have no basic pay (see apply()); Admin and Faculty/Admin must enter one.
+        if (admin && r.basicPay() == null) {
             throw Validation.invalid("basicPay", "Basic pay is required.");
         }
         Validation.money(r.basicPay(), "basicPay", "Basic pay", MAX_BASIC_PAY);
+
+        if (faculty && r.loadUnits() == null) {
+            throw Validation.invalid("loadUnits", "Load units is required.");
+        }
         Validation.wholeNumber(r.loadUnits(), "loadUnits", "Load units", MAX_LOAD_UNITS);
+
+        if (faculty && r.lectureHours() == null) {
+            throw Validation.invalid("lectureHours", "Lecture hours is required.");
+        }
         Validation.decimal(r.lectureHours(), "lectureHours", "Lecture hours", 1, MAX_LECTURE_HOURS);
+
+        if (admin && (r.officeDepartment() == null || r.officeDepartment().isBlank())) {
+            throw Validation.invalid("officeDepartment", "Department is required.");
+        }
         Validation.optionalText(r.officeDepartment(), "officeDepartment", "Department", 50);
+
+        if (admin && (r.position() == null || r.position().isBlank())) {
+            throw Validation.invalid("position", "Position is required.");
+        }
         Validation.optionalText(r.position(), "position", "Position", 50);
+
+        if (admin && r.officeHours() == null) {
+            throw Validation.invalid("officeHours", "Office hours is required.");
+        }
         Validation.decimal(r.officeHours(), "officeHours", "Office hours", 1, MAX_OFFICE_HOURS);
 
+        if (r.sssId() == null || r.sssId().isBlank()) {
+            throw Validation.invalid("sssId", "SSS No. is required.");
+        }
         Validation.governmentId(r.sssId(), "sssId", "SSS No.", 10);
+
+        if (r.philhealthId() == null || r.philhealthId().isBlank()) {
+            throw Validation.invalid("philhealthId", "PhilHealth No. is required.");
+        }
         Validation.governmentId(r.philhealthId(), "philhealthId", "PhilHealth No.", 12);
+
+        if (r.pagibigId() == null || r.pagibigId().isBlank()) {
+            throw Validation.invalid("pagibigId", "Pag-IBIG No. is required.");
+        }
         Validation.governmentId(r.pagibigId(), "pagibigId", "Pag-IBIG No.", 12);
+
+        if (r.tinId() == null || r.tinId().isBlank()) {
+            throw Validation.invalid("tinId", "TIN is required.");
+        }
         Validation.governmentId(r.tinId(), "tinId", "TIN", 9, 12, 14);
+
         Validation.optionalText(r.notes(), "notes", "Notes", 1000);
     }
 
