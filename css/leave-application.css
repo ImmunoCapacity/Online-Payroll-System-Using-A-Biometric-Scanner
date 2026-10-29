@@ -192,39 +192,31 @@
 /* Column widths */
 
 .leave-table .id-column {
-    width: 12%;
-}
-
-.leave-table .employee-column {
-    width: 16%;
-}
-
-.leave-table .type-column {
-    width: 12%;
-}
-
-.leave-table .date-column {
     width: 15%;
 }
 
+.leave-table .employee-column {
+    width: 20%;
+}
+
+.leave-table .type-column {
+    width: 15%;
+}
+
+.leave-table .date-column {
+    width: 18%;
+}
+
 .leave-table .days-column {
-    width: 7%;
+    width: 9%;
 }
 
 .leave-table .pay-column {
-    width: 8%;
-}
-
-.leave-table .filed-column {
-    width: 11%;
-}
-
-.leave-table .status-column {
     width: 10%;
 }
 
-.leave-table .remarks-column {
-    width: 19%;
+.leave-table .filed-column {
+    width: 13%;
 }
 
 /* Row-number column (payrollpro.css draws it via ::before): its 3rem
