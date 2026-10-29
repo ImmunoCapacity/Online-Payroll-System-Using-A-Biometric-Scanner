@@ -192,8 +192,8 @@
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
                                 <label for="employeeType" class="pp-form-label">Employment Status</label>
-                                <select class="form-select pp-form-select" id="employeeType">
-                                    <option value="">—</option>
+                                <select class="form-select pp-form-select" id="employeeType" required>
+                                    <option value="" hidden data-hint>—</option>
                                     <option value="Full-time">Full-time</option>
                                     <option value="Part-time">Part-time</option>
                                     <option value="Contractual">Contractual</option>
@@ -201,7 +201,7 @@
                             </div>
                             <div class="col-md-6 d-none" id="basicPayField">
                                 <label for="employeeBasicPay" class="pp-form-label">Basic Pay (₱, monthly)</label>
-                                <input type="number" class="form-control pp-form-control" id="employeeBasicPay" min="0" max="10000000" step="0.01" data-validate="number" data-decimals="2" inputmode="decimal" placeholder="e.g. 18000.00">
+                                <input type="number" class="form-control pp-form-control" id="employeeBasicPay" min="0" max="10000000" step="0.01" data-validate="number" data-decimals="2" inputmode="decimal" placeholder="e.g. 18000.00" required>
                             </div>
                         </div>
 

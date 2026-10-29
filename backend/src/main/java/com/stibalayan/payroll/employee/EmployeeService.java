@@ -250,11 +250,19 @@ public class EmployeeService {
         if (r.status() != null && !r.status().isBlank() && !STATUSES.contains(r.status())) {
             throw Validation.invalid("status", "Employment status must be Active, Inactive, On Leave, Resigned, or Terminated.");
         }
+        if (r.employeeType() == null || r.employeeType().isBlank()) {
+            throw Validation.invalid("employeeType", "Employee type is required.");
+        }
         oneOf(r.employeeType(), EMPLOYEE_TYPES, "employeeType", "Employee type");
 
         Validation.optionalText(r.instructorRank(), "instructorRank", "Instructor rank", 20);
         Validation.money(r.rate(), "rate", "Rate", MAX_RATE);
         Validation.money(r.teachingRate(), "teachingRate", "Teaching rate", MAX_RATE);
+        // Faculty have no basic pay (see apply()); Admin and Faculty/Admin must enter one.
+        String department = r.department() == null ? "" : r.department();
+        if (!department.equals(FACULTY) && r.basicPay() == null) {
+            throw Validation.invalid("basicPay", "Basic pay is required.");
+        }
         Validation.money(r.basicPay(), "basicPay", "Basic pay", MAX_BASIC_PAY);
         Validation.wholeNumber(r.loadUnits(), "loadUnits", "Load units", MAX_LOAD_UNITS);
         Validation.decimal(r.lectureHours(), "lectureHours", "Lecture hours", 1, MAX_LECTURE_HOURS);
