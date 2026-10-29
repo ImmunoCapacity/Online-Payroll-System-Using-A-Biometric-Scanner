@@ -228,14 +228,17 @@
 }
 
 /* Row-number column (payrollpro.css draws it via ::before): its 3rem
-   default reads too wide here, since rows never go past two digits. */
+   default reads too wide here, since rows never go past two digits.
+   payrollpro.css's rule is :is(...):not(...) > tbody > tr::before, whose
+   specificity (0,2,4) beats a plain "table.leave-table > tbody > tr::before"
+   (0,1,4) — the !important is what actually makes this win. */
 table.leave-table > thead > tr::before,
 table.leave-table > tbody > tr::before,
 table.leave-table > tfoot > tr::before {
-    width: 1.75rem;
-    min-width: 1.75rem;
-    padding-left: 0.625rem;
-    padding-right: 0.375rem;
+    width: 1.75rem !important;
+    min-width: 1.75rem !important;
+    padding-left: 0.625rem !important;
+    padding-right: 0.375rem !important;
 }
 
 
