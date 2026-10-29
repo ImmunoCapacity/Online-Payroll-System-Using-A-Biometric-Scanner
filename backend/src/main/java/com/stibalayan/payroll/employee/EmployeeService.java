@@ -231,8 +231,17 @@ public class EmployeeService {
         if (birthdate.isBefore(today.minusYears(MAX_AGE))) {
             throw Validation.invalid("birthdate", "Birthdate must make the employee at most " + MAX_AGE + " years old.");
         }
+        if (r.civilStatus() == null || r.civilStatus().isBlank()) {
+            throw Validation.invalid("civilStatus", "Civil status is required.");
+        }
         oneOf(r.civilStatus(), CIVIL_STATUSES, "civilStatus", "Civil status");
+        if (r.dependents() == null) {
+            throw Validation.invalid("dependents", "Number of dependents is required.");
+        }
         Validation.wholeNumber(r.dependents(), "dependents", "Number of dependents", MAX_DEPENDENTS);
+        if (r.address() == null || r.address().isBlank()) {
+            throw Validation.invalid("address", "Address is required.");
+        }
         Validation.optionalText(r.address(), "address", "Address", 255);
         Validation.email(r.email(), "email", "Email");
         Validation.phone(r.phone(), "phone", "Contact number");
