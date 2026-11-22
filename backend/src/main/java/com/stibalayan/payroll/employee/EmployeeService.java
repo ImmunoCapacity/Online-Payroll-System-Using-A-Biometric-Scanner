@@ -30,8 +30,9 @@ import org.springframework.transaction.annotation.Transactional;
  * Admin would mean migrating their row and its DTR/payroll history.
  *
  * Employee IDs are assigned by the server: STIBLN-####-M or STIBLN-####-F,
- * the next number across both tables plus the gender letter. The number never
- * changes; the letter follows the gender if it is corrected.
+ * the next number across both tables plus a random M/F letter that has
+ * nothing to do with the employee's gender. Neither the number nor the
+ * letter ever change afterward, including when gender is corrected.
  */
 @Service
 public class EmployeeService {
@@ -39,13 +40,12 @@ public class EmployeeService {
     private static final String FACULTY = "Faculty";
     private static final String ADMIN = AdminStaff.ADMIN;
     private static final String FACULTY_ADMIN = AdminStaff.FACULTY_ADMIN;
-    private static final String UTILITY = AdminStaff.UTILITY;
-    private static final String SECURITY_GUARD = AdminStaff.SECURITY_GUARD;
 
     // Paper, Tables 1 and 2: "active, inactive, resigned, terminated, on leave",
     // plus Archived — picking it here is now how an employee is archived (see apply()).
-    private static final Set<String> STATUSES =
-            Set.of("Active", "On Leave", "Inactive", "Resigned", "Terminated", "Archived");
+    // Active, On Leave and Archived are fixed (see isKnownStatus); the rest
+    // are managed in Maintenance → Employee Status (table employee_status).
+    private static final Set<String> BUILT_IN_STATUSES = Set.of("Active", "On Leave", "Archived");
 
     // The choices offered by the form's select boxes.
     private static final Set<String> GENDERS = new LinkedHashSet<>(List.of("Male", "Female"));
@@ -94,10 +94,10 @@ public class EmployeeService {
     @Transactional
     public synchronized String create(EmployeeRequest request) {
         String department = request.department() == null ? "" : request.department();
-        if (!department.equals(FACULTY) && !department.equals(ADMIN) && !department.equals(FACULTY_ADMIN)
-                && !department.equals(UTILITY) && !department.equals(SECURITY_GUARD)) {
+        boolean builtIn = department.equals(FACULTY) || department.equals(ADMIN) || department.equals(FACULTY_ADMIN);
+        if (!builtIn && !isEmployeeType(department)) {
             throw Validation.invalid("department",
-                    "Choose a staff type: Faculty, Admin, Faculty/Admin, Utility or Security Guard.");
+                    "Choose a staff type: Faculty, Admin, Faculty/Admin, or one from Maintenance → Employee Types.");
         }
         validate(request);
         checkRank(request.instructorRank());
@@ -107,19 +107,23 @@ public class EmployeeService {
         // The ID entered in the form, or the next STIBLN-####-M/F when left blank.
         String employeeNumber = employeeNumber(request, null);
         if (employeeNumber == null) {
-            employeeNumber = ID_PREFIX + nextSequence() + "-" + genderLetter(request.gender());
+            employeeNumber = ID_PREFIX + nextSequence() + "-" + randomLetter();
         }
 
         if (department.equals(FACULTY)) {
             FacultyStaff staff = new FacultyStaff();
             apply(staff, request);
+            staff.setRatePerHourUnit(rankRate(request.instructorRank()));
             staff.setEmployeeNumber(employeeNumber);
             return "F" + saveOrExplain(() -> faculty.saveAndFlush(staff)).getId();
         }
         AdminStaff staff = new AdminStaff();
         staff.setFaculty(department.equals(FACULTY_ADMIN));
-        staff.setStaffRole(department.equals(UTILITY) ? UTILITY : department.equals(SECURITY_GUARD) ? SECURITY_GUARD : null);
+        staff.setStaffRole(department.equals(ADMIN) || department.equals(FACULTY_ADMIN) ? null : department);
         apply(staff, request);
+        if (staff.isFaculty()) {
+            staff.setRatePerHourUnit(rankRate(request.instructorRank()));
+        }
         staff.setEmployeeNumber(employeeNumber);
         return "A" + saveOrExplain(() -> admins.saveAndFlush(staff)).getId();
     }
@@ -130,18 +134,22 @@ public class EmployeeService {
         validate(request);
         checkRank(request.instructorRank());
         checkUnique(request, eid);
-        // A changed ID is used as entered; otherwise the letter follows a corrected gender.
+        // A changed ID is used as entered; otherwise the existing ID is kept as-is.
         String entered = employeeNumber(request, eid);
 
         if (eid.isFaculty()) {
             FacultyStaff staff = faculty.findById(eid.number()).orElseThrow(EmployeeService::notFound);
             apply(staff, request);
-            staff.setEmployeeNumber(entered != null ? entered : withGender(staff.getEmployeeNumber(), request.gender()));
+            staff.setRatePerHourUnit(rankRate(request.instructorRank()));
+            if (entered != null) staff.setEmployeeNumber(entered);
             saveOrExplain(() -> faculty.saveAndFlush(staff));
         } else {
             AdminStaff staff = admins.findById(eid.number()).orElseThrow(EmployeeService::notFound);
             apply(staff, request);
-            staff.setEmployeeNumber(entered != null ? entered : withGender(staff.getEmployeeNumber(), request.gender()));
+            if (staff.isFaculty()) {
+                staff.setRatePerHourUnit(rankRate(request.instructorRank()));
+            }
+            if (entered != null) staff.setEmployeeNumber(entered);
             saveOrExplain(() -> admins.saveAndFlush(staff));
         }
     }
@@ -184,12 +192,12 @@ public class EmployeeService {
      * the field so the page can show it beside the input. The same rules run
      * in the browser (js/form-validation.js).
      */
-    private static void validate(EmployeeRequest r) {
+    private void validate(EmployeeRequest r) {
         Validation.name(r.firstName(), "firstName", "First name", true);
         Validation.name(r.middleName(), "middleName", "Middle name", false);
         Validation.name(r.lastName(), "lastName", "Last name", true);
         if (r.gender() == null || r.gender().isBlank()) {
-            throw Validation.invalid("gender", "Gender is required (it sets the M/F at the end of the Employee ID).");
+            throw Validation.invalid("gender", "Gender is required.");
         }
         oneOf(r.gender(), GENDERS, "gender", "Gender");
 
@@ -229,9 +237,9 @@ public class EmployeeService {
         if (birthdate != null && dateHired.isBefore(birthdate.plusYears(MIN_AGE))) {
             throw Validation.invalid("dateHired", "Date hired must be at least " + MIN_AGE + " years after the birthdate.");
         }
-        if (r.status() != null && !r.status().isBlank() && !STATUSES.contains(r.status())) {
+        if (r.status() != null && !r.status().isBlank() && !isKnownStatus(r.status())) {
             throw Validation.invalid("status",
-                    "Employment status must be Active, On Leave, Inactive, Resigned, Terminated, or Archived.");
+                    "Choose an employment status from the list (add new ones in Maintenance).");
         }
         if (r.employeeType() == null || r.employeeType().isBlank()) {
             throw Validation.invalid("employeeType", "Employee type is required.");
@@ -242,26 +250,20 @@ public class EmployeeService {
         // required) follows the same rule as which ones the form shows.
         String department = r.department() == null ? "" : r.department();
         boolean faculty = department.equals(FACULTY) || department.equals(FACULTY_ADMIN);
-        boolean admin = department.equals(ADMIN) || department.equals(FACULTY_ADMIN)
-                || department.equals(UTILITY) || department.equals(SECURITY_GUARD);
+        boolean admin = department.equals(ADMIN) || department.equals(FACULTY_ADMIN) || isEmployeeType(department);
 
         if (faculty && (r.instructorRank() == null || r.instructorRank().isBlank())) {
             throw Validation.invalid("instructorRank", "Instructor rank is required.");
         }
         Validation.optionalText(r.instructorRank(), "instructorRank", "Instructor rank", 20);
 
-        // rate is the one rate field every department always shows (Faculty's
-        // Rate per Hour/Unit, or Admin/Faculty-Admin's Rate per Hour).
-        if (r.rate() == null) {
+        // rate is the office Rate per Hour (Admin/Faculty-Admin/other Admin-like
+        // types only — pure Faculty's Rate per Hour/Unit is set automatically
+        // from Instructor Rank, never typed in).
+        if (admin && r.rate() == null) {
             throw Validation.invalid("rate", "Rate is required.");
         }
         Validation.money(r.rate(), "rate", "Rate", MAX_RATE);
-
-        // teachingRate only exists as its own field for Faculty/Admin.
-        if (department.equals(FACULTY_ADMIN) && r.teachingRate() == null) {
-            throw Validation.invalid("teachingRate", "Teaching rate is required.");
-        }
-        Validation.money(r.teachingRate(), "teachingRate", "Teaching rate", MAX_RATE);
 
         // Faculty have no basic pay (see apply()); Admin and Faculty/Admin must enter one.
         if (admin && r.basicPay() == null) {
@@ -343,29 +345,17 @@ public class EmployeeService {
         return find(id).getEmployeeNumber();
     }
 
-    /** The ID the next new employee would get, without the M/F letter (e.g. "STIBLN-0015"). */
-    @Transactional(readOnly = true)
-    public String previewNextId() {
-        return ID_PREFIX + nextSequence();
-    }
-
-    private static String genderLetter(String gender) {
-        return "Female".equals(gender == null ? null : gender.trim()) ? "F" : "M";
-    }
-
-    /** Same number, letter for the (possibly corrected) gender: STIBLN-0007-M -> STIBLN-0007-F. */
-    private static String withGender(String employeeNumber, String gender) {
-        if (employeeNumber == null || !employeeNumber.matches("^STIBLN-\\d+-[MF]$")) {
-            return employeeNumber;
-        }
-        return employeeNumber.substring(0, employeeNumber.length() - 1) + genderLetter(gender);
+    /** A random M or F for a new Employee ID's trailing letter — it has nothing to do with gender. */
+    private static String randomLetter() {
+        return java.util.concurrent.ThreadLocalRandom.current().nextBoolean() ? "M" : "F";
     }
 
     /**
      * The Employee ID entered in the form, upper-cased, or null when left blank.
      * Format STIBLN-####-M/F (EMPLOYEE_ID: 4 or more digits, at most 20
-     * characters since the payroll table keeps it too), the letter matching
-     * the gender, and not used by any other employee, archived ones included.
+     * characters since the payroll table keeps it too), and not used by any
+     * other employee, archived ones included. The trailing letter is free —
+     * it no longer has to match gender.
      */
     private String employeeNumber(EmployeeRequest r, EmployeeId current) {
         String id = r.employeeNumber() == null ? "" : r.employeeNumber().trim().toUpperCase();
@@ -375,10 +365,6 @@ public class EmployeeService {
         if (id.length() > 20 || !EMPLOYEE_ID.matcher(id).matches()) {
             throw Validation.invalid("employeeNumber",
                     "Employee ID must look like STIBLN-0037-M: STIBLN, a dash, at least 4 digits, a dash, then M or F.");
-        }
-        if (!id.endsWith("-" + genderLetter(r.gender()))) {
-            throw Validation.invalid("employeeNumber", "The last letter of the Employee ID must be " + genderLetter(r.gender())
-                    + " (" + r.gender() + ").");
         }
         boolean taken;
         if (current == null) {
@@ -403,6 +389,36 @@ public class EmployeeService {
         if (known == null || known == 0) {
             throw Validation.invalid("instructorRank", "Choose an instructor rank from the list (add new ranks in Maintenance).");
         }
+    }
+
+    /**
+     * The chosen Instructor Rank's standard rate per hour — the sole source
+     * of a Faculty/Faculty-Admin employee's Rate per Hour/Unit (a read-only
+     * field in Employee Records that follows the rank; never typed in).
+     * checkRank() already confirmed the rank exists.
+     */
+    private BigDecimal rankRate(String rank) {
+        BigDecimal rate = jdbc.queryForObject(
+                "SELECT rate_per_hour FROM employee_rank WHERE rank_name = ?", BigDecimal.class, rank.trim());
+        return rate == null ? BigDecimal.ZERO.setScale(2) : rate;
+    }
+
+    /** Whether name is one of the "Admin-like" types the Payroll Master added in Maintenance (table employee_type). */
+    private boolean isEmployeeType(String name) {
+        if (name == null || name.isBlank()) {
+            return false;
+        }
+        Integer known = jdbc.queryForObject("SELECT COUNT(*) FROM employee_type WHERE type_name = ?", Integer.class, name.trim());
+        return known != null && known > 0;
+    }
+
+    /** A valid Employment Status: one of the three built-ins, or one added in Maintenance (table employee_status). */
+    private boolean isKnownStatus(String name) {
+        if (BUILT_IN_STATUSES.contains(name)) {
+            return true;
+        }
+        Integer known = jdbc.queryForObject("SELECT COUNT(*) FROM employee_status WHERE status_name = ?", Integer.class, name.trim());
+        return known != null && known > 0;
     }
 
     /** Email must be unique across both staff tables. */
@@ -452,11 +468,12 @@ public class EmployeeService {
         staff.setBasicPay(staff instanceof FacultyStaff ? null : r.basicPay());
 
         staff.setGender(blankToNull(r.gender()));
-        LocalDate birthdate = blankToNull(r.birthdate()) == null ? null : parseDate(r.birthdate(), "Birthdate");
+        String birthdateText = blankToNull(r.birthdate());
+        LocalDate birthdate = birthdateText == null ? null : parseDate(birthdateText, "Birthdate");
         if (birthdate != null && birthdate.isAfter(LocalDate.now())) {
             throw unprocessable("Birthdate can't be in the future.");
         }
-        staff.setBirthdate(birthdate);
+        staff.setBirthdate(birthdateText);
         staff.setAge(birthdate == null ? null : Period.between(birthdate, LocalDate.now()).getYears());
         staff.setCivilStatus(blankToNull(r.civilStatus()));
         staff.setDependentNumber(r.dependents());
@@ -467,8 +484,9 @@ public class EmployeeService {
         staff.setPagibigId(blankToNull(r.pagibigId()));
         staff.setTinId(blankToNull(r.tinId()));
 
+        // Rate per Hour/Unit (teaching) is set separately, from the chosen
+        // Instructor Rank (EmployeeService.rankRate) — never from the request.
         if (staff instanceof FacultyStaff f) {
-            f.setRatePerHourUnit(r.rate());
             f.setInstructorRank(blankToNull(r.instructorRank()));
             f.setLoadUnits(r.loadUnits());
             f.setLectureHours(r.lectureHours());
@@ -478,7 +496,6 @@ public class EmployeeService {
             a.setPosition(blankToNull(r.position()));
             a.setOfficeHours(r.officeHours());
             // Faculty/Admin also teach, so they keep the faculty fields too.
-            a.setRatePerHourUnit(a.isFaculty() ? r.teachingRate() : null);
             a.setInstructorRank(a.isFaculty() ? blankToNull(r.instructorRank()) : null);
             a.setLoadUnits(a.isFaculty() ? r.loadUnits() : null);
             a.setLectureHours(a.isFaculty() ? r.lectureHours() : null);

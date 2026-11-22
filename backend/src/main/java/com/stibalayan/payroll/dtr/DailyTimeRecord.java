@@ -53,6 +53,9 @@ public class DailyTimeRecord {
     /** Why a manual entry was made (paper: manual logging "subject to verification"). */
     private String remarks;
 
+    /** Optional free-form notes on a manual entry, separate from the required reason. */
+    private String notes;
+
     /** users.user_id of whoever encoded a manual entry. */
     @Column(name = "recorded_by")
     private Integer recordedBy;
@@ -78,6 +81,8 @@ public class DailyTimeRecord {
     public void setManualEntry(boolean manualEntry) { this.manualEntry = manualEntry; }
     public String getRemarks() { return remarks; }
     public void setRemarks(String remarks) { this.remarks = remarks; }
+    public String getNotes() { return notes; }
+    public void setNotes(String notes) { this.notes = notes; }
     public Integer getRecordedBy() { return recordedBy; }
     public void setRecordedBy(Integer recordedBy) { this.recordedBy = recordedBy; }
 }

@@ -159,7 +159,7 @@
                         : 'pp-badge-admin'
             ) +
             '">' +
-            type +
+            escapeHtml(PayrollProLayout.staffTypeLabel(type)) +
             '</span>'
         );
     }
@@ -771,7 +771,7 @@
                                     '<span class="pp-faculty-result-name">' + escapeHtml(employee.displayName) + '</span>' +
                                     '<span class="pp-faculty-result-info">' +
                                         escapeHtml(employee.employeeNumber) +
-                                        (employee.type ? ' &middot; ' + escapeHtml(employee.type) : '') +
+                                        (employee.type ? ' &middot; ' + escapeHtml(PayrollProLayout.staffTypeLabel(employee.type)) : '') +
                                     '</span>' +
                                 '</span>' +
                             '</button>'
@@ -903,7 +903,8 @@
         date: 'manualDate',
         timeIn: 'manualTimeIn',
         timeOut: 'manualTimeOut',
-        reason: 'manualReason'
+        reason: 'manualReason',
+        notes: 'manualNotes'
     };
 
 
@@ -1036,7 +1037,10 @@
                         document.getElementById('manualTimeOut').value || null,
 
                     reason:
-                        document.getElementById('manualReason').value.trim()
+                        document.getElementById('manualReason').value.trim(),
+
+                    notes:
+                        document.getElementById('manualNotes').value.trim() || null
 
                 };
 
@@ -1169,8 +1173,10 @@
 
     /* Initialize */
 
-    loadManualEmployees();
-
-    loadDtrRecords();
+    Promise.all([PayrollProLayout.loadStaffTypeLabels(), PayrollProLayout.loadEmployeeTypeOptions()]).then(function (results) {
+        PayrollProLayout.populateEmployeeTypeSelect(filterType, results[1]);
+        loadManualEmployees();
+        loadDtrRecords();
+    });
 
 })();

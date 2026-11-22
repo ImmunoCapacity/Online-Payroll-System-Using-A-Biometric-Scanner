@@ -118,7 +118,7 @@
                 '<tr>' +
                     '<td>' + escapeHtml(emp.employeeNumber) + '</td>' +
                     '<td><strong>' + escapeHtml(emp.employeeName) + '</strong></td>' +
-                    '<td><span class="pp-badge ' + badge + '">' + escapeHtml(emp.type) + '</span></td>' +
+                    '<td><span class="pp-badge ' + badge + '">' + escapeHtml(PayrollProLayout.staffTypeLabel(emp.type)) + '</span></td>' +
                     '<td class="col-num">' + emp.present + '</td>' +
                     '<td class="col-num">' + emp.late + '</td>' +
                     '<td class="col-num">' + emp.absent + '</td>' +
@@ -206,7 +206,11 @@
     reportType.addEventListener('change', render);
     reportFrom.addEventListener('change', function () { syncCutoff(); load(); });
     reportTo.addEventListener('change', function () { syncCutoff(); load(); });
-    PPPeriods.load().then(function () {
+
+    Promise.all([PayrollProLayout.loadStaffTypeLabels(), PayrollProLayout.loadEmployeeTypeOptions()]).then(function (results) {
+        PayrollProLayout.populateEmployeeTypeSelect(reportType, results[1]);
+        return PPPeriods.load();
+    }).then(function () {
         fillCutoffs();
         load();
     });

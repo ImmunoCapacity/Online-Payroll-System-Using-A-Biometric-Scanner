@@ -240,6 +240,7 @@ public class DtrService {
         if (reason.length() > 255) {
             throw Validation.invalid("reason", "The reason can be at most 255 characters.");
         }
+        String notes = Validation.optionalText(request.notes(), "notes", "Remarks", 255);
 
         LocalTime timeIn = Validation.time(request.timeIn(), "timeIn", "Time in", true);
         LocalTime timeOut = Validation.time(request.timeOut(), "timeOut", "Time out", false);
@@ -272,6 +273,7 @@ public class DtrService {
         record.setStatus(capitalize(status));
         record.setManualEntry(true);
         record.setRemarks(reason);
+        record.setNotes(notes);
         record.setRecordedBy(recordedBy);
         dtr.save(record);
 
@@ -281,12 +283,12 @@ public class DtrService {
     private static DtrRow row(DailyTimeRecord r, String employeeId, StaffMember s) {
         return new DtrRow(r.getId(), employeeId, s.getEmployeeNumber(), s.getFullName(), s.staffType(),
                 r.getRecordDate().toString(), time(r.getTimeIn()), time(r.getTimeOut()),
-                r.getStatus() == null ? "absent" : r.getStatus().toLowerCase(), r.isManualEntry(), r.getRemarks());
+                r.getStatus() == null ? "absent" : r.getStatus().toLowerCase(), r.isManualEntry(), r.getRemarks(), r.getNotes());
     }
 
     private static DtrRow absent(String employeeId, StaffMember s, LocalDate date) {
         return new DtrRow(null, employeeId, s.getEmployeeNumber(), s.getFullName(), s.staffType(),
-                date.toString(), null, null, "absent", false, null);
+                date.toString(), null, null, "absent", false, null, null);
     }
 
     private static Map<String, String> choice(String id, StaffMember s) {

@@ -59,6 +59,10 @@ public class FacultyClass {
     @Column(name = "schedule_status")
     private String scheduleStatus = SCHEDULED;
 
+    /** Hidden from the active Faculty Schedule view (term/semester cleanup); kept with all its history. */
+    @Column(name = "is_archived")
+    private boolean archived;
+
     @Column(name = "status_reason")
     private String statusReason;
 
@@ -102,6 +106,8 @@ public class FacultyClass {
     public void setGracePeriodMinutes(int gracePeriodMinutes) { this.gracePeriodMinutes = gracePeriodMinutes; }
     public String getScheduleStatus() { return scheduleStatus; }
     public void setScheduleStatus(String scheduleStatus) { this.scheduleStatus = scheduleStatus; }
+    public boolean isArchived() { return archived; }
+    public void setArchived(boolean archived) { this.archived = archived; }
     public String getStatusReason() { return statusReason; }
     public void setStatusReason(String statusReason) { this.statusReason = statusReason; }
     public Integer getCreatedBy() { return createdBy; }

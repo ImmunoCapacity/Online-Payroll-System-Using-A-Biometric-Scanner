@@ -84,7 +84,7 @@ public record EmployeeResponse(
                 s.getNotes(),
                 s.getFingerprintId() != null && !s.getFingerprintId().isEmpty(),
                 s.getGender(),
-                text(s.getBirthdate()),
+                s.getBirthdate(),
                 s.getAge(),
                 s.getCivilStatus(),
                 s.getDependentNumber(),

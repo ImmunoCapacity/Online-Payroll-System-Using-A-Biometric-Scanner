@@ -82,7 +82,7 @@
         'user-management.html': [ADMIN],
         'biometric-devices.html': [ADMIN],
         'audit-trail.html': [ADMIN],
-        'archive.html': [ADMIN],
+        'archive.html': [ADMIN, STAFF],
         'backup-restore.html': [ADMIN]
     };
 

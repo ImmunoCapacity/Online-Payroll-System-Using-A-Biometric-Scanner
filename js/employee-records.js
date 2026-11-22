@@ -29,7 +29,6 @@
     const employeeLastName = document.getElementById('employeeLastName');
     const employeeNumber = document.getElementById('employeeNumber');   // read-only, assigned by the server
     const employeeGender = document.getElementById('employeeGender');
-    let nextIdBase = '';   // e.g. "STIBLN-0015" for a new employee (api/employees/next-id)
     const employeeDepartmentSelect = document.getElementById('employeeDepartmentSelect');
     const employeeEmail = document.getElementById('employeeEmail');
     const employeePhone = document.getElementById('employeePhone');
@@ -90,9 +89,47 @@
         lectureHours: FACULTY_FIELDS.lectureHours
     });
 
-    // Utility and Security Guard are non-teaching staff like Admin: same
-    // table (admin_staff) and the same field set, just their own label.
-    const ADMIN_LIKE = ['Admin', 'Utility', 'Security Guard'];
+    // Admin-like staff types: same table (admin_staff) and the same field
+    // set as Admin, just their own label. 'Admin' itself is built in; the
+    // rest come from Maintenance → Employee Types (loadEmployeeTypes below).
+    const ADMIN_LIKE = ['Admin'];
+
+    // Employee Types (Maintenance → Employee Types, api/employee-types):
+    // more "Admin-like" choices for the Employee Type dropdowns, beyond the
+    // three built-in staff types (Faculty, Admin, Faculty/Admin).
+    function loadEmployeeTypes() {
+        return fetch('api/employee-types')
+            .then(function (response) { return response.json(); })
+            .then(function (data) {
+                if (!data.success) return;
+                // Faculty/Admin/Faculty-Admin are already static options above; only add the rest.
+                const options = data.types.filter(function (t) { return !t.builtIn; }).map(function (t) {
+                    if (ADMIN_LIKE.indexOf(t.name) === -1) ADMIN_LIKE.push(t.name);
+                    return '<option value="' + escapeHtml(t.name) + '">' + escapeHtml(t.name) + '</option>';
+                }).join('');
+                employeeDepartment.insertAdjacentHTML('beforeend', options);
+                employeeDepartmentSelect.insertAdjacentHTML('beforeend', options);
+            })
+            .catch(function () { /* the dropdowns just offer the built-in types */ });
+    }
+
+    // Employee Status (Maintenance → Employee Status, api/employee-statuses):
+    // more Employment Status choices, beyond the three built-ins (Active, On
+    // Leave, Archived). Inserted before the Archived option, which must stay last
+    // (the filter's is lowercase "archived" — a special "show archived only" value).
+    function loadEmployeeStatuses() {
+        return fetch('api/employee-statuses')
+            .then(function (response) { return response.json(); })
+            .then(function (data) {
+                if (!data.success) return;
+                const options = data.statuses.filter(function (s) { return !s.builtIn; }).map(function (s) {
+                    return '<option value="' + escapeHtml(s.name) + '">' + escapeHtml(s.name) + '</option>';
+                }).join('');
+                employeeStatus.querySelector('option[value="archived"]').insertAdjacentHTML('beforebegin', options);
+                employeeStatusSelect.querySelector('option[value="Archived"]').insertAdjacentHTML('beforebegin', options);
+            })
+            .catch(function () { /* the dropdowns just offer the built-in statuses */ });
+    }
 
     function typeFields(department) {
         if (department === 'Faculty') return FACULTY_FIELDS;
@@ -139,7 +176,9 @@
             .catch(function () { /* the field just offers no ranks */ });
     }
 
-    // Picking a rank fills in its standard rate (the user can still change it).
+    // Picking a rank displays its standard rate — Rate per Hour/Unit is a
+    // read-only display, always set by the rank (never typed in; the server
+    // sets it the same way regardless of what this field shows).
     // Bound to 'change', not programmatic value-setting, so loading an existing
     // employee for editing keeps their actual saved rate.
     document.getElementById('employeeRank').addEventListener('change', function () {
@@ -221,7 +260,7 @@
                     'aria-label="View details of ' + name + '">' +
                     '<td>' + escapeHtml(employee.employeeNumber) + '</td>' +
                     '<td><strong>' + name + '</strong></td>' +
-                    '<td>' + escapeHtml(employee.department) + '</td>' +
+                    '<td>' + escapeHtml(PayrollProLayout.staffTypeLabel(employee.department)) + '</td>' +
                     '<td>' + escapeHtml(employee.email) + '</td>' +
                     '<td>' + escapeHtml(employee.phone) + '</td>' +
                 '</tr>'
@@ -275,7 +314,10 @@
     // Status itself, so they can still be un-archived from here.
     function setReadOnly(readOnly) {
         employeeForm.querySelectorAll('input, select, textarea').forEach(function (field) {
-            if (field.id === 'employeeDepartmentSelect' || field.id === 'employeeStatusSelect') return;
+            // employeeDepartmentSelect/employeeStatusSelect: always independently
+            // controlled. employeeRateUnit: always disabled — it's a display set
+            // from Instructor Rank, never directly editable either way.
+            if (field.id === 'employeeDepartmentSelect' || field.id === 'employeeStatusSelect' || field.id === 'employeeRateUnit') return;
             field.disabled = readOnly;
         });
         saveButton.classList.toggle('d-none', readOnly);
@@ -305,65 +347,25 @@
         toggleTypeFields(employeeDepartmentSelect.value);
     });
 
-    // Employee ID: STIBLN-####-M / -F. New employees see the number they will
-    // get; the letter follows the Gender field (also when it is corrected).
-    function genderLetter() {
-        return employeeGender.value === 'Female' ? 'F' : employeeGender.value === 'Male' ? 'M' : '?';
-    }
-
-    // Once the Employee ID is typed in, it is kept as typed (no suggested number or letter).
+    // Employee ID: STIBLN-####-M / -F. For a new employee it's left blank so
+    // the server assigns the number and a random M/F letter on save — the
+    // letter has nothing to do with Gender. Once the Employee ID is typed
+    // in, it is kept as typed.
     let idEdited = false;
     employeeNumber.addEventListener('input', function () { idEdited = true; });
 
-    // STIBLN-####-M/F (4 or more digits; M or F matching the Gender field), and
-    // unique among all employees (archived included). Same rule on the server.
+    // STIBLN-####-M/F (4 or more digits, then M or F), unique among all
+    // employees (archived included). Same rule on the server. An empty value
+    // is allowed here (the server assigns one); only a typed-in value is checked.
     const EMPLOYEE_ID = /^STIBLN-\d{4,}-[MF]$/;
     employeeNumber.ppValidator = function (value) {
         const id = value.trim().toUpperCase();
         if (!EMPLOYEE_ID.test(id)) return 'Employee ID must look like STIBLN-0037-M: STIBLN, a dash, at least 4 digits, a dash, then M or F.';
-        const letter = genderLetter();
-        if (letter !== '?' && id.slice(-1) !== letter) {
-            return 'The last letter must be ' + letter + ' (' + employeeGender.value + ').';
-        }
         const taken = employeeList.some(function (e) {
             return String(e.employeeNumber).toUpperCase() === id && e.id !== employeeId.value;
         });
         return taken ? 'This Employee ID is already used by another employee.' : '';
     };
-
-    function showEmployeeId() {
-        if (idEdited) return;
-        if (employeeId.value) {
-            employeeNumber.value = employeeNumber.value.replace(/-[MF?]$/, '-' + genderLetter());
-        } else {
-            const letter = genderLetter();
-            employeeNumber.value = nextIdBase + (letter === '?' ? '' : '-' + letter);
-        }
-    }
-
-    /** Next ID from the loaded list (archived included), until the server's answer arrives. */
-    function nextIdFromList() {
-        const highest = employeeList.reduce(function (max, e) {
-            const m = /^STIBLN-(\d+)-[MF]$/.exec(e.employeeNumber || '');
-            return m ? Math.max(max, Number(m[1])) : max;
-        }, 0);
-        return 'STIBLN-' + String(highest + 1).padStart(4, '0');
-    }
-
-    function loadNextId() {
-        nextIdBase = nextIdFromList();
-        showEmployeeId();
-        fetch('api/employees/next-id')
-            .then(function (response) { return response.json(); })
-            .then(function (data) {
-                if (!data.success || employeeId.value || idEdited) return;
-                nextIdBase = data.nextId;
-                showEmployeeId();
-            })
-            .catch(function () { /* the server assigns it on save anyway */ });
-    }
-
-    employeeGender.addEventListener('change', showEmployeeId);
 
     function openModal(employee) {
         resetForm();
@@ -396,8 +398,6 @@
                 modalTitle.textContent = 'Archived Employee';
                 setReadOnly(true);
             }
-        } else {
-            loadNextId();
         }
 
         const modal = new bootstrap.Modal(employeeModal);
@@ -419,7 +419,7 @@
             return;
         }
 
-        // Employee ID as shown (suggested STIBLN-####-M/F, or typed in).
+        // Employee ID as typed in, or blank to let the server assign one.
         const payload = {
             employeeNumber: employeeNumber.value.trim().toUpperCase(),
             firstName: employeeFirstName.value.trim(),
@@ -500,7 +500,21 @@
 
     employeeModal.addEventListener('hidden.bs.modal', resetForm);
 
-    Promise.all([loadEmployees(), loadRanks()]).then(function () {
+    /** The built-in types' option text follows their renamed display name (Maintenance → Employee Types); value stays fixed. */
+    function applyBuiltInTypeLabels() {
+        ['Faculty', 'Admin', 'Faculty/Admin'].forEach(function (code) {
+            var label = PayrollProLayout.staffTypeLabel(code);
+            [employeeDepartment, employeeDepartmentSelect].forEach(function (select) {
+                var opt = select.querySelector('option[value="' + code + '"]');
+                if (opt) opt.textContent = label;
+            });
+        });
+    }
+
+    PayrollProLayout.loadStaffTypeLabels().then(function () {
+        applyBuiltInTypeLabels();
+        return Promise.all([loadEmployees(), loadRanks(), loadEmployeeTypes(), loadEmployeeStatuses()]);
+    }).then(function () {
         if (new URLSearchParams(location.search).get('action') === 'add') {
             openModal(null);
         }

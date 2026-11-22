@@ -89,7 +89,7 @@
             return '<tr class="pp-row-clickable" tabindex="0" data-key="' + escapeHtml(e.key) + '" title="Show month by month">' +
                 '<td>' + escapeHtml(e.number) + '</td>' +
                 '<td><strong>' + escapeHtml(e.name) + '</strong></td>' +
-                '<td>' + escapeHtml(e.type) + '</td>' +
+                '<td>' + escapeHtml(PayrollProLayout.staffTypeLabel(e.type)) + '</td>' +
                 '<td class="text-end">' + e.monthsPaid + '</td>' +
                 '<td class="text-end">' + peso(e.basic) + '</td>' +
                 '<td class="text-end">' + peso(e.net) + '</td>' +
@@ -110,7 +110,7 @@
         if (!e) return;
         var year = el('yearSelect').value;
         el('thirteenthModalTitle').textContent = e.name;
-        el('thirteenthModalSub').textContent = (e.number || '') + ' · ' + e.type + ' · ' + year;
+        el('thirteenthModalSub').textContent = (e.number || '') + ' · ' + PayrollProLayout.staffTypeLabel(e.type) + ' · ' + year;
         el('thirteenthMonths').innerHTML = MONTHS.map(function (name, i) {
             var m = e.months[i];
             return '<tr' + (m ? ' title="' + escapeHtml(m.periods.join(', ')) + '"' : '') + '>' +
@@ -148,7 +148,10 @@
     el('thirteenthSearch').addEventListener('input', render);
 
     el('thirteenthBody').innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">Loading…</td></tr>';
-    fetch('api/payroll/released')
+    Promise.all([PayrollProLayout.loadStaffTypeLabels(), PayrollProLayout.loadEmployeeTypeOptions()]).then(function (results) {
+        PayrollProLayout.populateEmployeeTypeSelect(el('typeSelect'), results[1]);
+        return fetch('api/payroll/released');
+    })
         .then(function (r) { return r.json(); })
         .then(function (data) {
             if (!data.success) throw new Error(data.message);

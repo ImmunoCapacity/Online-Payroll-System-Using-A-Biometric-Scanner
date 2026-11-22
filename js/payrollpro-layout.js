@@ -83,6 +83,7 @@
         hrefFor: function (key) { return 'archive.html?view=' + key; },
         items: [
             { key: 'employees', label: 'Employee', icon: 'bi-people' },
+            { key: 'schedules', label: 'Faculty Schedules', icon: 'bi-calendar-week' },
             { key: 'bir', label: 'BIR Table', icon: 'bi-journal-text' },
             { key: 'pagibig', label: 'Pag-IBIG Table', icon: 'bi-house-door' },
             { key: 'sss', label: 'SSS Table', icon: 'bi-bank' },
@@ -236,6 +237,13 @@
             label: 'Attendance Recording',
             icon: 'bi-pencil-square',
             href: 'dtr.html?section=manual'
+        },
+
+        {
+            id: 'archive',
+            label: 'Archive',
+            icon: 'bi-archive',
+            href: 'archive.html?view=schedules'
         }
 
     ];
@@ -1538,6 +1546,78 @@
 
 
     // ============================================================
+    // STAFF TYPE LABELS — the display name of Faculty/Admin/Faculty-Admin,
+    // renamable in Maintenance → Employee Types (api/employee-types/labels).
+    // The underlying type itself (which table, pay rules) never changes;
+    // only what it's called is renamable. Every page that shows an
+    // employee's department/type should look it up through staffTypeLabel()
+    // instead of printing the raw value, after awaiting loadStaffTypeLabels()
+    // once at startup.
+    // ============================================================
+
+    var staffTypeLabels = null;
+    var staffTypeLabelsPromise = null;
+
+    function loadStaffTypeLabels() {
+        if (staffTypeLabelsPromise) return staffTypeLabelsPromise;
+        staffTypeLabelsPromise = fetch('api/employee-types/labels')
+            .then(function (response) { return response.json(); })
+            .then(function (data) {
+                staffTypeLabels = (data.success && data.labels) || {};
+                return staffTypeLabels;
+            })
+            .catch(function () {
+                staffTypeLabels = {};
+                return staffTypeLabels;
+            });
+        return staffTypeLabelsPromise;
+    }
+
+    /** The current display name for a staff type code (Faculty/Admin/Faculty-Admin); any other value (Utility, a custom type, etc.) is returned as-is. */
+    function staffTypeLabel(code) {
+        return (staffTypeLabels && staffTypeLabels[code]) || code;
+    }
+
+    // ============================================================
+    // EMPLOYEE TYPE OPTIONS — every type an "Employee Type" filter dropdown
+    // should offer (the three built-ins plus every type added in Maintenance
+    // → Employee Types, api/employee-types/options), so a page's dropdown
+    // isn't stuck with only Faculty/Admin/Faculty-Admin once more types
+    // exist. Use populateEmployeeTypeSelect() to fill a <select> with them
+    // while keeping its first ("All ...") option.
+    // ============================================================
+
+    var employeeTypeOptionsPromise = null;
+
+    function loadEmployeeTypeOptions() {
+        if (employeeTypeOptionsPromise) return employeeTypeOptionsPromise;
+        employeeTypeOptionsPromise = fetch('api/employee-types/options')
+            .then(function (response) { return response.json(); })
+            .then(function (data) { return (data.success && data.options) || []; })
+            .catch(function () { return []; });
+        return employeeTypeOptionsPromise;
+    }
+
+    function escapeHtmlForOptions(value) {
+        return String(value == null ? '' : value)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    /**
+     * Fills a <select> with one <option value="..."> per employee type,
+     * keeping whatever first option it already has (the hidden "All ..."
+     * placeholder) untouched. options is the array from loadEmployeeTypeOptions().
+     */
+    function populateEmployeeTypeSelect(select, options) {
+        if (!select) return;
+        var first = select.querySelector('option');
+        var firstHtml = first ? first.outerHTML : '';
+        select.innerHTML = firstHtml + options.map(function (o) {
+            return '<option value="' + escapeHtmlForOptions(o.value) + '">' + escapeHtmlForOptions(o.label) + '</option>';
+        }).join('');
+    }
+
+    // ============================================================
     // EXPORT
     // ============================================================
 
@@ -1551,7 +1631,15 @@
             SYSTEM_ADMIN_NAV_ITEMS,
 
         ATTENDANCE_MONITORING_STAFF_NAV_ITEMS:
-            ATTENDANCE_MONITORING_STAFF_NAV_ITEMS
+            ATTENDANCE_MONITORING_STAFF_NAV_ITEMS,
+
+        loadStaffTypeLabels: loadStaffTypeLabels,
+
+        staffTypeLabel: staffTypeLabel,
+
+        loadEmployeeTypeOptions: loadEmployeeTypeOptions,
+
+        populateEmployeeTypeSelect: populateEmployeeTypeSelect
 
     };
 

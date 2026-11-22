@@ -15,5 +15,6 @@ public record DtrRow(
         String timeOut,
         String status,
         boolean manual,
-        String remarks) {
+        String remarks,
+        String notes) {
 }

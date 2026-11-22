@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
  * PUT  /api/faculty-schedule/classes/{id}           edit                      — Payroll Master
  * POST /api/faculty-schedule/classes/{id}/cancel    { reason }                — Payroll Master
  * POST /api/faculty-schedule/classes/{id}/restore                             — Payroll Master
+ * POST /api/faculty-schedule/archive-all           archive every past class    — Attendance Monitoring Staff
  */
 @RestController
 @RequestMapping("/api/faculty-schedule")
@@ -79,6 +80,13 @@ public class FacultyScheduleController {
     @RequireModule(SystemModule.FACULTY_SCHEDULE_MANAGEMENT)
     public Map<String, Object> restore(@PathVariable int id, HttpServletRequest http) {
         return Map.of("success", true, "class", schedule.restore(id, userId(http)));
+    }
+
+    @PostMapping("/archive-all")
+    @RequireModule(SystemModule.FACULTY_SCHEDULE_ARCHIVE)
+    public Map<String, Object> archiveAll(HttpServletRequest http) {
+        int archived = schedule.archiveAllPast(userId(http));
+        return Map.of("success", true, "archived", archived);
     }
 
     private static int userId(HttpServletRequest http) {

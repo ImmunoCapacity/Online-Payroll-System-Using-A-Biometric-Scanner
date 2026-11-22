@@ -127,10 +127,14 @@ public class RankController {
         return name;
     }
 
-    /** Optional standard rate per hour, prefilled into Employee Records when this rank is picked. */
+    /**
+     * The standard rate per hour — required: it's the sole source of a
+     * Faculty/Faculty-Admin employee's Rate per Hour/Unit in Employee
+     * Records (a read-only field that follows the chosen Instructor Rank).
+     */
     private BigDecimal rate(Object value) {
         if (value == null || String.valueOf(value).trim().isEmpty()) {
-            return null;
+            throw Validation.invalid("ratePerHour", "Rate per hour is required.");
         }
         BigDecimal amount;
         try {
@@ -139,7 +143,10 @@ public class RankController {
             throw Validation.invalid("ratePerHour", "Rate per hour must be a number.");
         }
         amount = Validation.money(amount, "ratePerHour", "Rate per hour", MAX_RATE);
-        return amount == null ? null : amount.setScale(2, RoundingMode.HALF_UP);
+        if (amount == null || amount.signum() <= 0) {
+            throw Validation.invalid("ratePerHour", "Rate per hour must be more than zero.");
+        }
+        return amount.setScale(2, RoundingMode.HALF_UP);
     }
 
     private static String str(Object value) {

@@ -82,6 +82,8 @@
         rates: 'Employee Rates',
         leave: 'Leave Categories',
         ranks: 'Instructor Ranks',
+        employeeTypes: 'Employee Types',
+        employeeStatuses: 'Employee Status',
         holidays: 'Holiday Calendar',
         bir: 'BIR Table',
         philhealth: 'PhilHealth Table',
@@ -91,7 +93,9 @@
         periods: 'Payroll Periods'
     };
     var AUDIT_TARGETS = {
-        rates: 'ratesAudit', leave: 'leaveAudit', ranks: 'ranksAudit', holidays: 'holidaysAudit', bir: 'birAudit',
+        rates: 'ratesAudit', leave: 'leaveAudit', ranks: 'ranksAudit', employeeTypes: 'employeeTypesAudit',
+        employeeStatuses: 'employeeStatusesAudit',
+        holidays: 'holidaysAudit', bir: 'birAudit',
         philhealth: 'phAudit', pagibig: 'pagAudit', sss: 'sssAudit', grace: 'graceAudit', periods: 'periodsAudit'
     };
 
@@ -121,6 +125,8 @@
         rates: 'sectionRates',
         leave: 'sectionLeave',
         ranks: 'sectionRanks',
+        employeeTypes: 'sectionEmployeeTypes',
+        employeeStatuses: 'sectionEmployeeStatuses',
         holidays: 'sectionHolidays',
         benefits: 'sectionBenefits',
         bir: 'sectionBir',
@@ -176,7 +182,7 @@
                     'data-employee="' + escapeHtml(r.employeeId) + '" data-kind="' + escapeHtml(r.kind) + '" ' +
                     'aria-label="New rate for ' + escapeHtml(r.employeeName) + '">' +
                     '<td>' + escapeHtml(r.employeeNumber) + '</td>' +
-                    '<td><strong>' + escapeHtml(r.employeeName) + '</strong><br><span class="text-muted small">' + escapeHtml(r.employeeType) + '</span></td>' +
+                    '<td><strong>' + escapeHtml(r.employeeName) + '</strong><br><span class="text-muted small">' + escapeHtml(PayrollProLayout.staffTypeLabel(r.employeeType)) + '</span></td>' +
                     '<td>' + escapeHtml(r.rateType) + '</td>' +
                     '<td class="col-money">' + peso(r.amount) + '</td>' +
                     '<td>' + formatDate(r.effective) + '</td>' +
@@ -208,7 +214,7 @@
         form.reset();
         PPValidate.clear(form);
         rateEmployee.innerHTML = '<option value="' + escapeHtml(emp.id) + '">' +
-            escapeHtml(emp.name) + ' (' + escapeHtml(emp.employeeType) + ')</option>';
+            escapeHtml(emp.name) + ' (' + escapeHtml(PayrollProLayout.staffTypeLabel(emp.employeeType)) + ')</option>';
         rateEmployee.value = emp.id;
         rateEmployee.disabled = true;
         populateRateTypes();
@@ -881,6 +887,227 @@
     });
 
     // ================================================================
+    // EMPLOYEE TYPES (api/employee-types) — more "Admin-like" choices for
+    // Employee Records' Employee Type, beyond the built-in Faculty, Admin
+    // and Faculty/Admin. The built-ins (shown muted) can be renamed — the
+    // new name shows up everywhere the type is displayed — but not removed,
+    // since real pay rules are tied to them. Other types can be freely
+    // renamed and removed when nobody has them.
+    // ================================================================
+
+    var employeeTypes = [];
+    var employeeTypeEditId = null;
+
+    function loadEmployeeTypes() {
+        return api('api/employee-types').then(function (data) {
+            if (!data.success) throw new Error(data.message);
+            employeeTypes = data.types;
+            renderEmployeeTypes();
+        }).catch(function () {
+            document.getElementById('employeeTypesBody').innerHTML =
+                '<tr><td colspan="2" class="text-center text-muted py-4">Could not load employee types from the server.</td></tr>';
+        });
+    }
+
+    function renderEmployeeTypes() {
+        var body = document.getElementById('employeeTypesBody');
+        if (!employeeTypes.length) {
+            body.innerHTML = '<tr><td colspan="2" class="text-center text-muted py-4">No employee types yet. Click Add Employee Type.</td></tr>';
+            return;
+        }
+        body.innerHTML = employeeTypes.map(function (t) {
+            // The three built-in types are shown muted (reference: they
+            // drive real pay-rule differences) but can still be clicked to
+            // rename their display name.
+            var muted = t.builtIn ? ' text-muted' : '';
+            return '<tr ' + rowAttrs(t.id, 'Edit ' + t.name) + '>' +
+                '<td><strong class="' + muted.trim() + '">' + escapeHtml(t.name) + '</strong></td>' +
+                '<td class="col-num' + muted + '">' + t.employees + '</td>' +
+            '</tr>';
+        }).join('');
+    }
+
+    function openEmployeeTypeForm(type) {
+        employeeTypeEditId = type ? type.id : null;
+        document.getElementById('employeeTypeModalTitle').textContent = type ? 'Rename Employee Type' : 'Add Employee Type';
+        document.getElementById('employeeTypeForm').reset();
+        document.getElementById('employeeTypeName').value = type ? type.name : '';
+        // Built-in types (Faculty/Admin/Faculty-Admin) can be renamed but never removed.
+        setRemoveButton('employeeTypeRemoveBtn', 'Remove', !!type && !type.builtIn);
+        var removeBtn = document.getElementById('employeeTypeRemoveBtn');
+        removeBtn.disabled = !!(type && type.employees);
+        removeBtn.title = type && type.employees ? type.employees + ' employee(s) have this type' : '';
+        PPValidate.clear(document.getElementById('employeeTypeForm'));
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('employeeTypeModal')).show();
+    }
+
+    document.getElementById('btnAddEmployeeType').addEventListener('click', function () { openEmployeeTypeForm(null); });
+
+    document.getElementById('employeeTypeName').ppValidator = function (value) {
+        var taken = employeeTypes.some(function (t) {
+            return t.id !== employeeTypeEditId && String(t.name).toLowerCase() === value.trim().toLowerCase();
+        });
+        return taken ? 'This employee type already exists.' : '';
+    };
+
+    clickableRows('employeeTypesBody', function (id) {
+        var type = employeeTypes.find(function (t) { return t.id === id; });
+        if (type) openEmployeeTypeForm(type);
+    });
+
+    document.getElementById('employeeTypeRemoveBtn').addEventListener('click', function () {
+        var type = employeeTypes.find(function (t) { return t.id === employeeTypeEditId; });
+        if (!type) return;
+        ConfirmModal.show({
+            title: 'Remove Employee Type',
+            message: 'Remove "' + type.name + '"? It will no longer be offered in Employee Records.',
+            confirmText: 'Remove',
+            tone: 'danger'
+        }).then(function (confirmed) {
+            if (!confirmed) return;
+            api('api/employee-types/' + type.id, 'DELETE').then(function (data) {
+                if (!data.success) { PPToast.error(data.message); return; }
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('employeeTypeModal')).hide();
+                employeeTypes = data.types;
+                renderEmployeeTypes();
+                PPToast.success('"' + type.name + '" removed.');
+                loadAudit();
+            }).catch(function () { PPToast.error('Could not reach the server.'); });
+        });
+    });
+
+    document.getElementById('employeeTypeForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        var form = e.target;
+        if (!PPValidate.validateForm(form)) return;
+        var name = document.getElementById('employeeTypeName').value.trim();
+        api(employeeTypeEditId ? 'api/employee-types/' + employeeTypeEditId : 'api/employee-types',
+            employeeTypeEditId ? 'PUT' : 'POST', { name: name })
+            .then(function (data) {
+                if (!data.success) {
+                    if (!PPValidate.showServerError(form, data, { name: 'employeeTypeName' })) PPToast.error(data.message);
+                    return;
+                }
+                bootstrap.Modal.getInstance(document.getElementById('employeeTypeModal')).hide();
+                employeeTypes = data.types;
+                renderEmployeeTypes();
+                PPToast.success(employeeTypeEditId ? 'Employee type renamed.' : '"' + name + '" added.');
+                loadAudit();
+            }).catch(function () { PPToast.error('Could not reach the server.'); });
+    });
+
+    // ================================================================
+    // EMPLOYEE STATUS (api/employee-statuses) — more Employment Status
+    // choices for Employee Records, beyond the built-in Active, On Leave
+    // and Archived. A status can only be removed when nobody has it.
+    // ================================================================
+
+    var employeeStatuses = [];
+    var employeeStatusEditId = null;
+
+    function loadEmployeeStatuses() {
+        return api('api/employee-statuses').then(function (data) {
+            if (!data.success) throw new Error(data.message);
+            employeeStatuses = data.statuses;
+            renderEmployeeStatuses();
+        }).catch(function () {
+            document.getElementById('employeeStatusesBody').innerHTML =
+                '<tr><td colspan="2" class="text-center text-muted py-4">Could not load employee statuses from the server.</td></tr>';
+        });
+    }
+
+    function renderEmployeeStatuses() {
+        var body = document.getElementById('employeeStatusesBody');
+        if (!employeeStatuses.length) {
+            body.innerHTML = '<tr><td colspan="2" class="text-center text-muted py-4">No employee statuses yet. Click Add Employee Status.</td></tr>';
+            return;
+        }
+        body.innerHTML = employeeStatuses.map(function (s) {
+            // The three built-in statuses are shown for reference only — they
+            // drive real behavior and can't be edited here.
+            if (s.builtIn) {
+                return '<tr class="text-muted">' +
+                    '<td><strong>' + escapeHtml(s.name) + '</strong></td>' +
+                    '<td class="col-num">' + s.employees + '</td>' +
+                '</tr>';
+            }
+            return '<tr ' + rowAttrs(s.id, 'Edit ' + s.name) + '>' +
+                '<td><strong>' + escapeHtml(s.name) + '</strong></td>' +
+                '<td class="col-num">' + s.employees + '</td>' +
+            '</tr>';
+        }).join('');
+    }
+
+    function openEmployeeStatusForm(status) {
+        employeeStatusEditId = status ? status.id : null;
+        document.getElementById('employeeStatusModalTitle').textContent = status ? 'Rename Employee Status' : 'Add Employee Status';
+        document.getElementById('employeeStatusForm').reset();
+        document.getElementById('employeeStatusName').value = status ? status.name : '';
+        setRemoveButton('employeeStatusRemoveBtn', 'Remove', !!status);
+        // A status can only be removed when nobody has it.
+        var removeBtn = document.getElementById('employeeStatusRemoveBtn');
+        removeBtn.disabled = !!(status && status.employees);
+        removeBtn.title = status && status.employees ? status.employees + ' employee(s) have this status' : '';
+        PPValidate.clear(document.getElementById('employeeStatusForm'));
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('employeeStatusModal')).show();
+    }
+
+    document.getElementById('btnAddEmployeeStatus').addEventListener('click', function () { openEmployeeStatusForm(null); });
+
+    document.getElementById('employeeStatusName').ppValidator = function (value) {
+        var taken = employeeStatuses.some(function (s) {
+            return s.id !== employeeStatusEditId && String(s.name).toLowerCase() === value.trim().toLowerCase();
+        });
+        return taken ? 'This employee status already exists.' : '';
+    };
+
+    clickableRows('employeeStatusesBody', function (id) {
+        var status = employeeStatuses.find(function (s) { return s.id === id; });
+        if (status) openEmployeeStatusForm(status);
+    });
+
+    document.getElementById('employeeStatusRemoveBtn').addEventListener('click', function () {
+        var status = employeeStatuses.find(function (s) { return s.id === employeeStatusEditId; });
+        if (!status) return;
+        ConfirmModal.show({
+            title: 'Remove Employee Status',
+            message: 'Remove "' + status.name + '"? It will no longer be offered in Employee Records.',
+            confirmText: 'Remove',
+            tone: 'danger'
+        }).then(function (confirmed) {
+            if (!confirmed) return;
+            api('api/employee-statuses/' + status.id, 'DELETE').then(function (data) {
+                if (!data.success) { PPToast.error(data.message); return; }
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('employeeStatusModal')).hide();
+                employeeStatuses = data.statuses;
+                renderEmployeeStatuses();
+                PPToast.success('"' + status.name + '" removed.');
+                loadAudit();
+            }).catch(function () { PPToast.error('Could not reach the server.'); });
+        });
+    });
+
+    document.getElementById('employeeStatusForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        var form = e.target;
+        if (!PPValidate.validateForm(form)) return;
+        var name = document.getElementById('employeeStatusName').value.trim();
+        api(employeeStatusEditId ? 'api/employee-statuses/' + employeeStatusEditId : 'api/employee-statuses',
+            employeeStatusEditId ? 'PUT' : 'POST', { name: name })
+            .then(function (data) {
+                if (!data.success) {
+                    if (!PPValidate.showServerError(form, data, { name: 'employeeStatusName' })) PPToast.error(data.message);
+                    return;
+                }
+                bootstrap.Modal.getInstance(document.getElementById('employeeStatusModal')).hide();
+                employeeStatuses = data.statuses;
+                renderEmployeeStatuses();
+                PPToast.success(employeeStatusEditId ? 'Employee status renamed.' : '"' + name + '" added.');
+                loadAudit();
+            }).catch(function () { PPToast.error('Could not reach the server.'); });
+    });
+
+    // ================================================================
     // HOLIDAY CALENDAR (api/holidays) — the holidays on the Dashboard
     // calendar. Hours worked on a double-pay holiday are paid twice.
     // ================================================================
@@ -1250,10 +1477,12 @@
         });
     });
 
-    loadRates();
+    PayrollProLayout.loadStaffTypeLabels().then(loadRates);
     loadLeaveCategories();
     loadHolidays();
     loadRanks();
+    loadEmployeeTypes();
+    loadEmployeeStatuses();
     loadTables();
     loadSettings();
     loadAudit();
@@ -1264,6 +1493,10 @@
         document.querySelector('[data-section="holidays"]').click();
     } else if (location.hash === '#ranks') {
         document.querySelector('[data-section="ranks"]').click();
+    } else if (location.hash === '#employeeTypes') {
+        document.querySelector('[data-section="employeeTypes"]').click();
+    } else if (location.hash === '#employeeStatuses') {
+        document.querySelector('[data-section="employeeStatuses"]').click();
     } else if (location.hash === '#benefits') {
         document.querySelector('[data-section="benefits"]').click();
     } else if (location.hash === '#bir') {

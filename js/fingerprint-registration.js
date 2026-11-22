@@ -93,7 +93,7 @@
                         '<div class="pp-employee-name text-truncate">' + escapeHtml(emp.displayName) + registered + '</div>' +
                         '<div class="pp-employee-id">' + escapeHtml(emp.employeeNumber) + '</div>' +
                     '</div>' +
-                    '<span class="pp-badge ' + badgeClass(emp.type) + '">' + emp.type + '</span>' +
+                    '<span class="pp-badge ' + badgeClass(emp.type) + '">' + escapeHtml(PayrollProLayout.staffTypeLabel(emp.type)) + '</span>' +
                 '</div>'
             );
         }).join('');
@@ -113,7 +113,7 @@
         return (
             '<div class="pp-avatar mb-3" style="width:64px;height:64px;font-size:1.25rem;">' + escapeHtml(initials(emp)) + '</div>' +
             '<div class="pp-selected-name">' + escapeHtml(emp.displayName) + '</div>' +
-            '<div class="pp-selected-meta">' + escapeHtml(emp.employeeNumber) + ' · <span class="pp-badge ' + badgeClass(emp.type) + '">' + emp.type + '</span></div>'
+            '<div class="pp-selected-meta">' + escapeHtml(emp.employeeNumber) + ' · <span class="pp-badge ' + badgeClass(emp.type) + '">' + escapeHtml(PayrollProLayout.staffTypeLabel(emp.type)) + '</span></div>'
         );
     }
 
@@ -249,5 +249,5 @@
 
     employeeSearch.addEventListener('input', renderList);
 
-    load();
+    PayrollProLayout.loadStaffTypeLabels().then(load);
 })();

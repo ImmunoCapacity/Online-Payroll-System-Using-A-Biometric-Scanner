@@ -21,7 +21,7 @@
 /* Breadcrumb */
 .report-breadcrumb {
     margin-bottom: 14px;
-    color: var(--pp-muted, #6b7280);
+    color: var(--pp-text-muted);
     font-size: 12px;
 }
 
@@ -48,7 +48,7 @@
 
 .report-header p {
     margin: 0;
-    color: var(--pp-muted, #6b7280);
+    color: var(--pp-text-muted);
     font-size: 13px;
     line-height: 1.5;
 }
@@ -170,7 +170,7 @@
     padding: 11px 12px;
     background: var(--pp-surface-alt, #f8f9fa);
     border-bottom: 1px solid var(--pp-border, #e2e5e9);
-    color: var(--pp-muted, #6b7280);
+    color: var(--pp-text-muted);
     font-size: 11px;
     font-weight: 650;
     text-align: left;
@@ -207,7 +207,7 @@
 /* Empty state */
 .report-empty {
     padding: 40px 20px !important;
-    color: var(--pp-muted, #6b7280) !important;
+    color: var(--pp-text-muted) !important;
     text-align: center;
 }
 

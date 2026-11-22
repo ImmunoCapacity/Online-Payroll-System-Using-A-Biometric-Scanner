@@ -114,7 +114,7 @@
 
     function typeBadge(type) {
         var cls = type === 'Faculty' ? 'pp-badge-faculty' : type === 'Faculty/Admin' ? 'pp-badge-faculty-admin' : 'pp-badge-admin';
-        return '<span class="pp-badge ' + cls + '">' + escapeHtml(type) + '</span>';
+        return '<span class="pp-badge ' + cls + '">' + escapeHtml(PayrollProLayout.staffTypeLabel(type)) + '</span>';
     }
 
     function api(url) {
@@ -369,7 +369,7 @@
 
     function loadManual(range) {
         var token = ++manualToken;
-        el('manualViewBody').innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4">Loading…</td></tr>';
+        el('manualViewBody').innerHTML = '<tr><td colspan="10" class="text-center text-muted py-4">Loading…</td></tr>';
         el('manualViewEmpty').classList.add('d-none');
         api('api/dtr/manual?from=' + range[0] + '&to=' + range[1]).then(function (data) {
             if (token !== manualToken) return;
@@ -414,6 +414,7 @@
                 '<td>' + hoursText(totalHours(r.timeIn, r.timeOut)) + '</td>' +
                 '<td>' + statusBadge(r.status) + '</td>' +
                 '<td>' + escapeHtml(r.remarks || '—') + '</td>' +
+                '<td>' + escapeHtml(r.notes || '—') + '</td>' +
             '</tr>';
         }).join('');
     }

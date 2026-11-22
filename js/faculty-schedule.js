@@ -7,10 +7,12 @@
  *      form and their day/week schedule.
  *
  * Everyone with DTR access can view; adding, editing, cancelling and
- * restoring classes is for the Payroll Master (the server enforces this;
- * the form and buttons are only hidden here). The grace period for
- * classroom checks is fixed at 15 minutes. Whether a class was actually
- * taught is recorded in Faculty Teaching Hours, not here.
+ * restoring classes is for the Payroll Master and Attendance Monitoring
+ * Staff (the server enforces this; the form and buttons are only hidden
+ * here). "Archive All Schedules" (clears out classes already held) is
+ * Attendance Monitoring Staff only. The grace period for classroom checks
+ * is fixed at 15 minutes. Whether a class was actually taught is recorded
+ * in Faculty Teaching Hours, not here.
  */
 (function () {
     'use strict';
@@ -24,13 +26,15 @@
         notifications: true
     });
 
-    var canManage = (function () {
+    var currentRole = (function () {
         try {
-            return JSON.parse(localStorage.getItem('ppUser') || '{}').role === 'Payroll Master';
+            return JSON.parse(localStorage.getItem('ppUser') || '{}').role;
         } catch (e) {
-            return false;
+            return null;
         }
     })();
+    var canManage = currentRole === 'Payroll Master' || currentRole === 'Attendance Monitoring Staff';
+    var canArchive = currentRole === 'Attendance Monitoring Staff';
 
     var DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     var INACTIVE = ['Inactive', 'Resigned', 'Terminated'];
@@ -142,8 +146,11 @@
 
     function renderFacultyList() {
         var q = el('facultySearch').value.trim().toLowerCase();
+        var type = el('facultyTypeFilter').value;
         var shown = teachers.filter(function (t) {
-            return !q || (t.displayName + ' ' + t.employeeNumber).toLowerCase().indexOf(q) !== -1;
+            var searchMatch = !q || (t.displayName + ' ' + t.employeeNumber).toLowerCase().indexOf(q) !== -1;
+            var typeMatch = type === 'all' || t.type === type;
+            return searchMatch && typeMatch;
         });
 
         if (!shown.length) {
@@ -160,6 +167,7 @@
                     'aria-label="Open the schedule of ' + escapeHtml(t.displayName) + '">' +
                 '<td>' + escapeHtml(t.employeeNumber) + '</td>' +
                 '<td><strong>' + escapeHtml(t.displayName) + '</strong></td>' +
+                '<td>' + escapeHtml(PayrollProLayout.staffTypeLabel(t.type)) + '</td>' +
                 '<td class="text-end">' + (weekCounts[t.id] || 0) + '</td>' +
             '</tr>';
         }).join('');
@@ -209,7 +217,7 @@
         el('facultyName').textContent = teacher.displayName;
         el('facultyMeta').innerHTML = escapeHtml(teacher.employeeNumber) + ' · ' + employeeStatusBadge(teacher.status);
 
-        // The Payroll Master gets the Add Class form beside the schedule.
+        // Payroll Master / Attendance Monitoring Staff get the Add Class form beside the schedule.
         var showForm = canManage && INACTIVE.indexOf(teacher.status) === -1;
         el('classFormCol').classList.toggle('d-none', !showForm);
         el('scheduleCol').className = showForm ? 'col-xl-8' : 'col-12';
@@ -546,6 +554,27 @@
     // ---------------------------------------------------------------
 
     el('facultySearch').addEventListener('input', renderFacultyList);
+    el('facultyTypeFilter').addEventListener('change', renderFacultyList);
+
+    if (canArchive) {
+        el('btnArchiveAllSchedules').classList.remove('d-none');
+        el('btnArchiveAllSchedules').addEventListener('click', function () {
+            ConfirmModal.show({
+                title: 'Archive All Schedules',
+                message: 'Archive every scheduled class whose date has already passed? They\'ll be cleared from this list ' +
+                    '(and kept, read-only, in Archive) but upcoming classes are not affected.',
+                confirmText: 'Archive',
+                tone: 'danger'
+            }).then(function (confirmed) {
+                if (!confirmed) return;
+                postJson('api/faculty-schedule/archive-all', {}).then(function (data) {
+                    if (!data.success) { PPToast.error(data.message || 'Could not archive schedules.'); return; }
+                    PPToast.success(data.archived + ' class' + (data.archived === 1 ? '' : 'es') + ' archived.');
+                    loadTeachers().then(renderFacultyList);
+                }).catch(function () { PPToast.error('Could not reach the server.'); });
+            });
+        });
+    }
 
     el('facultyBody').addEventListener('click', function (e) {
         var row = e.target.closest('tr[data-employee]');
@@ -609,8 +638,11 @@
 
     anchorDate.value = new URLSearchParams(window.location.search).get('date') || iso(new Date());
 
-    el('facultyBody').innerHTML = '<tr><td colspan="3" class="text-center text-muted py-4">Loading faculty…</td></tr>';
-    loadTeachers()
+    el('facultyBody').innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4">Loading faculty…</td></tr>';
+    Promise.all([PayrollProLayout.loadStaffTypeLabels(), PayrollProLayout.loadEmployeeTypeOptions()]).then(function (results) {
+        PayrollProLayout.populateEmployeeTypeSelect(el('facultyTypeFilter'), results[1]);
+        return loadTeachers();
+    })
         .catch(function (error) {
             PPToast.error(error.message || 'Could not load faculty.');
         })

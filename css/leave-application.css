@@ -418,9 +418,9 @@ table.leave-table > tfoot > tr::before {
 .leave-badge.pending { background: var(--pp-warning-bg); color: var(--pp-warning); }
 .leave-badge.approved { background: var(--pp-success-bg); color: var(--pp-success); }
 .leave-badge.rejected { background: var(--pp-error-bg); color: var(--pp-error); }
-.leave-badge.cancelled { background: #f1f5f9; color: #64748b; }
+.leave-badge.cancelled { background: var(--pp-border); color: var(--pp-text-muted); }
 .leave-badge.paid { background: var(--pp-info-bg); color: var(--pp-info); }
-.leave-badge.unpaid { background: #f1f5f9; color: #475569; }
+.leave-badge.unpaid { background: var(--pp-border); color: var(--pp-text-muted); }
 
 .leave-table tbody tr.pp-row-clickable { cursor: pointer; }
 .leave-table tbody tr.pp-row-clickable:hover { background: var(--pp-bg); }

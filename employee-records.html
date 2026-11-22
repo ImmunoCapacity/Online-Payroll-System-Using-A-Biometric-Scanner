@@ -50,19 +50,16 @@
                                 <option value="Faculty">Faculty</option>
                                 <option value="Admin">Admin</option>
                                 <option value="Faculty/Admin">Faculty/Admin</option>
-                                <option value="Utility">Utility</option>
-                                <option value="Security Guard">Security Guard</option>
+                                <!-- More Admin-like types (Maintenance → Employee Types) are added here by JS. -->
                             </select>
                         </div>
                         <div class="pp-filter-group">
                             <label for="employeeStatus" class="pp-form-label">Status</label>
                             <select data-clearable class="form-select pp-form-select" id="employeeStatus">
-                                <option value="all" hidden data-hint>All statuses</option>
+                                <option value="all" hidden data-hint>All Status</option>
                                 <option value="Active">Active</option>
                                 <option value="On Leave">On Leave</option>
-                                <option value="Inactive">Inactive</option>
-                                <option value="Resigned">Resigned</option>
-                                <option value="Terminated">Terminated</option>
+                                <!-- More statuses (Maintenance → Employee Status) are added here by JS. -->
                                 <option value="archived">Archived</option>
                             </select>
                         </div>
@@ -109,12 +106,12 @@
                     <div class="modal-body">
                         <input type="hidden" id="employeeId">
 
-                        <!-- Suggested next ID (STIBLN-####-M / -F, letter follows Gender); can be changed. -->
+                        <!-- Left blank, the server assigns the next number plus a random M/F letter
+                             (unrelated to Gender) on save. Typing one in here overrides that. -->
                         <div class="row g-3 mb-4">
                             <div class="col-md-5">
                                 <label for="employeeNumber" class="pp-form-label">Employee ID</label>
-                                <input type="text" class="form-control pp-form-control pp-employee-id" id="employeeNumber" maxlength="20" placeholder="STIBLN-0000-M" data-label="Employee ID" autocomplete="off" required>
-                                <div class="invalid-feedback">Enter the Employee ID.</div>
+                                <input type="text" class="form-control pp-form-control pp-employee-id" id="employeeNumber" maxlength="20" placeholder="STIBLN-0003-M" data-label="Employee ID" autocomplete="off">
                             </div>
                         </div>
 
@@ -186,8 +183,7 @@
                                     <option value="Faculty">Faculty</option>
                                     <option value="Admin">Admin</option>
                                     <option value="Faculty/Admin">Faculty/Admin</option>
-                                    <option value="Utility">Utility</option>
-                                    <option value="Security Guard">Security Guard</option>
+                                    <!-- More Admin-like types (Maintenance → Employee Types) are added here by JS. -->
                                 </select>
                             </div>
                             <div class="col-md-6">
@@ -217,9 +213,7 @@
                                 <select class="form-select pp-form-select" id="employeeStatusSelect">
                                     <option value="Active">Active</option>
                                     <option value="On Leave">On Leave</option>
-                                    <option value="Inactive">Inactive</option>
-                                    <option value="Resigned">Resigned</option>
-                                    <option value="Terminated">Terminated</option>
+                                    <!-- More statuses (Maintenance → Employee Status) are added here by JS. -->
                                     <option value="Archived">Archived</option>
                                 </select>
                                 <div class="form-text d-none" id="employeeStatusHint">
@@ -240,7 +234,8 @@
                             </div>
                             <div class="col-md-3">
                                 <label for="employeeRateUnit" class="pp-form-label" id="employeeRateUnitLabel">Rate per Hour/Unit (₱)</label>
-                                <input type="number" class="form-control pp-form-control" id="employeeRateUnit" min="0" max="100000" step="0.01" data-validate="number" data-decimals="2" inputmode="decimal" required>
+                                <!-- Set automatically from Instructor Rank (Maintenance); not user-editable. -->
+                                <input type="number" class="form-control pp-form-control" id="employeeRateUnit" min="0" max="100000" step="0.01" inputmode="decimal" disabled>
                             </div>
                             <div class="col-md-3">
                                 <label for="employeeLoadUnits" class="pp-form-label">Load Units per Semester</label>

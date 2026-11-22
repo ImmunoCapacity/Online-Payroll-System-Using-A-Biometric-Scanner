@@ -5,7 +5,7 @@
 
 .pp-widget-subtitle {
     margin-top: 4px;
-    color: #6c8190;
+    color: var(--pp-text-muted);
     font-size: 12px;
 }
 
@@ -14,9 +14,9 @@
     align-items: center;
     justify-content: center;
     padding: 6px 11px;
-    background: #fff1d5;
+    background: var(--pp-warning-bg);
     border-radius: 7px;
-    color: #98610f;
+    color: var(--pp-warning);
     font-size: 11px;
     font-weight: 700;
 }
@@ -33,8 +33,8 @@
 .payroll-calendar-card {
     min-width: 0;
     padding: 14px;
-    background: #f8fbfd;
-    border: 1px solid #dbe8f0;
+    background: var(--pp-surface-hover);
+    border: 1px solid var(--pp-border);
     border-radius: 10px;
 }
 
@@ -48,7 +48,7 @@
 
 .payroll-calendar-month {
     margin: 0;
-    color: #0c4f70;
+    color: var(--pp-primary-dark);
     font-size: 14px;
     font-weight: 700;
     text-align: center;
@@ -65,7 +65,7 @@
     background: transparent;
     border: 0;
     border-radius: 7px;
-    color: #1681ad;
+    color: var(--pp-primary);
     cursor: pointer;
     transition:
         background 0.15s ease,
@@ -73,8 +73,8 @@
 }
 
 .payroll-calendar-nav:hover {
-    background: #e3f2f9;
-    color: #075a7e;
+    background: var(--pp-primary-light);
+    color: var(--pp-primary-dark);
 }
 
 .payroll-calendar-grid {
@@ -85,22 +85,22 @@
 }
 
 .payroll-calendar-day-period {
-    background: #dceef5;
-    color: #0c4f70;
+    background: var(--pp-primary-light);
+    color: var(--pp-primary-dark);
     border-radius: 4px;
     font-weight: 600;
 }
 
 .payroll-calendar-day-start, .payroll-calendar-day-end {
     z-index: 2;
-    background: #126d8c;
+    background: var(--pp-primary);
     color: #ffffff;
     border-radius: 50%;
     font-weight: 700;
 }
 
 .payroll-calendar-day-start:hover, .payroll-calendar-day-end:hover {
-    background: #0d5d78;
+    background: var(--pp-primary-dark);
 }
 
 /* Holidays: a coloured dot under the day number, so it also shows on
@@ -122,7 +122,7 @@
     background: currentColor;
 }
 
-.payroll-calendar-day.payroll-holiday-mark { color: #c0392b; }
+.payroll-calendar-day.payroll-holiday-mark { color: var(--pp-error); }
 
 /* On the white-on-blue start/end circles, keep the number white. */
 .payroll-calendar-day-start.payroll-calendar-day-holiday,
@@ -138,14 +138,14 @@
     border-radius: 50%;
 }
 
-.payroll-holiday-dot.payroll-holiday-mark { background: #c0392b; }
+.payroll-holiday-dot.payroll-holiday-mark { background: var(--pp-error); }
 
 .payroll-calendar-legend {
     display: flex;
     flex-wrap: wrap;
     gap: 4px 12px;
     margin-top: 10px;
-    color: #5b7083;
+    color: var(--pp-text-muted);
     font-size: 11px;
 }
 
@@ -161,7 +161,7 @@
     gap: 6px;
     margin-top: 10px;
     padding-top: 10px;
-    border-top: 1px solid #e3ebf0;
+    border-top: 1px solid var(--pp-border);
 }
 
 .payroll-holiday-item {
@@ -169,14 +169,14 @@
     align-items: center;
     gap: 8px;
     min-width: 0;
-    color: #29465d;
+    color: var(--pp-text);
     font-size: 12px;
 }
 
 .payroll-holiday-item strong {
     flex: 0 0 auto;
     min-width: 44px;
-    color: #0c4f70;
+    color: var(--pp-primary-dark);
 }
 
 .payroll-holiday-name {
@@ -186,7 +186,7 @@
 }
 
 .payroll-holiday-empty {
-    color: #7a8b99;
+    color: var(--pp-text-muted);
     font-size: 12px;
 }
 
@@ -200,7 +200,7 @@
 
 .payroll-period-title {
     margin: 0 0 5px;
-    color: #0c4f70;
+    color: var(--pp-primary-dark);
     font-size: 17px;
     font-weight: 700;
     line-height: 1.35;
@@ -228,7 +228,7 @@
     height: 32px;
     flex: 0 0 32px;
     border-radius: 50%;
-    background: #126d8c;
+    background: var(--pp-primary);
     color: #ffffff;
     font-size: 11px;
     font-weight: 700;
@@ -241,7 +241,7 @@
 .payroll-period-date-item strong, .payroll-period-legend strong {
     display: block;
     margin-bottom: 2px;
-    color: #29465d;
+    color: var(--pp-text);
     font-size: 12px;
     font-weight: 700;
     line-height: 1.3;
@@ -249,7 +249,7 @@
 
 .payroll-period-date-item span, .payroll-period-legend span {
     display: block;
-    color: #8293a3;
+    color: var(--pp-text-muted);
     font-size: 11px;
     line-height: 1.35;
 }
@@ -258,38 +258,38 @@
     width: 32px;
     height: 24px;
     flex: 0 0 32px;
-    background: #dceef5;
-    border: 1px solid #c9e0eb;
+    background: var(--pp-primary-light);
+    border: 1px solid var(--pp-border);
     border-radius: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #1a5f7a;
+    color: var(--pp-primary);
     font-size: 13px;
 }
 
 .pp-activity-feed {
-    background: #ffffff;
+    background: var(--pp-surface);
 }
 
 .pp-activity-icon-success {
-    background: #e3f6ea;
-    color: #18864b;
+    background: var(--pp-success-bg);
+    color: var(--pp-success);
 }
 
 .pp-activity-icon-warning {
-    background: #fff2dc;
-    color: #b77718;
+    background: var(--pp-warning-bg);
+    color: var(--pp-warning);
 }
 
 .pp-activity-icon-info {
-    background: #e3f2f9;
-    color: #0878a5;
+    background: var(--pp-info-bg);
+    color: var(--pp-info);
 }
 
 .pp-activity-icon-primary {
-    background: #e8efff;
-    color: #3569d4;
+    background: var(--pp-primary-light);
+    color: var(--pp-primary);
 }
 
 .pp-activity-content {

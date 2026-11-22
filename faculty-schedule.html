@@ -36,6 +36,9 @@
                 <section class="pp-widget" aria-labelledby="facultyListTitle">
                     <div class="pp-widget-header">
                         <h2 class="pp-widget-title" id="facultyListTitle">Faculty</h2>
+                        <button type="button" class="btn btn-outline-danger d-none" id="btnArchiveAllSchedules">
+                            <i class="bi bi-archive me-1"></i> Archive All Schedules
+                        </button>
                     </div>
                     <div class="pp-widget-body">
                         <div class="pp-filter-bar" role="search">
@@ -45,6 +48,12 @@
                                     <i class="bi bi-search"></i>
                                     <input type="search" class="form-control pp-form-control" id="facultySearch" maxlength="100" placeholder="Search by name or employee ID…">
                                 </div>
+                            </div>
+                            <div class="pp-filter-group">
+                                <label for="facultyTypeFilter" class="pp-form-label">Employee Type</label>
+                                <select data-clearable class="form-select pp-form-select" id="facultyTypeFilter">
+                                    <option value="all" hidden data-hint>All employee types</option>
+                                </select>
                             </div>
                         </div>
 
@@ -58,6 +67,7 @@
                                     <tr>
                                         <th>Employee ID</th>
                                         <th>Faculty</th>
+                                        <th>Employee Type</th>
                                         <th class="text-end">Classes This Week</th>
                                     </tr>
                                 </thead>

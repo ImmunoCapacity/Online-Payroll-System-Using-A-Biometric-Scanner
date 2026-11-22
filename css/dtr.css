@@ -380,7 +380,7 @@
     margin-top: 1rem;
     padding: 0.7rem 0.85rem;
     border-radius: 0.45rem;
-    background: #f8fafc;
+    background: var(--pp-surface-hover);
     color: var(--pp-text-muted);
     font-size: 0.8rem;
 }
@@ -404,7 +404,7 @@
 .pp-grid-time-col {
     width: 125px;
     min-width: 125px;
-    background: #f1f5f9;
+    background: var(--pp-surface-hover);
     color: var(--pp-text-muted);
     font-size: 0.8rem;
     font-weight: 600;
@@ -476,13 +476,13 @@
 }
 
 .pp-schedule-class.status-late {
-    background: #fff7ed;
-    color: #c2410c;
+    background: var(--pp-warning-bg);
+    color: var(--pp-warning);
 }
 
 .pp-schedule-class.status-not-teaching {
-    background: #fef2f2;
-    color: #b91c1c;
+    background: var(--pp-error-bg);
+    color: var(--pp-error);
 }
 
 .pp-schedule-class.status-teaching:hover,
@@ -501,7 +501,7 @@
     padding: 0.55rem 0.75rem;
     border: 1px solid var(--pp-border);
     border-radius: var(--pp-radius-sm);
-    background: #f8fafc;
+    background: var(--pp-surface-hover);
     color: var(--pp-text-muted);
     font-size: 0.8rem;
 }
@@ -727,7 +727,7 @@
     padding: 4px 6px;
     border: 1px solid var(--pp-border, #e2e5e9);
     border-radius: 6px;
-    background: #fff;
+    background: var(--pp-surface);
     font-size: 0.7rem;
     text-align: left;
     cursor: pointer;
@@ -753,10 +753,10 @@
     color: var(--pp-text-muted, #6b7280);
 }
 
-.pp-att-cell.status-present { background: #ecf8f1; }
-.pp-att-cell.status-late { background: #fff6e5; }
-.pp-att-cell.status-absent { background: #fdeeee; }
-.pp-att-cell.status-leave { background: #eef3fd; }
+.pp-att-cell.status-present { background: var(--pp-success-bg); }
+.pp-att-cell.status-late { background: var(--pp-warning-bg); }
+.pp-att-cell.status-absent { background: var(--pp-error-bg); }
+.pp-att-cell.status-leave { background: var(--pp-info-bg); }
 .pp-att-cell.status-rest-day,
 .pp-att-cell.status-upcoming,
 .pp-att-cell.status-not-hired { background: var(--pp-surface-alt, #f6f8f9); color: var(--pp-text-muted, #6b7280); }
@@ -782,4 +782,4 @@
 /* Attendance Recording: automatic status box (js/dtr.js) */
 #manualStatus { font-weight: 600; background: var(--pp-bg, #f8fafc); }
 #manualStatus.pp-status-present { color: var(--pp-success); }
-#manualStatus.pp-status-late { color: #b45309; }
+#manualStatus.pp-status-late { color: var(--pp-warning); }

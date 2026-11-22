@@ -165,7 +165,7 @@
                     'aria-label="Edit leave of ' + escapeHtml(r.employeeName) + '">' +
                 '<td>' + escapeHtml(r.employeeNumber) + '</td>' +
                 '<td><strong>' + escapeHtml(r.employeeName) + '</strong>' +
-                    '<span class="leave-sub">' + escapeHtml(r.employeeType) + '</span></td>' +
+                    '<span class="leave-sub">' + escapeHtml(PayrollProLayout.staffTypeLabel(r.employeeType)) + '</span></td>' +
                 '<td>' + escapeHtml(r.category) + '</td>' +
                 '<td>' + dateRange(r.dateFrom, r.dateTo) + '</td>' +
                 '<td class="leave-days-cell">' + r.days + ' day' + (r.days === 1 ? '' : 's') + '</td>' +
@@ -183,7 +183,7 @@
         el('leaveEmployee').innerHTML = '<option value="" selected hidden data-hint>Select employee</option>' +
             employees.map(function (e) {
                 return '<option value="' + escapeHtml(e.id) + '">' + escapeHtml(e.displayName) + ' — ' +
-                    escapeHtml(e.employeeNumber) + ' (' + escapeHtml(e.department) + ')</option>';
+                    escapeHtml(e.employeeNumber) + ' (' + escapeHtml(PayrollProLayout.staffTypeLabel(e.department)) + ')</option>';
             }).join('');
         el('leaveCategory').innerHTML = '<option value="" selected hidden data-hint>Select leave type</option>' +
             categories.filter(function (c) { return c.active || (request && c.id === request.categoryId); })
@@ -339,5 +339,5 @@
         }
     });
 
-    load();
+    PayrollProLayout.loadStaffTypeLabels().then(load);
 })();

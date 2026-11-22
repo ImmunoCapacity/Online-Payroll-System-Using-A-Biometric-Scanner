@@ -1,5 +1,6 @@
 /**
- * Utility → Archive, System Administrator. Read-only.
+ * Utility → Archive, System Administrator (and, for ?view=schedules only,
+ * Attendance Monitoring Staff). Read-only.
  *
  *   ?view=employees   archived employees (api/utility/archive); archiving and
  *                     restoring are done by the Payroll Master in Employee Records.
@@ -7,6 +8,9 @@
  *                     deduction tables the Payroll Master archived in
  *                     Maintenance when the government changed them
  *                     (api/utility/archive/tables/{table}).
+ *   ?view=schedules   archived faculty classes (api/utility/archive/schedules);
+ *                     "Archive All Schedules" in Faculty Schedule is how they
+ *                     get archived, by Attendance Monitoring Staff.
  *
  * The sub-menu (payrollpro-layout.js) switches views without reloading.
  */
@@ -92,7 +96,7 @@
             return '<tr>' +
                 '<td>' + escapeHtml(e.employeeNumber) + '</td>' +
                 '<td><strong>' + escapeHtml(e.name) + '</strong></td>' +
-                '<td>' + escapeHtml(e.type) + '</td>' +
+                '<td>' + escapeHtml(PayrollProLayout.staffTypeLabel(e.type)) + '</td>' +
                 '<td>' + escapeHtml(e.status) + '</td>' +
                 '<td>' + date(e.dateHired) + '</td>' +
                 '<td>' + date(e.archivedAt) + '</td>' +
@@ -166,22 +170,75 @@
     }
 
     // ---------------------------------------------------------------
+    // Faculty schedules
+    // ---------------------------------------------------------------
+
+    var schedules = null;
+
+    function renderSchedules() {
+        var q = el('schedulesSearch').value.trim().toLowerCase();
+        var shown = schedules.filter(function (c) {
+            return !q || (c.employeeNumber + ' ' + c.employeeName).toLowerCase().indexOf(q) !== -1;
+        });
+        el('schedulesCount').textContent = schedules.length
+            ? shown.length + ' of ' + schedules.length + ' archived class' + (schedules.length === 1 ? '' : 'es') + '.'
+            : '';
+        el('schedulesEmpty').classList.toggle('d-none', shown.length > 0);
+        el('schedulesEmpty').textContent = schedules.length ? 'No archived classes match the search.' : 'No archived classes.';
+        el('schedulesBody').innerHTML = shown.map(function (c) {
+            return '<tr>' +
+                '<td>' + escapeHtml(c.employeeNumber) + '</td>' +
+                '<td><strong>' + escapeHtml(c.employeeName) + '</strong></td>' +
+                '<td>' + escapeHtml(PayrollProLayout.staffTypeLabel(c.type)) + '</td>' +
+                '<td>' + escapeHtml(c.subject) + ' <span class="text-muted">(' + escapeHtml(c.classSection) + ')</span></td>' +
+                '<td>' + escapeHtml(c.room || '—') + '</td>' +
+                '<td>' + date(c.classDate) + '</td>' +
+                '<td>' + escapeHtml(c.scheduledStart) + ' – ' + escapeHtml(c.scheduledEnd) + '</td>' +
+                '<td>' + escapeHtml(c.status) + '</td>' +
+            '</tr>';
+        }).join('');
+    }
+
+    function loadSchedules() {
+        if (schedules) { renderSchedules(); return; }
+        el('schedulesBody').innerHTML = '';
+        el('schedulesEmpty').textContent = 'Loading…';
+        el('schedulesEmpty').classList.remove('d-none');
+        api('api/utility/archive/schedules').then(function (data) {
+            schedules = data.classes;
+            renderSchedules();
+        }).catch(function (error) {
+            el('schedulesEmpty').textContent = error.message || 'Could not load the archive.';
+            el('schedulesEmpty').classList.remove('d-none');
+        });
+    }
+
+    el('schedulesSearch').addEventListener('input', function () { if (schedules) renderSchedules(); });
+
+    // ---------------------------------------------------------------
     // Views
     // ---------------------------------------------------------------
 
     function show(view) {
-        if (view !== 'employees' && !TABLES[view]) view = 'employees';
+        if (view !== 'employees' && view !== 'schedules' && !TABLES[view]) view = 'employees';
         document.querySelectorAll('.pp-archive-sidebar-link').forEach(function (a) {
             a.classList.toggle('active', a.dataset.archive === view);
         });
         var isEmployees = view === 'employees';
+        var isSchedules = view === 'schedules';
         el('employeesView').classList.toggle('d-none', !isEmployees);
-        el('tablesView').classList.toggle('d-none', isEmployees);
+        el('schedulesView').classList.toggle('d-none', !isSchedules);
+        el('tablesView').classList.toggle('d-none', isEmployees || isSchedules);
         if (isEmployees) {
             el('archiveTitle').textContent = 'Archive — Employees';
             el('archiveSubtitle').textContent = 'Employees who no longer work here. Their payroll, attendance and leave history is kept.';
             el('archiveNote').textContent = 'This list is read-only. The Payroll Master archives and restores employees in Employee Records.';
             loadEmployees();
+        } else if (isSchedules) {
+            el('archiveTitle').textContent = 'Archive — Faculty Schedules';
+            el('archiveSubtitle').textContent = 'Classes already held, cleared from the active Faculty Schedule view.';
+            el('archiveNote').textContent = 'This list is read-only. Attendance Monitoring Staff archives past classes from Faculty Schedule ("Archive All Schedules").';
+            loadSchedules();
         } else {
             var title = TABLES[view].title;
             el('archiveTitle').textContent = 'Archive — ' + title;
@@ -200,5 +257,7 @@
         });
     });
 
-    show(new URLSearchParams(location.search).get('view') || 'employees');
+    PayrollProLayout.loadStaffTypeLabels().then(function () {
+        show(new URLSearchParams(location.search).get('view') || 'employees');
+    });
 })();

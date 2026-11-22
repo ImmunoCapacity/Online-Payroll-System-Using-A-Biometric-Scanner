@@ -469,7 +469,7 @@
                 });
 
                 show(columns, employees.map(function (e) {
-                    return [e.employeeNumber, e.displayName, e.department, e.email, e.phone, e.dateHired || ''];
+                    return [e.employeeNumber, e.displayName, PayrollProLayout.staffTypeLabel(e.department), e.email, e.phone, e.dateHired || ''];
                 }));
             })
             .catch(function (error) {
@@ -548,7 +548,7 @@
                     var c = categories[g.categoryId];
                     var left = c && c.paid && c.paidDays != null
                         ? Math.max(0, c.paidDays - g.paid) + ' of ' + c.paidDays : '—';
-                    return [g.id, g.name, g.type, g.category, g.dates.join(', '), g.paid, g.unpaid, left];
+                    return [g.id, g.name, PayrollProLayout.staffTypeLabel(g.type), g.category, g.dates.join(', '), g.paid, g.unpaid, left];
                 });
             var totals = sumColumns(rows, columns);
             show(columns, rows, totals, 'No leave recorded for ' + year + ' with the selected filters.');
@@ -737,7 +737,18 @@
     /* Init */
     var startKey = new URLSearchParams(location.search).get('report');
 
-    fetch('api/payroll/released')
+    /** The Employee type filter's Faculty/Faculty-Admin option text follows their renamed display name; values stay fixed custom codes. */
+    function applyBuiltInTypeLabels() {
+        var opt = employeeType.querySelector('option[value="faculty"]');
+        if (opt) opt.textContent = PayrollProLayout.staffTypeLabel('Faculty');
+        opt = employeeType.querySelector('option[value="both"]');
+        if (opt) opt.textContent = PayrollProLayout.staffTypeLabel('Faculty/Admin');
+    }
+
+    PayrollProLayout.loadStaffTypeLabels().then(function () {
+        applyBuiltInTypeLabels();
+        return fetch('api/payroll/released');
+    })
         .then(function (response) { return response.json(); })
         .then(function (data) {
             if (!data.success) throw new Error(data.message);

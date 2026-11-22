@@ -42,6 +42,12 @@
                     <button type="button" class="pp-maint-nav-btn" data-section="ranks">
                         <i class="bi bi-mortarboard"></i> Instructor Ranks
                     </button>
+                    <button type="button" class="pp-maint-nav-btn" data-section="employeeTypes">
+                        <i class="bi bi-person-badge"></i> Employee Types
+                    </button>
+                    <button type="button" class="pp-maint-nav-btn" data-section="employeeStatuses">
+                        <i class="bi bi-toggle2-on"></i> Employee Status
+                    </button>
                     <button type="button" class="pp-maint-nav-btn" data-section="benefits">
                         <i class="bi bi-gift"></i> Benefits Table
                     </button>
@@ -183,6 +189,58 @@
                             </table>
                         </div>
                         <div class="pp-maint-audit" id="ranksAudit"></div>
+                    </section>
+
+                    <!-- Employee Types -->
+                    <section class="pp-maint-section d-none" id="sectionEmployeeTypes" aria-labelledby="employeeTypesTitle">
+                        <div class="pp-maint-section-header">
+                            <div>
+                                <h2 class="pp-maint-section-title" id="employeeTypesTitle">Employee Types</h2>
+                                <p class="pp-maint-section-desc">More Admin-like staff types to offer in Employee Records' Employee Type choice, alongside the built-in Faculty, Admin and Faculty/Admin.</p>
+                            </div>
+                            <button type="button" class="btn btn-pp-maint-add" id="btnAddEmployeeType">
+                                <i class="bi bi-plus-lg me-1"></i> Add Employee Type
+                            </button>
+                        </div>
+                        <p class="pp-table-hint pp-maint-hint"><i class="bi bi-hand-index" aria-hidden="true"></i> <span>Click a row to edit it.</span></p>
+                        <div class="pp-maint-table-wrap">
+                            <table class="pp-table pp-table-maint w-100">
+                                <thead>
+                                    <tr>
+                                        <th>Type Name</th>
+                                        <th class="col-num">Employees</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="employeeTypesBody"></tbody>
+                            </table>
+                        </div>
+                        <div class="pp-maint-audit" id="employeeTypesAudit"></div>
+                    </section>
+
+                    <!-- Employee Status -->
+                    <section class="pp-maint-section d-none" id="sectionEmployeeStatuses" aria-labelledby="employeeStatusesTitle">
+                        <div class="pp-maint-section-header">
+                            <div>
+                                <h2 class="pp-maint-section-title" id="employeeStatusesTitle">Employee Status</h2>
+                                <p class="pp-maint-section-desc">More Employment Status choices to offer in Employee Records, alongside the built-in Active, On Leave and Archived.</p>
+                            </div>
+                            <button type="button" class="btn btn-pp-maint-add" id="btnAddEmployeeStatus">
+                                <i class="bi bi-plus-lg me-1"></i> Add Employee Status
+                            </button>
+                        </div>
+                        <p class="pp-table-hint pp-maint-hint"><i class="bi bi-hand-index" aria-hidden="true"></i> <span>Click a row to edit it.</span></p>
+                        <div class="pp-maint-table-wrap">
+                            <table class="pp-table pp-table-maint w-100">
+                                <thead>
+                                    <tr>
+                                        <th>Status Name</th>
+                                        <th class="col-num">Employees</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="employeeStatusesBody"></tbody>
+                            </table>
+                        </div>
+                        <div class="pp-maint-audit" id="employeeStatusesAudit"></div>
                     </section>
 
                     <!-- Benefits Table (js/benefits.js) -->
@@ -576,12 +634,60 @@
                         </div>
                         <div>
                             <label for="rankRate" class="pp-form-label">Rate per Hour (₱)</label>
-                            <input type="number" class="form-control pp-form-control" id="rankRate" min="0" max="100000" step="0.01" data-validate="number" data-decimals="2" inputmode="decimal" placeholder="e.g. 250.00">
+                            <input type="number" class="form-control pp-form-control" id="rankRate" min="0.01" max="100000" step="0.01" data-validate="number" data-decimals="2" inputmode="decimal" placeholder="e.g. 250.00" required>
                         </div>
                     </div>
                     <div class="modal-footer justify-content-center">
                         <button type="button" class="btn btn-pp-modal-remove d-none" id="rankRemoveBtn">Remove</button>
                         <button type="submit" class="btn btn-pp-primary">Save Rank</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Employee Type Modal -->
+    <div class="modal fade pp-modal" id="employeeTypeModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title" id="employeeTypeModalTitle">Add Employee Type</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="employeeTypeForm" novalidate>
+                    <div class="modal-body">
+                        <div class="mb-0">
+                            <label for="employeeTypeName" class="pp-form-label">Type Name</label>
+                            <input type="text" class="form-control pp-form-control" id="employeeTypeName" maxlength="20" data-validate="text" data-label="Employee type" placeholder="e.g. Librarian" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer justify-content-center">
+                        <button type="button" class="btn btn-pp-modal-remove d-none" id="employeeTypeRemoveBtn">Remove</button>
+                        <button type="submit" class="btn btn-pp-primary">Save Employee Type</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Employee Status Modal -->
+    <div class="modal fade pp-modal" id="employeeStatusModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title" id="employeeStatusModalTitle">Add Employee Status</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="employeeStatusForm" novalidate>
+                    <div class="modal-body">
+                        <div class="mb-0">
+                            <label for="employeeStatusName" class="pp-form-label">Status Name</label>
+                            <input type="text" class="form-control pp-form-control" id="employeeStatusName" maxlength="20" data-validate="text" data-label="Employee status" placeholder="e.g. Suspended" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer justify-content-center">
+                        <button type="button" class="btn btn-pp-modal-remove d-none" id="employeeStatusRemoveBtn">Remove</button>
+                        <button type="submit" class="btn btn-pp-primary">Save Employee Status</button>
                     </div>
                 </form>
             </div>

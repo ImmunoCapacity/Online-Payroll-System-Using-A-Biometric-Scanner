@@ -46,6 +46,12 @@
                                     <input type="search" class="form-control pp-form-control" id="facultySearch" maxlength="100" placeholder="Search by name or employee ID…">
                                 </div>
                             </div>
+                            <div class="pp-filter-group">
+                                <label for="facultyTypeFilter" class="pp-form-label">Employee Type</label>
+                                <select data-clearable class="form-select pp-form-select" id="facultyTypeFilter">
+                                    <option value="all" hidden data-hint>All employee types</option>
+                                </select>
+                            </div>
                         </div>
 
                         <p class="pp-table-hint">
@@ -58,6 +64,7 @@
                                     <tr>
                                         <th>Employee ID</th>
                                         <th>Faculty</th>
+                                        <th>Employee Type</th>
                                         <th class="text-end">Classes</th>
                                         <th class="text-end">Needs Checks</th>
                                         <th class="text-end">Waiting for Approval</th>
@@ -112,7 +119,7 @@
                             <div class="pp-filter-group">
                                 <label for="statusFilter" class="pp-form-label">Status</label>
                                 <select data-clearable class="form-select pp-form-select" id="statusFilter">
-                                    <option value="all" hidden data-hint>All statuses</option>
+                                    <option value="all" hidden data-hint>All Status</option>
                                     <option value="Not checked">Not checked</option>
                                     <option value="Incomplete">Incomplete (one check)</option>
                                     <option value="Pending">Waiting for approval</option>

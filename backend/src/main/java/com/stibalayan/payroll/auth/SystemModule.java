@@ -19,7 +19,11 @@ public enum SystemModule {
     /** Viewing planned faculty classes (part of the Daily Time Record). */
     FACULTY_SCHEDULE(Roles.PAYROLL_MASTER, Roles.ATTENDANCE_MONITORING_STAFF),
     /** Creating, editing and cancelling faculty classes. */
-    FACULTY_SCHEDULE_MANAGEMENT(Roles.PAYROLL_MASTER),
+    FACULTY_SCHEDULE_MANAGEMENT(Roles.PAYROLL_MASTER, Roles.ATTENDANCE_MONITORING_STAFF),
+    /** "Archive All Schedules" — Attendance Monitoring Staff only, since they keep the schedule up to date. */
+    FACULTY_SCHEDULE_ARCHIVE(Roles.ATTENDANCE_MONITORING_STAFF),
+    /** Reading archived classes (System Administrator's Archive page, and Attendance Monitoring Staff's own). */
+    FACULTY_SCHEDULE_ARCHIVE_READ(Roles.SYSTEM_ADMINISTRATOR, Roles.ATTENDANCE_MONITORING_STAFF),
     /** Entering the beginning and ending classroom checks. */
     FACULTY_TEACHING_HOURS(Roles.PAYROLL_MASTER, Roles.ATTENDANCE_MONITORING_STAFF),
     /** Approving or rejecting checked classes — kept apart from entering them. */
@@ -36,7 +40,9 @@ public enum SystemModule {
     /** Pulling attendance from the K40 on demand ("Sync Device"), apart from UTILITY's device management. */
     DEVICE_SYNC(Roles.PAYROLL_MASTER, Roles.ATTENDANCE_MONITORING_STAFF, Roles.SYSTEM_ADMINISTRATOR),
     /** Reading the grace period and payroll periods (every page that shows cut-offs needs them). */
-    SETTINGS_READ(Roles.PAYROLL_MASTER, Roles.ATTENDANCE_MONITORING_STAFF, Roles.SYSTEM_ADMINISTRATOR);
+    SETTINGS_READ(Roles.PAYROLL_MASTER, Roles.ATTENDANCE_MONITORING_STAFF, Roles.SYSTEM_ADMINISTRATOR),
+    /** Reading the display names of Faculty/Admin/Faculty-Admin (every page that shows an employee's type needs them). */
+    EMPLOYEE_TYPE_LABELS_READ(Roles.PAYROLL_MASTER, Roles.ATTENDANCE_MONITORING_STAFF, Roles.SYSTEM_ADMINISTRATOR);
 
     private final Set<String> roles;
 

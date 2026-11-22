@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS faculty_staff (
     lastname           VARCHAR(50)  NOT NULL,
     gender             VARCHAR(50),
     age                INT,
-    birthdate          DATE,
+    birthdate          VARCHAR(20),                 -- YYYY-MM-DD as entered; not a SQL date type
     contact_number     VARCHAR(50),
     address            VARCHAR(255),
     email_address      VARCHAR(100) NOT NULL UNIQUE,
@@ -94,7 +94,7 @@ CREATE TABLE IF NOT EXISTS admin_staff (
     lastname           VARCHAR(50)  NOT NULL,
     gender             VARCHAR(50),
     age                INT,
-    birthdate          DATE,
+    birthdate          VARCHAR(20),                 -- YYYY-MM-DD as entered; not a SQL date type
     contact_number     VARCHAR(50),
     address            VARCHAR(255),
     email_address      VARCHAR(100) NOT NULL UNIQUE,
@@ -151,6 +151,7 @@ CREATE TABLE IF NOT EXISTS daily_time_record (
     status             VARCHAR(20),                 -- Present | Late | Absent
     is_manual_entry    TINYINT(1)  NOT NULL DEFAULT 0,
     remarks            VARCHAR(255),               -- reason for a manual entry
+    notes              VARCHAR(255),               -- optional free-form remarks on a manual entry
     recorded_by        INT,                        -- users.user_id who encoded a manual entry
     created_at         DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY uq_dtr_faculty_day (faculty_id, record_date),
@@ -513,6 +514,7 @@ CREATE TABLE IF NOT EXISTS faculty_class_schedule (
     scheduled_end        TIME         NOT NULL,
     grace_period_minutes INT          NOT NULL DEFAULT 15,
     schedule_status      VARCHAR(20)  NOT NULL DEFAULT 'Scheduled',   -- Scheduled | Cancelled
+    is_archived          TINYINT(1)   NOT NULL DEFAULT 0,             -- hidden from the active view (term cleanup)
     status_reason        VARCHAR(255),                                -- why it was cancelled
     created_by           INT,
     updated_by           INT,
@@ -750,3 +752,52 @@ ALTER TABLE employee_rank ADD COLUMN IF NOT EXISTS rate_per_hour DECIMAL(10,2) N
 
 -- Utility and Security Guard employee types (admin_staff, databases created before this existed).
 ALTER TABLE admin_staff ADD COLUMN IF NOT EXISTS staff_role VARCHAR(20) NULL AFTER is_faculty;
+
+-- Employee Types (Maintenance): the "Admin-like" staff types a Payroll
+-- Master can add beyond Faculty/Admin/Faculty-Admin. admin_staff.staff_role
+-- stores the chosen type name (same pattern as instructor_rank referencing
+-- employee_rank.rank_name). Seeded with the two types that used to be hardcoded.
+CREATE TABLE IF NOT EXISTS employee_type (
+    type_id   INT AUTO_INCREMENT PRIMARY KEY,
+    type_name VARCHAR(20) NOT NULL UNIQUE
+) ENGINE=InnoDB;
+INSERT IGNORE INTO employee_type (type_name) VALUES ('Utility'), ('Security Guard');
+
+-- Instructor ranks now always carry a rate (it's the sole source of a
+-- Faculty/Faculty-Admin employee's teaching rate); fill in any legacy gaps.
+UPDATE employee_rank SET rate_per_hour = 0 WHERE rate_per_hour IS NULL;
+
+-- The display name of the three built-in staff types (Faculty, Admin,
+-- Faculty/Admin), renamable in Maintenance → Employee Types. type_code is
+-- the fixed internal identity (never changes, used everywhere in payroll
+-- logic); display_name is only what's shown to the user and can be renamed.
+CREATE TABLE IF NOT EXISTS built_in_employee_type (
+    type_code    VARCHAR(20) PRIMARY KEY,
+    display_name VARCHAR(20) NOT NULL
+) ENGINE=InnoDB;
+INSERT IGNORE INTO built_in_employee_type (type_code, display_name) VALUES
+    ('Faculty', 'Faculty'), ('Admin', 'Admin'), ('Faculty/Admin', 'Faculty/Admin');
+
+-- Employee Status (Maintenance): more Employment Status choices a Payroll
+-- Master can add beyond the three built-ins (Active, On Leave, Archived —
+-- each drives real behavior: On Leave is set automatically by Leave
+-- Application, Archived sets is_archived, so they aren't managed here).
+-- Seeded with the statuses that used to be hardcoded.
+CREATE TABLE IF NOT EXISTS employee_status (
+    status_id   INT AUTO_INCREMENT PRIMARY KEY,
+    status_name VARCHAR(20) NOT NULL UNIQUE
+) ENGINE=InnoDB;
+INSERT IGNORE INTO employee_status (status_name) VALUES ('Inactive'), ('Resigned'), ('Terminated');
+
+-- Birthdate is a plain varchar, not a SQL date (databases created before this existed).
+ALTER TABLE faculty_staff MODIFY COLUMN birthdate VARCHAR(20);
+ALTER TABLE admin_staff MODIFY COLUMN birthdate VARCHAR(20);
+
+-- Optional remarks on a manual DTR entry, separate from the required reason
+-- (databases created before this existed).
+ALTER TABLE daily_time_record ADD COLUMN IF NOT EXISTS notes VARCHAR(255) AFTER remarks;
+
+-- Faculty Schedule: classes hidden from the active view by "Archive All
+-- Schedules" (Attendance Monitoring Staff), kept with all their history
+-- (databases created before this existed).
+ALTER TABLE faculty_class_schedule ADD COLUMN IF NOT EXISTS is_archived TINYINT(1) NOT NULL DEFAULT 0 AFTER schedule_status;

@@ -158,7 +158,7 @@
                 '<td><strong>' + escapeHtml(e.name) + '</strong>' +
                     (s.skipped ? ' <span class="loan-status loan-status-skipped" title="A loan deduction was skipped because the pay wasn\'t enough">Skipped</span>' : '') +
                 '</td>' +
-                '<td>' + escapeHtml(e.type) + '</td>' +
+                '<td>' + escapeHtml(PayrollProLayout.staffTypeLabel(e.type)) + '</td>' +
                 '<td class="text-end">' + s.active + '</td>' +
                 '<td class="text-end loan-money">' + (s.perPayroll ? peso(s.perPayroll) : '—') + '</td>' +
                 '<td class="text-end loan-balance">' + (s.remaining ? peso(s.remaining) : '—') + '</td>' +
@@ -193,7 +193,7 @@
         var s = summary(employeeId);
         el('empInitials').textContent = initials(e.name);
         el('empName').textContent = e.name;
-        el('empMeta').textContent = e.number + ' · ' + e.type + (e.status && e.status !== 'Active' ? ' · ' + e.status : '');
+        el('empMeta').textContent = e.number + ' · ' + PayrollProLayout.staffTypeLabel(e.type) + (e.status && e.status !== 'Active' ? ' · ' + e.status : '');
         el('empActiveCount').textContent = s.active;
         el('empPerPayroll').textContent = peso(s.perPayroll);
         el('empPaid').textContent = peso(s.paid);
@@ -415,5 +415,8 @@
     });
 
     showView('loanManagementView');
-    loadData();
+    Promise.all([PayrollProLayout.loadStaffTypeLabels(), PayrollProLayout.loadEmployeeTypeOptions()]).then(function (results) {
+        PayrollProLayout.populateEmployeeTypeSelect(el('loanTypeFilter'), results[1]);
+        return loadData();
+    });
 })();

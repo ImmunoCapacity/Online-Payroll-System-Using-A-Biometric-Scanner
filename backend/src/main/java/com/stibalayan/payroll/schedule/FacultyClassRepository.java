@@ -11,4 +11,8 @@ public interface FacultyClassRepository extends JpaRepository<FacultyClass, Inte
     List<FacultyClass> findByFacultyIdAndClassDate(Integer facultyId, LocalDate classDate);
 
     List<FacultyClass> findByAdminstaffIdAndClassDate(Integer adminstaffId, LocalDate classDate);
+
+    List<FacultyClass> findByClassDateBeforeAndArchivedFalse(LocalDate date);
+
+    List<FacultyClass> findByArchivedTrueOrderByClassDateDesc();
 }

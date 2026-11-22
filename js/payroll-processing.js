@@ -525,7 +525,7 @@
 
     function typeBadge(type) {
         var cls = type === 'Faculty' ? 'pp-badge-faculty' : type === 'Faculty/Admin' ? 'pp-badge-faculty-admin' : 'pp-badge-admin';
-        return '<span class="pp-badge ' + cls + '">' + type + '</span>';
+        return '<span class="pp-badge ' + cls + '">' + escapeHtml(PayrollProLayout.staffTypeLabel(type)) + '</span>';
     }
 
     function periodStatusBadge(status) {
@@ -875,7 +875,9 @@
         loadRun();
     });
 
-    PPPeriods.load().then(function () {
+    PayrollProLayout.loadStaffTypeLabels().then(function () {
+        return PPPeriods.load();
+    }).then(function () {
         PERIODS = buildPeriods();
         currentPeriod = Object.keys(PERIODS)[0];
         periodSelect.innerHTML = Object.keys(PERIODS).map(function (key) {

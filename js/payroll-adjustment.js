@@ -251,7 +251,7 @@
                 '<td><strong>' + escapeHtml(r.name) + '</strong>' +
                     (r.status === 'Applied' ? '<span class="pp-adjust-lock" title="Paid when the cut-off was released"><i class="bi bi-lock-fill"></i></span>' : '') +
                     (r.inPayroll === false && r.status !== 'Applied' ? '<span class="pp-adjust-warn" title="Not Active (or hired after this cut-off), so not in this cut-off\'s payroll. Clear this row."><i class="bi bi-exclamation-triangle-fill"></i> Not in payroll</span>' : '') + '</td>' +
-                '<td>' + escapeHtml(r.type) + '</td>' +
+                '<td>' + escapeHtml(PayrollProLayout.staffTypeLabel(r.type)) + '</td>' +
                 '<td class="text-end" data-cell="rate"></td>' +
                 '<td><div class="pp-adjust-dates">' +
                     '<input type="date" class="form-control pp-form-control pp-cell pp-cell-date" data-field="dateFrom" value="' + escapeHtml(s.dateFrom) + '" max="' + grid.applyEnd + '" aria-label="Date from for ' + escapeHtml(r.name) + '"' + dis + '>' +
@@ -309,9 +309,12 @@
 
     function applySearch() {
         var q = el('adjustmentSearch').value.trim().toLowerCase();
+        var type = el('typeSelect').value;
         el('adjustmentBody').querySelectorAll('tr[data-id]').forEach(function (tr) {
             var r = rowOf(tr.dataset.id);
-            tr.style.display = !q || (r.employeeNumber + ' ' + r.name).toLowerCase().indexOf(q) !== -1 ? '' : 'none';
+            var searchMatch = !q || (r.employeeNumber + ' ' + r.name).toLowerCase().indexOf(q) !== -1;
+            var typeMatch = type === 'all' || r.type === type;
+            tr.style.display = searchMatch && typeMatch ? '' : 'none';
         });
     }
 
@@ -436,6 +439,7 @@
 
     el('saveAdjustmentsBtn').addEventListener('click', save);
     el('adjustmentSearch').addEventListener('input', function () { if (grid) applySearch(); });
+    el('typeSelect').addEventListener('change', function () { if (grid) applySearch(); });
 
     el('cutoffSelect').addEventListener('change', function () {
         var select = el('cutoffSelect');
@@ -466,7 +470,10 @@
         }
     });
 
-    PPPeriods.load().then(function () {
+    Promise.all([PayrollProLayout.loadStaffTypeLabels(), PayrollProLayout.loadEmployeeTypeOptions()]).then(function (results) {
+        PayrollProLayout.populateEmployeeTypeSelect(el('typeSelect'), results[1]);
+        return PPPeriods.load();
+    }).then(function () {
         fillCutoffs();
         load();
     });

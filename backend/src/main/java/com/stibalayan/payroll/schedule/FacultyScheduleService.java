@@ -1,5 +1,6 @@
 package com.stibalayan.payroll.schedule;
 
+import com.stibalayan.payroll.audit.AuditService;
 import com.stibalayan.payroll.common.ApiException;
 import com.stibalayan.payroll.common.Validation;
 import com.stibalayan.payroll.settings.SettingsService;
@@ -14,6 +15,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -45,16 +47,18 @@ public class FacultyScheduleService {
     private final Teachers teachers;
     private final UserNames userNames;
     private final SettingsService settings;
+    private final AuditService audit;
 
     public FacultyScheduleService(FacultyClassRepository classes, ScheduleHistoryRepository history,
                                   TeachingAttendanceRepository attendance, Teachers teachers, UserNames userNames,
-                                  SettingsService settings) {
+                                  SettingsService settings, AuditService audit) {
         this.settings = settings;
         this.classes = classes;
         this.history = history;
         this.attendance = attendance;
         this.teachers = teachers;
         this.userNames = userNames;
+        this.audit = audit;
     }
 
     /** Teaching employees for the faculty pickers. */
@@ -84,7 +88,8 @@ public class FacultyScheduleService {
         if (ChronoUnit.DAYS.between(from, to) > MAX_RANGE_DAYS) {
             throw Validation.invalid("to", "Choose a range of at most " + MAX_RANGE_DAYS + " days.");
         }
-        List<FacultyClass> rows = classes.findByClassDateBetweenOrderByClassDateAscScheduledStartAsc(from, to);
+        List<FacultyClass> rows = classes.findByClassDateBetweenOrderByClassDateAscScheduledStartAsc(from, to).stream()
+                .filter(c -> !c.isArchived()).toList();
         if (employeeId != null && !employeeId.isBlank()) {
             rows = rows.stream().filter(c -> Teachers.employeeIdOf(c).equals(employeeId)).toList();
         }
@@ -219,6 +224,50 @@ public class FacultyScheduleService {
             row.put("changedBy", names.getOrDefault(h.getChangedBy(), "—"));
             row.put("changedAt", h.getChangedAt() == null ? null : h.getChangedAt().toString());
             result.add(row);
+        }
+        return result;
+    }
+
+    /**
+     * Archives every class already in the past (before today) that isn't
+     * archived yet — a term/semester cleanup. Archived classes are hidden
+     * from the active Faculty Schedule view (list()) but keep all their
+     * history; upcoming scheduled classes are never touched.
+     */
+    @Transactional
+    public int archiveAllPast(int userId) {
+        List<FacultyClass> past = classes.findByClassDateBeforeAndArchivedFalse(LocalDate.now());
+        for (FacultyClass c : past) {
+            c.setArchived(true);
+        }
+        classes.saveAll(past);
+        if (!past.isEmpty()) {
+            audit.log(userId, "Faculty Schedule", "Archived all past classes", past.size() + " class(es) archived");
+        }
+        return past.size();
+    }
+
+    /** Archived classes, read-only (Archive page — System Administrator and Attendance Monitoring Staff). */
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> archivedList() {
+        Map<String, StaffMember> people = teachers.all();
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (FacultyClass c : classes.findByArchivedTrueOrderByClassDateDesc()) {
+            String employeeId = Teachers.employeeIdOf(c);
+            StaffMember s = people.get(employeeId);
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("employeeId", employeeId);
+            m.put("employeeNumber", s == null ? "" : s.getEmployeeNumber());
+            m.put("employeeName", s == null ? "(no longer teaching)" : s.getFullName());
+            m.put("type", s == null ? "" : s.staffType());
+            m.put("subject", c.getSubject());
+            m.put("classSection", c.getClassSection());
+            m.put("room", c.getRoom());
+            m.put("classDate", c.getClassDate().toString());
+            m.put("scheduledStart", c.getScheduledStart().format(HH_MM));
+            m.put("scheduledEnd", c.getScheduledEnd().format(HH_MM));
+            m.put("status", c.getScheduleStatus());
+            result.add(m);
         }
         return result;
     }

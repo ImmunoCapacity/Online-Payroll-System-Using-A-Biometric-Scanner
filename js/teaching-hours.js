@@ -177,8 +177,11 @@
 
     function renderFacultyList() {
         var q = el('facultySearch').value.trim().toLowerCase();
+        var type = el('facultyTypeFilter').value;
         var shown = teachers.filter(function (t) {
-            return !q || (t.displayName + ' ' + t.employeeNumber).toLowerCase().indexOf(q) !== -1;
+            var searchMatch = !q || (t.displayName + ' ' + t.employeeNumber).toLowerCase().indexOf(q) !== -1;
+            var typeMatch = type === 'all' || t.type === type;
+            return searchMatch && typeMatch;
         });
         if (!shown.length) {
             el('facultyBody').innerHTML = '';
@@ -195,6 +198,7 @@
                     'aria-label="Open the classes of ' + escapeHtml(t.displayName) + '">' +
                 '<td>' + escapeHtml(t.employeeNumber) + '</td>' +
                 '<td><strong>' + escapeHtml(t.displayName) + '</strong></td>' +
+                '<td>' + escapeHtml(PayrollProLayout.staffTypeLabel(t.type)) + '</td>' +
                 '<td class="text-end">' + s.classes + '</td>' +
                 '<td class="text-end">' + (s.needsChecks ? '<span class="fm-status incomplete">' + s.needsChecks + '</span>' : '0') + '</td>' +
                 '<td class="text-end">' + (s.pending ? '<span class="fm-status pending">' + s.pending + '</span>' : '0') + '</td>' +
@@ -406,6 +410,9 @@
                     ? '<div class="col-12"><label for="' + id + 'Reason" class="pp-form-label">Reason for correction <span class="text-muted fw-normal">(required only if you change this check)</span></label>' +
                       '<input type="text" class="form-control pp-form-control" id="' + id + 'Reason" maxlength="255" data-validate="text" data-label="Reason for the correction"' + disabled + '></div>'
                     : '') +
+                '<div class="col-12"><label for="' + id + 'Remarks" class="pp-form-label">Remarks <span class="text-muted fw-normal">(optional)</span></label>' +
+                  '<textarea class="form-control pp-form-control" id="' + id + 'Remarks" maxlength="255" rows="2" data-validate="text" data-label="Remarks"' + disabled + '>' +
+                  escapeHtml(r.remarks || '') + '</textarea></div>' +
             '</div>' +
             (waiting ? '<p class="fm-note mt-2 mb-0">Record the beginning check first.</p>' : '') +
             (time ? '<div class="fm-check-recorded">Recorded by ' + escapeHtml(by || '—') +
@@ -573,14 +580,15 @@
             check: which,
             time: el(prefix + 'Time').value,
             status: el(prefix + 'Status').value,
-            reason: el(prefix + 'Reason') ? el(prefix + 'Reason').value.trim() : null
+            reason: el(prefix + 'Reason') ? el(prefix + 'Reason').value.trim() : null,
+            remarks: el(prefix + 'Remarks') ? el(prefix + 'Remarks').value.trim() : null
         };
         var btn = form.querySelector('button[type="submit"]');
         btn.disabled = true;
         postJson('api/teaching-hours/classes/' + r.classId + '/checks', payload).then(function (data) {
             btn.disabled = false;
             if (!data.success) {
-                var map = { time: prefix + 'Time', status: prefix + 'Status', reason: prefix + 'Reason' };
+                var map = { time: prefix + 'Time', status: prefix + 'Status', reason: prefix + 'Reason', remarks: prefix + 'Remarks' };
                 if (!PPValidate.showServerError(el('checkBody'), data, map)) PPToast.error(data.message || 'Could not save the check.');
                 return;
             }
@@ -657,6 +665,7 @@
     // ---------------------------------------------------------------
 
     el('facultySearch').addEventListener('input', renderFacultyList);
+    el('facultyTypeFilter').addEventListener('change', renderFacultyList);
 
     el('facultyBody').addEventListener('click', function (e) {
         var row = e.target.closest('tr[data-employee]');
@@ -725,8 +734,11 @@
         statusFilter.value = params.get('status');
     }
 
-    el('facultyBody').innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">Loading faculty…</td></tr>';
-    loadTeachers()
+    el('facultyBody').innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Loading faculty…</td></tr>';
+    Promise.all([PayrollProLayout.loadStaffTypeLabels(), PayrollProLayout.loadEmployeeTypeOptions()]).then(function (results) {
+        PayrollProLayout.populateEmployeeTypeSelect(el('facultyTypeFilter'), results[1]);
+        return loadTeachers();
+    })
         .catch(function (error) {
             PPToast.error(error.message || 'Could not load faculty.');
         })

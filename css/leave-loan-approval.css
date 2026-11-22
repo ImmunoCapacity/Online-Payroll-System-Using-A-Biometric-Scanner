@@ -104,7 +104,7 @@
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 18px;
     padding: 18px;
-    background: #f8fbfd;
+    background: var(--pp-surface-hover);
 }
 
 .loan-history-section {
@@ -169,7 +169,7 @@
 }
 
 .loan-history-skipped td {
-    background: #fffafa;
+    background: var(--pp-error-bg);
 }
 
 /* An employee's loans: four summary cards */

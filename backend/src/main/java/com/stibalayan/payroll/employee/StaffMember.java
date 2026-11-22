@@ -31,7 +31,8 @@ public abstract class StaffMember {
 
     private String gender;
 
-    private LocalDate birthdate;
+    /** Stored as entered (varchar), not a SQL date — see EmployeeService for the date rules enforced on it. */
+    private String birthdate;
 
     /** Kept in step with birthdate on every save. */
     private Integer age;
@@ -102,8 +103,8 @@ public abstract class StaffMember {
     public void setLastname(String lastname) { this.lastname = lastname; }
     public String getGender() { return gender; }
     public void setGender(String gender) { this.gender = gender; }
-    public LocalDate getBirthdate() { return birthdate; }
-    public void setBirthdate(LocalDate birthdate) { this.birthdate = birthdate; }
+    public String getBirthdate() { return birthdate; }
+    public void setBirthdate(String birthdate) { this.birthdate = birthdate; }
     public Integer getAge() { return age; }
     public void setAge(Integer age) { this.age = age; }
     public String getAddress() { return address; }

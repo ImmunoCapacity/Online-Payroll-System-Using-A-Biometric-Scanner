@@ -72,6 +72,40 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Archived faculty classes ("Archive All Schedules" in Faculty Schedule) -->
+            <div class="pp-widget d-none" id="schedulesView">
+                <div class="pp-widget-body">
+                    <div class="pp-filter-bar" role="search">
+                        <div class="pp-filter-group search">
+                            <label for="schedulesSearch" class="pp-form-label">Search</label>
+                            <div class="pp-search-input">
+                                <i class="bi bi-search"></i>
+                                <input type="search" class="form-control pp-form-control" id="schedulesSearch" maxlength="100" placeholder="Search by name or employee ID…">
+                            </div>
+                        </div>
+                    </div>
+                    <p class="pp-table-hint" id="schedulesCount"></p>
+                    <div class="pp-table-wrap">
+                        <table class="pp-table w-100">
+                            <thead>
+                                <tr>
+                                    <th>Employee ID</th>
+                                    <th>Faculty</th>
+                                    <th>Employee Type</th>
+                                    <th>Subject / Section</th>
+                                    <th>Room</th>
+                                    <th>Date</th>
+                                    <th>Scheduled</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="schedulesBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="pp-empty-state d-none" id="schedulesEmpty">No archived classes.</div>
+                </div>
+            </div>
         </main>
     </div>
 

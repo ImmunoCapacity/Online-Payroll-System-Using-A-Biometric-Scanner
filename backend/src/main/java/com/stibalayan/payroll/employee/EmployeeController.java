@@ -19,7 +19,6 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * GET    /api/employees        list faculty + admin staff
  * POST   /api/employees        create
- * GET    /api/employees/next-id  the ID the next new employee gets (STIBLN-####, before M/F)
  * PUT    /api/employees/{id}   update ("F3" / "A5"); status: "Archived" archives (never
  *                               deleted, just hidden), any other status un-archives
  * GET    /api/employees?archived=true    include archived employees
@@ -44,11 +43,6 @@ public class EmployeeController {
     @GetMapping
     public Map<String, Object> list(@RequestParam(defaultValue = "false") boolean archived) {
         return Map.of("success", true, "employees", employees.listAll(archived));
-    }
-
-    @GetMapping("/next-id")
-    public Map<String, Object> nextId() {
-        return Map.of("success", true, "nextId", employees.previewNextId());
     }
 
     @PostMapping

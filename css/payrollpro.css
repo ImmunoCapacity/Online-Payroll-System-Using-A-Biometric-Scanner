@@ -28,6 +28,7 @@
     --pp-info: #1d4ed8;
     --pp-info-bg: #eff6ff;
     --pp-surface-hover: #f8f9fa;
+    --pp-surface-alt: #f8f9fa;
     --pp-primary-soft: rgba(26, 95, 122, 0.08);
     --pp-radius: 10px;
     --pp-radius-sm: 8px;
@@ -58,6 +59,7 @@
     --pp-info: #60a5fa;
     --pp-info-bg: #122a4d;
     --pp-surface-hover: #242e3a;
+    --pp-surface-alt: #242e3a;
     --pp-primary-soft: rgba(79, 168, 201, 0.15);
     --pp-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.35);
 }
@@ -432,8 +434,8 @@ select.pp-select-has-clear {
 }
 
 .pp-badge-archived {
-    background: #e5e7eb;
-    color: #4b5563;
+    background: var(--pp-border);
+    color: var(--pp-text-muted);
 }
 
 .pp-employee-list {
@@ -452,7 +454,7 @@ select.pp-select-has-clear {
 }
 
 .pp-employee-item:hover {
-    background: #f8fafc;
+    background: var(--pp-surface-hover);
 }
 
 .pp-employee-item.active {
@@ -572,9 +574,9 @@ select.pp-select-has-clear {
     background: var(--pp-bg);
 }
 
-.pp-summary-card.present { border-left-color: #22c55e; }
+.pp-summary-card.present { border-left-color: var(--pp-success); }
 
-.pp-summary-card.late { border-left-color: #f59e0b; }
+.pp-summary-card.late { border-left-color: var(--pp-warning); }
 
 .pp-summary-card.absent { border-left-color: var(--pp-error); }
 
@@ -657,7 +659,7 @@ select.pp-select-has-clear {
 .pp-grid-cell {
     font-size: 0.8125rem;
     color: var(--pp-text-muted);
-    background: #fafbfc;
+    background: var(--pp-surface-hover);
 }
 
 .pp-grid-cell.is-scheduled {
@@ -702,7 +704,7 @@ select.pp-select-has-clear {
 }
 
 .pp-table thead th {
-    background: #f8fafc;
+    background: var(--pp-surface-hover);
     font-size: 0.6875rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -724,7 +726,7 @@ select.pp-select-has-clear {
 }
 
 .pp-table tbody tr:hover {
-    background: #fafbfc;
+    background: var(--pp-surface-hover);
 }
 
 /* Whole row opens its details (Loan Management, Payroll Processing). */
@@ -1365,7 +1367,7 @@ body.pp-sidebar-collapsed .pp-sidebar-link {
 }
 
 .pp-calendar-period-status.upcoming {
-    background: #f1f5f9;
+    background: var(--pp-border);
     color: var(--pp-text-muted);
 }
 
@@ -1564,7 +1566,7 @@ body.pp-app-shell .pp-content {
 
 .pp-loan-progress {
     height: 6px;
-    background: #f1f5f9;
+    background: var(--pp-border);
     border-radius: 999px;
     overflow: hidden;
 }
@@ -1621,7 +1623,7 @@ body.pp-app-shell .pp-content {
     gap: 0.75rem;
     align-items: flex-end;
     padding: 0.875rem 1rem;
-    background: #f8fafc;
+    background: var(--pp-surface-hover);
     border-bottom: 1px solid var(--pp-border);
 }
 
@@ -1698,7 +1700,7 @@ body.pp-app-shell .pp-content {
     max-width: 120px;
     font-size: 0.8125rem;
     font-weight: 600;
-    border-color: #fcd34d;
+    border-color: var(--pp-warning);
 }
 
 .pp-maint-toolbar {
@@ -1731,30 +1733,30 @@ body.pp-app-shell .pp-content {
 }
 
 .pp-modal-highstakes .modal-header {
-    background: linear-gradient(135deg, #fffbeb, #fef3c7);
-    border-bottom: 1px solid #fcd34d;
+    background: var(--pp-warning-bg);
+    border-bottom: 1px solid var(--pp-warning);
 }
 
 .pp-modal-highstakes .modal-title {
-    color: #92400e;
+    color: var(--pp-warning);
 }
 
 .pp-modal-highstakes .modal-title i {
-    color: #d97706;
+    color: var(--pp-warning);
 }
 
 .pp-modal-highstakes .pp-highstakes-alert {
-    background: #fffbeb;
-    border: 1px solid #fcd34d;
+    background: var(--pp-warning-bg);
+    border: 1px solid var(--pp-warning);
     border-radius: var(--pp-radius-sm);
     padding: 0.875rem 1rem;
     font-size: 0.875rem;
-    color: #78350f;
+    color: var(--pp-warning);
     line-height: 1.5;
 }
 
 .pp-modal-highstakes .pp-highstakes-alert i {
-    color: #d97706;
+    color: var(--pp-warning);
     font-size: 1.125rem;
 }
 
@@ -1790,8 +1792,8 @@ body.pp-app-shell .pp-content {
 
 .pp-highstakes-alert.pp-alert-danger {
     background: var(--pp-error-bg);
-    border-color: #fca5a5;
-    color: #7f1616;
+    border-color: var(--pp-error);
+    color: var(--pp-error);
 }
 
 .pp-highstakes-alert.pp-alert-danger i {
@@ -1896,7 +1898,7 @@ body.pp-app-shell .pp-content {
 }
 
 .pp-topbar-user:hover {
-    background: #F1F5F9;
+    background: var(--pp-surface-hover);
 }
 
 .pp-user-dropdown {
@@ -1904,8 +1906,8 @@ body.pp-app-shell .pp-content {
     top: calc(100% + 8px);
     right: 0;
     width: 230px;
-    background: #ffffff;
-    border: 1px solid #E2E8F0;
+    background: var(--pp-surface);
+    border: 1px solid var(--pp-border);
     border-radius: 10px;
     box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
     padding: 8px;
@@ -1929,18 +1931,18 @@ body.pp-app-shell .pp-content {
 .pp-user-dropdown-name {
     font-size: 14px;
     font-weight: 600;
-    color: #1E293B;
+    color: var(--pp-text);
 }
 
 .pp-user-dropdown-role {
     font-size: 12px;
-    color: #64748B;
+    color: var(--pp-text-muted);
     margin-top: 2px;
 }
 
 .pp-user-dropdown-divider {
     height: 1px;
-    background: #E2E8F0;
+    background: var(--pp-border);
     margin: 6px 0;
 }
 
@@ -1952,7 +1954,7 @@ body.pp-app-shell .pp-content {
     padding: 10px 12px;
     border: none;
     background: transparent;
-    color: #334155;
+    color: var(--pp-text);
     text-decoration: none;
     font-size: 14px;
     border-radius: 7px;
@@ -1961,8 +1963,8 @@ body.pp-app-shell .pp-content {
 }
 
 .pp-user-dropdown-item:hover {
-    background: #F1F5F9;
-    color: #4169A1;
+    background: var(--pp-surface-hover);
+    color: var(--pp-primary);
 }
 
 .pp-user-dropdown-item i {
@@ -1971,8 +1973,8 @@ body.pp-app-shell .pp-content {
 }
 
 .pp-logout-button:hover {
-    background: #FEF2F2;
-    color: #B91C1C;
+    background: var(--pp-error-bg);
+    color: var(--pp-error);
 }
 
 .pp-dash-grid {
@@ -2143,7 +2145,7 @@ body.pp-app-shell .pp-content {
     align-items: center;
     justify-content: center;
     padding: 3px 0 6px;
-    color: #8293a3;
+    color: var(--pp-text-muted);
     font-size: 10px;
     font-weight: 600;
     text-align: center;
@@ -2157,7 +2159,7 @@ body.pp-app-shell .pp-content {
     min-width: 0;
     height: 30px;
     border-radius: 6px;
-    color: #29465d;
+    color: var(--pp-text);
     font-size: 11px;
     font-weight: 500;
     line-height: 1;
@@ -2165,7 +2167,7 @@ body.pp-app-shell .pp-content {
 }
 
 .payroll-calendar-day-muted {
-    color: #b8c3cc;
+    color: var(--pp-text-muted);
 }
 
 .pp-activity-item {
@@ -2173,7 +2175,7 @@ body.pp-app-shell .pp-content {
     align-items: flex-start;
     gap: 13px;
     padding: 14px 18px;
-    border-bottom: 1px solid #e8eef2;
+    border-bottom: 1px solid var(--pp-border);
 }
 
 .pp-activity-item:last-child {
@@ -2193,13 +2195,13 @@ body.pp-app-shell .pp-content {
 
 .pp-activity-text {
     margin: 0 0 4px;
-    color: #29465d;
+    color: var(--pp-text);
     font-size: 13px;
     line-height: 1.45;
 }
 
 .pp-activity-time {
-    color: #8293a3;
+    color: var(--pp-text-muted);
     font-size: 11px;
 }
 
@@ -2242,10 +2244,10 @@ body.pp-app-shell .pp-content {
     gap: 10px;
     padding: 12px 14px;
     margin-bottom: 18px;
-    background: #eef6fb;
-    border: 1px solid #d6e6f0;
+    background: var(--pp-info-bg);
+    border: 1px solid var(--pp-border);
     border-radius: 10px;
-    color: #456174;
+    color: var(--pp-text);
     font-size: 13px;
     line-height: 1.5;
 }
@@ -2336,7 +2338,7 @@ body.pp-app-shell .pp-content {
     align-items: center;
     gap: 14px;
     padding: 18px 20px;
-    background: #ffffff;
+    background: var(--pp-surface);
     border-bottom: 1px solid var(--pp-border);
 }
 
@@ -2376,7 +2378,7 @@ body.pp-app-shell .pp-content {
     min-width: 0;
     overflow: hidden;
     margin: 0;
-    background: #ffffff;
+    background: var(--pp-surface);
     border: 1px solid var(--pp-border);
     border-radius: 10px;
 }
@@ -2385,7 +2387,7 @@ body.pp-app-shell .pp-content {
     display: flex;
     align-items: center;
     padding: 12px 16px;
-    background: #f3f8fc;
+    background: var(--pp-surface-hover);
     border-bottom: 1px solid var(--pp-border);
     color: var(--pp-primary-dark);
     font-size: 14px;
@@ -2439,7 +2441,7 @@ body.pp-app-shell .pp-content {
     gap: 18px;
     min-width: 0;
     padding: 14px 16px;
-    background: #f8fafc;
+    background: var(--pp-surface-hover);
     border: 1px solid var(--pp-border);
     border-radius: 9px;
 }
@@ -2477,7 +2479,7 @@ body.pp-app-shell .pp-content {
 
 .loan-history-table th {
     padding: 11px 16px;
-    background: #f8fafc;
+    background: var(--pp-surface-hover);
     border-bottom: 1px solid var(--pp-border);
     color: var(--pp-text-muted);
     font-size: 10px;
@@ -2489,7 +2491,7 @@ body.pp-app-shell .pp-content {
 
 .loan-history-table td {
     padding: 12px 16px;
-    border-bottom: 1px solid #edf1f5;
+    border-bottom: 1px solid var(--pp-border);
     color: var(--pp-text);
     font-size: 13px;
     vertical-align: middle;
@@ -2500,7 +2502,7 @@ body.pp-app-shell .pp-content {
 }
 
 .loan-history-table tbody tr:hover {
-    background: #f8fbfd;
+    background: var(--pp-surface-hover);
 }
 
 #recordLoanModal .modal-dialog {
@@ -2700,8 +2702,8 @@ input[type="number"] {
     right: 0;
     width: 340px;
     max-width: calc(100vw - 24px);
-    background: #ffffff;
-    border: 1px solid #E2E8F0;
+    background: var(--pp-surface);
+    border: 1px solid var(--pp-border);
     border-radius: 10px;
     box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
     opacity: 0;
@@ -2720,10 +2722,10 @@ input[type="number"] {
 
 .pp-notif-head {
     padding: 12px 14px;
-    border-bottom: 1px solid #E2E8F0;
+    border-bottom: 1px solid var(--pp-border);
     font-size: 14px;
     font-weight: 600;
-    color: #1E293B;
+    color: var(--pp-text);
 }
 
 .pp-notif-list {
@@ -2735,8 +2737,8 @@ input[type="number"] {
     display: flex;
     gap: 10px;
     padding: 11px 14px;
-    border-bottom: 1px solid #F1F5F9;
-    color: #334155;
+    border-bottom: 1px solid var(--pp-border);
+    color: var(--pp-text);
     text-decoration: none;
 }
 
@@ -2745,12 +2747,12 @@ input[type="number"] {
 }
 
 a.pp-notif-item:hover {
-    background: #F8FAFC;
-    color: #334155;
+    background: var(--pp-surface-hover);
+    color: var(--pp-text);
 }
 
 .pp-notif-item.is-new {
-    background: #F0F7FF;
+    background: var(--pp-primary-light);
 }
 
 .pp-notif-icon {
@@ -2760,12 +2762,12 @@ a.pp-notif-item:hover {
     display: grid;
     place-items: center;
     font-size: 14px;
-    background: #E0ECFF;
-    color: #1F4E79;
+    background: var(--pp-primary-light);
+    color: var(--pp-primary-dark);
 }
 
-.pp-notif-warning .pp-notif-icon { background: #FEF3C7; color: #92400E; }
-.pp-notif-danger .pp-notif-icon  { background: #FEE2E2; color: #B91C1C; }
+.pp-notif-warning .pp-notif-icon { background: var(--pp-warning-bg); color: var(--pp-warning); }
+.pp-notif-danger .pp-notif-icon  { background: var(--pp-error-bg); color: var(--pp-error); }
 
 .pp-notif-body {
     display: flex;
@@ -2776,12 +2778,12 @@ a.pp-notif-item:hover {
 .pp-notif-title {
     font-size: 13px;
     font-weight: 600;
-    color: #1E293B;
+    color: var(--pp-text);
 }
 
 .pp-notif-text {
     font-size: 12px;
-    color: #64748B;
+    color: var(--pp-text-muted);
     margin-top: 1px;
 }
 
@@ -2789,11 +2791,11 @@ a.pp-notif-item:hover {
     padding: 22px 14px;
     text-align: center;
     font-size: 13px;
-    color: #64748B;
+    color: var(--pp-text-muted);
 }
 
 .pp-notif-empty .bi {
-    color: #16A34A;
+    color: var(--pp-success);
     margin-right: 4px;
 }
 
@@ -2827,14 +2829,14 @@ a.pp-notif-item:hover {
 /* Header cell: same look as the table's other headings. */
 :is(table.pp-table, table.leave-table, table.loan-history-table, table.report-table, table.attendance-table, .pp-admin-table table):not(.pp-no-rownum, .pp-13th-months) > thead > tr:first-child::before {
     content: "#";
-    background: #f8fafc;
+    background: var(--pp-surface-hover);
     font-size: 0.6875rem;
     font-weight: 700;
     letter-spacing: 0.05em;
 }
 
 table.pp-table-maint:not(.pp-no-rownum) > thead > tr:first-child::before {
-    background: #eef2f6;
+    background: var(--pp-surface-hover);
     border-bottom-width: 2px;
     border-right: 1px solid var(--pp-border);
     position: sticky;
@@ -2881,4 +2883,4 @@ table.report-table > tfoot > tr::before {
 
 .pp-toast-email i { color: var(--pp-primary); }
 
-.pp-notif-success .pp-notif-icon { background: #DCFCE7; color: #166534; }
+.pp-notif-success .pp-notif-icon { background: var(--pp-success-bg); color: var(--pp-success); }

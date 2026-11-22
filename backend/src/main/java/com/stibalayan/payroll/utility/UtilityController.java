@@ -7,6 +7,7 @@ import com.stibalayan.payroll.auth.SystemModule;
 import com.stibalayan.payroll.common.ApiException;
 import com.stibalayan.payroll.contribution.ContributionTableService;
 import com.stibalayan.payroll.employee.EmployeeDirectory;
+import com.stibalayan.payroll.schedule.FacultyScheduleService;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -42,6 +43,8 @@ import org.springframework.web.multipart.MultipartFile;
  * DELETE /api/utility/backups/{name}
  * GET    /api/utility/archive                    archived employees (read-only)
  * GET    /api/utility/archive/tables/{table}     archived BIR, PhilHealth, Pag-IBIG or SSS brackets (read-only)
+ * GET    /api/utility/archive/schedules          archived faculty classes (read-only; also open to
+ *                                                 Attendance Monitoring Staff — see FACULTY_SCHEDULE_ARCHIVE_READ)
  */
 @RestController
 @RequestMapping("/api/utility")
@@ -52,13 +55,15 @@ public class UtilityController {
     private final EmployeeDirectory employees;
     private final AuditService audit;
     private final ContributionTableService tables;
+    private final FacultyScheduleService schedule;
 
     public UtilityController(BackupService backups, EmployeeDirectory employees, AuditService audit,
-                             ContributionTableService tables) {
+                             ContributionTableService tables, FacultyScheduleService schedule) {
         this.backups = backups;
         this.employees = employees;
         this.audit = audit;
         this.tables = tables;
+        this.schedule = schedule;
     }
 
     @GetMapping("/backups")
@@ -139,5 +144,16 @@ public class UtilityController {
         });
         list.sort((a, b) -> String.valueOf(b.get("archivedAt")).compareTo(String.valueOf(a.get("archivedAt"))));
         return Map.of("success", true, "employees", list);
+    }
+
+    /**
+     * Archived faculty classes, read-only (archiving/restoring is done by
+     * Attendance Monitoring Staff in Faculty Schedule). Open to System
+     * Administrator and Attendance Monitoring Staff, not just UTILITY.
+     */
+    @GetMapping("/archive/schedules")
+    @RequireModule(SystemModule.FACULTY_SCHEDULE_ARCHIVE_READ)
+    public Map<String, Object> archivedSchedules() {
+        return Map.of("success", true, "classes", schedule.archivedList());
     }
 }

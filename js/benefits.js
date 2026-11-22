@@ -56,7 +56,7 @@
 
     function typeBadge(type) {
         var cls = type === 'Faculty' ? 'pp-badge-faculty' : type === 'Faculty/Admin' ? 'pp-badge-faculty-admin' : 'pp-badge-admin';
-        return '<span class="pp-badge ' + cls + '">' + escapeHtml(type) + '</span>';
+        return '<span class="pp-badge ' + cls + '">' + escapeHtml(PayrollProLayout.staffTypeLabel(type)) + '</span>';
     }
 
     function statusBadge(status) {
@@ -405,7 +405,7 @@
     el('addBenefitBtn').addEventListener('click', function () { openAssign(null); });
 
     el('employeeBody').innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">Loading employees…</td></tr>';
-    load().then(function () {
+    PayrollProLayout.loadStaffTypeLabels().then(load).then(function () {
         renderTypes();
         route();
     }).catch(function (error) {

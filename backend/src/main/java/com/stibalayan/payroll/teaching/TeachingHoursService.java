@@ -37,7 +37,12 @@ import org.springframework.transaction.annotation.Transactional;
  *     window (Maintenance → Grace Period). Any Absent check makes the class
  *     pay 0 hours.
  *   - A record needs both checks before it can be approved; approval is a
- *     separate permission (Payroll Master).
+ *     separate permission (Payroll Master). If the class is over (scheduled
+ *     end + grace period) and a check is still missing — the Attendance
+ *     Monitoring Staff never got to it — the record is still shown as
+ *     "Waiting for approval" so the Payroll Master can close it out (0 hours,
+ *     since there's no evidence the class was taught) instead of it sitting
+ *     unresolved forever.
  *   - Checks outside the grace window, missing checks and mixed
  *     Present/Absent evidence are flagged; approving a flagged record needs
  *     a review note.
@@ -176,6 +181,11 @@ public class TeachingHoursService {
             }
         }
 
+        String oldRemarks = a.getRemarks();
+        if (r.remarks() != null) {
+            a.setRemarks(Validation.optionalText(r.remarks(), "remarks", "Remarks", 255));
+        }
+
         String wasStatus = a.getApprovalStatus();
         if (start) {
             a.setStartCheckAt(at);
@@ -198,6 +208,9 @@ public class TeachingHoursService {
         attendance.saveAndFlush(a);
 
         String described = describeCheck(at, status, start ? lateMinutes : 0);
+        if (r.remarks() != null && !java.util.Objects.equals(oldRemarks, a.getRemarks())) {
+            described += " · Remarks: " + (a.getRemarks() == null ? "(cleared)" : a.getRemarks());
+        }
         if (replacing) {
             audit.save(new AttendanceAudit(a.getId(), which + " corrected",
                     describeCheck(oldAt, oldStatus, start ? oldLate : 0) + "  →  " + described, reason, userId));
@@ -210,19 +223,33 @@ public class TeachingHoursService {
         return get(classId);
     }
 
-    /** Approves a record with both checks; payable hours are fixed by the rules at this point. */
+    /**
+     * Approves a record; payable hours are fixed by the rules at this point.
+     * Normally both checks must be recorded first, but once the class is
+     * over (scheduled end + grace period) a record the Attendance Monitoring
+     * Staff never got to is still approvable (correctly paying 0 hours,
+     * since there is no evidence the class was taught) so it doesn't sit
+     * unresolved forever.
+     */
     @Transactional
     public TeachingRow approve(int classId, String noteText, int userId) {
         FacultyClass c = findClass(classId);
-        TeachingAttendance a = attendance.findByClassScheduleId(classId)
-                .orElseThrow(() -> conflict("No classroom checks have been recorded for this class yet."));
-        if (!TeachingAttendance.PENDING.equals(a.getApprovalStatus())) {
-            throw conflict(TeachingAttendance.INCOMPLETE.equals(a.getApprovalStatus())
-                    ? "Both the beginning and the ending checks are needed before approval."
-                    : "Only records waiting for approval can be approved (this one is " + a.getApprovalStatus().toLowerCase() + ").");
+        TeachingAttendance a = attendance.findByClassScheduleId(classId).orElse(null);
+        LocalDateTime now = LocalDateTime.now();
+        String status = effectiveStatus(c, a, now);
+        if (TeachingAttendance.APPROVED.equals(status)) {
+            throw conflict("This class has been approved and is locked. Its teaching hours may already be in payroll.");
+        }
+        if (!TeachingAttendance.PENDING.equals(status)) {
+            throw conflict(TeachingAttendance.REJECTED.equals(status)
+                    ? "Only records waiting for approval can be approved (this one is rejected)."
+                    : "Both the beginning and the ending checks are needed before approval, unless the class is already over.");
+        }
+        if (a == null) {
+            a = new TeachingAttendance(classId);
         }
         String note = Validation.optionalText(noteText, "note", "Review note", 255);
-        List<String> flags = flags(c, a, LocalDateTime.now());
+        List<String> flags = flags(c, a, now);
         if (!flags.isEmpty() && note == null) {
             throw Validation.invalid("note", "This record has issues flagged for review. Add a review note explaining the approval.");
         }
@@ -230,7 +257,7 @@ public class TeachingHoursService {
         a.setApprovalStatus(TeachingAttendance.APPROVED);
         a.setPayableHours(payable);
         a.setApprovedBy(userId);
-        a.setApprovedAt(LocalDateTime.now());
+        a.setApprovedAt(now);
         a.setReviewNote(note);
         attendance.saveAndFlush(a);
         audit.save(new AttendanceAudit(a.getId(), "Approved",
@@ -239,11 +266,22 @@ public class TeachingHoursService {
         return get(classId);
     }
 
+    /**
+     * Rejects a record. A record with at least one check already in (or no
+     * check at all once the class is over) can be rejected any time before
+     * approval; a class still running with nothing recorded yet cannot.
+     */
     @Transactional
     public TeachingRow reject(int classId, String noteText, int userId) {
-        findClass(classId);
-        TeachingAttendance a = attendance.findByClassScheduleId(classId)
-                .orElseThrow(() -> conflict("No classroom checks have been recorded for this class yet."));
+        FacultyClass c = findClass(classId);
+        TeachingAttendance a = attendance.findByClassScheduleId(classId).orElse(null);
+        LocalDateTime now = LocalDateTime.now();
+        if (a == null && !pastDeadline(c, now)) {
+            throw conflict("No classroom checks have been recorded for this class yet.");
+        }
+        if (a == null) {
+            a = new TeachingAttendance(classId);
+        }
         if (TeachingAttendance.APPROVED.equals(a.getApprovalStatus())) {
             throw conflict("This class has been approved and is locked.");
         }
@@ -254,7 +292,7 @@ public class TeachingHoursService {
         a.setApprovalStatus(TeachingAttendance.REJECTED);
         a.setPayableHours(BigDecimal.ZERO.setScale(2));
         a.setApprovedBy(userId);
-        a.setApprovedAt(LocalDateTime.now());
+        a.setApprovedAt(now);
         a.setReviewNote(note);
         attendance.saveAndFlush(a);
         audit.save(new AttendanceAudit(a.getId(), "Rejected", "No teaching hours will be paid for this class.", note, userId));
@@ -298,11 +336,12 @@ public class TeachingHoursService {
                 .forEach(a -> byClass.put(a.getClassScheduleId(), a));
 
         Map<String, ApprovedHours> result = new LinkedHashMap<>();
+        LocalDateTime now = LocalDateTime.now();
         for (FacultyClass c : rows) {
             String employeeId = Teachers.employeeIdOf(c);
             ApprovedHours h = result.computeIfAbsent(employeeId, k -> new ApprovedHours());
             TeachingAttendance a = byClass.get(c.getId());
-            String status = a == null ? NOT_CHECKED : a.getApprovalStatus();
+            String status = effectiveStatus(c, a, now);
             if (TeachingAttendance.APPROVED.equals(status)) {
                 BigDecimal hours = a.getPayableHours() == null ? BigDecimal.ZERO : a.getPayableHours();
                 h.hours = h.hours.add(hours);
@@ -355,6 +394,32 @@ public class TeachingHoursService {
         boolean present = taught(a.getStartCheckStatus())
                 && TeachingAttendance.PRESENT.equals(a.getEndCheckStatus());
         return present ? hours(c.durationMinutes()) : BigDecimal.ZERO.setScale(2);
+    }
+
+    /** Whether the class is over: past its scheduled end plus the grace period. */
+    private static boolean pastDeadline(FacultyClass c, LocalDateTime now) {
+        return now.isAfter(c.getClassDate().atTime(c.getScheduledEnd()).plusMinutes(c.getGracePeriodMinutes()));
+    }
+
+    /**
+     * The approval status shown to the Payroll Master. Normally the stored
+     * status, except an Incomplete (or never-checked) record becomes
+     * "Pending" — shown as "Waiting for approval" — once the class is over,
+     * so a class the Attendance Monitoring Staff never got to check (busy,
+     * forgot) still reaches the Payroll Master instead of sitting forever.
+     */
+    private static String effectiveStatus(FacultyClass c, TeachingAttendance a, LocalDateTime now) {
+        if (a != null && (TeachingAttendance.APPROVED.equals(a.getApprovalStatus())
+                || TeachingAttendance.REJECTED.equals(a.getApprovalStatus()))) {
+            return a.getApprovalStatus();
+        }
+        if (a != null && a.bothChecksRecorded()) {
+            return TeachingAttendance.PENDING;
+        }
+        if (pastDeadline(c, now)) {
+            return TeachingAttendance.PENDING;
+        }
+        return a == null ? NOT_CHECKED : a.getApprovalStatus();
     }
 
     /** Issues needing review. Check times are verification times, compared with the grace window. */
@@ -437,7 +502,8 @@ public class TeachingHoursService {
             String employeeId = Teachers.employeeIdOf(c);
             StaffMember s = people.get(employeeId);
             TeachingAttendance a = byClass.get(c.getId());
-            boolean bothChecks = a != null && a.bothChecksRecorded();
+            String status = effectiveStatus(c, a, now);
+            boolean previewPayable = TeachingAttendance.PENDING.equals(status);
             result.add(new TeachingRow(
                     c.getId(), employeeId,
                     s == null ? "" : s.getEmployeeNumber(),
@@ -454,9 +520,9 @@ public class TeachingHoursService {
                     a == null ? null : a.getEndCheckStatus(),
                     a == null ? null : names.get(a.getEndCheckedBy()),
                     a == null ? null : a.getRemarks(),
-                    a == null ? NOT_CHECKED : a.getApprovalStatus(),
+                    status,
                     flags(c, a, now),
-                    bothChecks ? payableFor(c, a) : null,
+                    previewPayable ? (a == null ? BigDecimal.ZERO.setScale(2) : payableFor(c, a)) : null,
                     a == null ? null : a.getPayableHours(),
                     a == null ? null : names.get(a.getApprovedBy()),
                     a == null || a.getApprovedAt() == null ? null : a.getApprovedAt().toString(),
