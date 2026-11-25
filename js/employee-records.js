@@ -34,12 +34,17 @@
     const employeePhone = document.getElementById('employeePhone');
     const employeeJoined = document.getElementById('employeeJoined');
     const saveButton = employeeForm.querySelector('button[type="submit"]');
-    // Employment Status: hidden on Add (new employees always start Active),
-    // shown on Edit. "Archived" is a status choice like any other — the
-    // server hides/shows the employee based on it (see EmployeeService.apply()).
+    // Employment Status: hidden on Add (new employees start Active, or
+    // Probationary via the checkbox below), shown on Edit instead. "Archived"
+    // is a status choice like any other — the server hides/shows the
+    // employee based on it (see EmployeeService.apply()).
     const employeeStatusRow = document.getElementById('employeeStatusRow');
     const employeeStatusSelect = document.getElementById('employeeStatusSelect');
     const employeeStatusHint = document.getElementById('employeeStatusHint');
+    // Probationary employee: only offered on Add (a simpler yes/no than the
+    // full Employment Status dropdown); on Edit, that dropdown covers it.
+    const employeeProbationaryRow = document.getElementById('employeeProbationaryRow');
+    const employeeProbationary = document.getElementById('employeeProbationary');
     const facultyFields = document.getElementById('facultyFields');
     const adminFields = document.getElementById('adminFields');
 
@@ -67,7 +72,6 @@
     };
     const ADMIN_FIELDS = {
         officeDepartment: { id: 'employeeOfficeDept' },
-        position: { id: 'employeePosition' },
         rate: { id: 'employeeRateHour', number: true },
         officeHours: { id: 'employeeOfficeHours', number: true }
     };
@@ -295,7 +299,6 @@
         loadUnits: 'employeeLoadUnits',
         lectureHours: 'employeeLectureHours',
         officeDepartment: 'employeeOfficeDept',
-        position: 'employeePosition',
         officeHours: 'employeeOfficeHours',
         sssId: 'employeeSssId',
         philhealthId: 'employeePhilhealthId',
@@ -337,6 +340,8 @@
         employeeStatusRow.classList.add('d-none');
         employeeStatusSelect.value = 'Active';
         employeeStatusHint.classList.add('d-none');
+        employeeProbationaryRow.classList.remove('d-none');
+        employeeProbationary.checked = false;
         setReadOnly(false);
         employeeJoined.value = new Date().toISOString().slice(0, 10);
         toggleTypeFields('');
@@ -392,6 +397,7 @@
             employeeStatusRow.classList.remove('d-none');
             employeeStatusSelect.value = employee.archived ? 'Archived' : (employee.status || 'Active');
             employeeStatusHint.classList.toggle('d-none', !employee.archived);
+            employeeProbationaryRow.classList.add('d-none');
             // Archived records are read-only except Employment Status itself,
             // so changing it away from Archived is how they're brought back.
             if (employee.archived) {
@@ -427,7 +433,7 @@
             department: employeeDepartmentSelect.value,
             email: employeeEmail.value.trim(),
             phone: employeePhone.value.trim(),
-            status: editingId ? employeeStatusSelect.value : 'Active',
+            status: editingId ? employeeStatusSelect.value : (employeeProbationary.checked ? 'Probationary' : 'Active'),
             dateHired: employeeJoined.value
         };
         readFields(PROFILE_FIELDS, payload);

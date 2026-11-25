@@ -286,11 +286,6 @@ public class EmployeeService {
         }
         Validation.optionalText(r.officeDepartment(), "officeDepartment", "Department", 50);
 
-        if (admin && (r.position() == null || r.position().isBlank())) {
-            throw Validation.invalid("position", "Position is required.");
-        }
-        Validation.optionalText(r.position(), "position", "Position", 50);
-
         if (admin && r.officeHours() == null) {
             throw Validation.invalid("officeHours", "Office hours is required.");
         }
@@ -493,7 +488,6 @@ public class EmployeeService {
         } else if (staff instanceof AdminStaff a) {
             a.setRatePerHour(r.rate());
             a.setDepartment(blankToNull(r.officeDepartment()));
-            a.setPosition(blankToNull(r.position()));
             a.setOfficeHours(r.officeHours());
             // Faculty/Admin also teach, so they keep the faculty fields too.
             a.setInstructorRank(a.isFaculty() ? blankToNull(r.instructorRank()) : null);

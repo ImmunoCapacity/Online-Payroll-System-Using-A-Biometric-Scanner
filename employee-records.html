@@ -115,6 +115,26 @@
                             </div>
                         </div>
 
+                        <h3 class="pp-form-label text-uppercase small text-muted mb-2">Government IDs</h3>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-3">
+                                <label for="employeeSssId" class="pp-form-label">SSS No.</label>
+                                <input type="text" class="form-control pp-form-control" id="employeeSssId" maxlength="50" data-validate="gov-id" data-digits="10" placeholder="XX-XXXXXXX-X" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="employeePhilhealthId" class="pp-form-label">PhilHealth No.</label>
+                                <input type="text" class="form-control pp-form-control" id="employeePhilhealthId" maxlength="50" data-validate="gov-id" data-digits="12" placeholder="XX-XXXXXXXXX-X" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="employeePagibigId" class="pp-form-label">Pag-IBIG No.</label>
+                                <input type="text" class="form-control pp-form-control" id="employeePagibigId" maxlength="50" data-validate="gov-id" data-digits="12" placeholder="XXXX-XXXX-XXXX" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="employeeTinId" class="pp-form-label">TIN</label>
+                                <input type="text" class="form-control pp-form-control" id="employeeTinId" maxlength="50" data-validate="gov-id" data-digits="9,12,14" placeholder="XXX-XXX-XXX-XXX" required>
+                            </div>
+                        </div>
+
                         <h3 class="pp-form-label text-uppercase small text-muted mb-2">Personal Information</h3>
                         <div class="row g-3 mb-3">
                             <div class="col-md-4">
@@ -177,9 +197,9 @@
                         <h3 class="pp-form-label text-uppercase small text-muted mb-2">Employment</h3>
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
-                                <label for="employeeDepartmentSelect" class="pp-form-label">Employee Type</label>
+                                <label for="employeeDepartmentSelect" class="pp-form-label">Position</label>
                                 <select class="form-select pp-form-select" id="employeeDepartmentSelect" required>
-                                    <option value="" hidden data-hint>Select employee type</option>
+                                    <option value="" hidden data-hint>Select position</option>
                                     <option value="Faculty">Faculty</option>
                                     <option value="Admin">Admin</option>
                                     <option value="Faculty/Admin">Faculty/Admin</option>
@@ -189,6 +209,16 @@
                             <div class="col-md-6">
                                 <label for="employeeJoined" class="pp-form-label">Date Hired</label>
                                 <input type="date" class="form-control pp-form-control" id="employeeJoined" data-validate="date" data-not-future min="1950-01-01" data-after="employeeBirthdate" data-after-years="18" required>
+                            </div>
+                        </div>
+                        <!-- Only shown when adding; on Edit, Employment Status below covers it. -->
+                        <div class="row g-3 mb-3" id="employeeProbationaryRow">
+                            <div class="col-12">
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" id="employeeProbationary">
+                                    <label class="form-check-label pp-form-label mb-0" for="employeeProbationary">Probationary employee</label>
+                                </div>
+                                <div class="form-text">Paid leave credits start at 0 until the probationary period ends (Maintenance → Leave Credit).</div>
                             </div>
                         </div>
                         <div class="row g-3 mb-3">
@@ -249,41 +279,17 @@
 
                         <!-- Admin and Faculty/Admin (Table 2) -->
                         <div class="row g-3 mb-3 d-none" id="adminFields">
-                            <div class="col-md-3">
+                            <div class="col-md-4">
                                 <label for="employeeOfficeDept" class="pp-form-label">Department</label>
                                 <input type="text" class="form-control pp-form-control" id="employeeOfficeDept" maxlength="50" data-validate="text" placeholder="e.g. Registrar" required>
                             </div>
-                            <div class="col-md-3">
-                                <label for="employeePosition" class="pp-form-label">Position</label>
-                                <input type="text" class="form-control pp-form-control" id="employeePosition" maxlength="50" data-validate="text" required>
-                            </div>
-                            <div class="col-md-3">
+                            <div class="col-md-4">
                                 <label for="employeeRateHour" class="pp-form-label">Rate per Hour (₱)</label>
                                 <input type="number" class="form-control pp-form-control" id="employeeRateHour" min="0" max="100000" step="0.01" data-validate="number" data-decimals="2" inputmode="decimal" required>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-4">
                                 <label for="employeeOfficeHours" class="pp-form-label">Office Hours</label>
                                 <input type="number" class="form-control pp-form-control" id="employeeOfficeHours" min="0" max="24" step="0.5" data-validate="number" data-decimals="1" inputmode="decimal" required>
-                            </div>
-                        </div>
-
-                        <h3 class="pp-form-label text-uppercase small text-muted mb-2 mt-4">Government IDs</h3>
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-3">
-                                <label for="employeeSssId" class="pp-form-label">SSS No.</label>
-                                <input type="text" class="form-control pp-form-control" id="employeeSssId" maxlength="50" data-validate="gov-id" data-digits="10" placeholder="XX-XXXXXXX-X" required>
-                            </div>
-                            <div class="col-md-3">
-                                <label for="employeePhilhealthId" class="pp-form-label">PhilHealth No.</label>
-                                <input type="text" class="form-control pp-form-control" id="employeePhilhealthId" maxlength="50" data-validate="gov-id" data-digits="12" placeholder="XX-XXXXXXXXX-X" required>
-                            </div>
-                            <div class="col-md-3">
-                                <label for="employeePagibigId" class="pp-form-label">Pag-IBIG No.</label>
-                                <input type="text" class="form-control pp-form-control" id="employeePagibigId" maxlength="50" data-validate="gov-id" data-digits="12" placeholder="XXXX-XXXX-XXXX" required>
-                            </div>
-                            <div class="col-md-3">
-                                <label for="employeeTinId" class="pp-form-label">TIN</label>
-                                <input type="text" class="form-control pp-form-control" id="employeeTinId" maxlength="50" data-validate="gov-id" data-digits="9,12,14" placeholder="XXX-XXX-XXX-XXX" required>
                             </div>
                         </div>
                     </div>
