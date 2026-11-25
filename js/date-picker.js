@@ -12,6 +12,12 @@
  * unchanged; this only adds matching minDate/maxDate so the calendar
  * itself reflects them too.
  *
+ * Times are shown and picked in 12-hour AM/PM (e.g. "2:30 PM") via
+ * Flatpickr's altInput: a second, visible text input the user actually
+ * types/clicks into, while the original input (same id) is hidden and
+ * keeps the real 24-hour value. Setting .value elsewhere (el('x').value =
+ * '14:30') is intercepted below to also refresh that visible text.
+ *
  * If vendor/flatpickr fails to load, inputs are left as native
  * type="date"/"time" — css/payrollpro.css has a plain restyling fallback
  * for that case.
@@ -56,6 +62,7 @@
     }
 
     function setup(input) {
+        if (input._flatpickr) return;   // already upgraded (e.g. a dynamically re-rendered grid)
         var isTime = input.type === 'time';
 
         // Fixed bounds from the markup (min/max/data-not-future/data-min-age/
@@ -75,6 +82,7 @@
             if (!minDate || ageMin > minDate) minDate = ageMin;
         }
 
+        var originalClassName = input.className;
         input.type = 'text';
         input.setAttribute('autocomplete', 'off');
         addIcon(input, isTime);
@@ -83,12 +91,15 @@
         // the browser handles outside the page), so it bubbles up to
         // Bootstrap's modal and closes the whole form. Stop it from
         // leaving the input when it's only meant to close the popup.
-        input.addEventListener('keydown', function (e) {
+        // (Bound to the altInput too, below, for time fields — that's the
+        // element actually focused while the AM/PM popup is open.)
+        function closeOnEscape(e) {
             if (e.key === 'Escape' && input._flatpickr && input._flatpickr.isOpen) {
                 e.stopPropagation();
                 input._flatpickr.close();
             }
-        });
+        }
+        input.addEventListener('keydown', closeOnEscape);
 
         // Bootstrap's modal focus trap steals focus back from anything
         // appended outside the modal; appending the calendar inside it
@@ -125,19 +136,65 @@
         if (isTime) {
             options.enableTime = true;
             options.noCalendar = true;
-            options.time_24hr = true;
+            options.time_24hr = false;        // picker and visible text show AM/PM
+            options.altInput = true;          // real .value stays 24-hour "HH:MM" (dateFormat above); altInput shows altFormat
+            options.altFormat = 'h:i K';
+            options.altInputClass = originalClassName;
         }
 
-        flatpickr(input, options);
+        var fp = flatpickr(input, options);
+
+        if (fp.altInput) {
+            fp.altInput.addEventListener('keydown', closeOnEscape);
+
+            // Everything else in the app sets .value directly (e.g. opening
+            // an edit form) expecting the visible text to follow; with
+            // altInput that assignment lands on the now-hidden real input,
+            // so mirror it into the picker (which updates the visible
+            // altInput) without requiring every caller to change.
+            // Flatpickr itself also writes input.value as part of handling
+            // a pick in the popup, which would otherwise re-enter this same
+            // setter and call setDate() again forever — syncing guards
+            // against that.
+            var nativeValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+            var syncing = false;
+            Object.defineProperty(input, 'value', {
+                configurable: true,
+                get: function () { return nativeValue.get.call(input); },
+                set: function (v) {
+                    nativeValue.set.call(input, v);
+                    if (syncing) return;
+                    syncing = true;
+                    try { fp.setDate(v || null, false); } finally { syncing = false; }
+                }
+            });
+        }
     }
 
-    function init() {
-        document.querySelectorAll('input.pp-form-control[type="date"], input.pp-form-control[type="time"]')
+    function init(root) {
+        (root || document).querySelectorAll('input.pp-form-control[type="date"], input.pp-form-control[type="time"]')
             .forEach(setup);
     }
 
+    // For pages that build rows after load (e.g. a per-employee grid):
+    // call this once right after adding the new markup to upgrade just
+    // those inputs (already-upgraded ones are skipped automatically).
+    window.PPDatePicker = { upgrade: init };
+
+    // form.reset() resets each field's native value directly; that may not
+    // go through the .value override above, which would leave a time
+    // field's visible AM/PM text stale. Resync every upgraded field in the
+    // form right after it resets.
+    document.addEventListener('reset', function (e) {
+        e.target.querySelectorAll('input[type="hidden"]').forEach(function (input) {
+            if (input._flatpickr) input._flatpickr.setDate(input.value || null, false);
+        });
+    });
+
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
+        // Not just `init` — addEventListener would call it with the Event
+        // object as `root`, and an Event has no querySelectorAll.
+        document.addEventListener('DOMContentLoaded', function () { init(); });
     } else {
         init();
     }
