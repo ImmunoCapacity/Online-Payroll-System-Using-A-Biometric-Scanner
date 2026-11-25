@@ -101,3 +101,25 @@
     font-size: 0.72rem;
     font-weight: 600;
 }
+
+/* Adjust Payroll modal: live preview of Days / Addition / Deduction / Total */
+.pp-adjust-preview {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+    padding: 0.875rem 1rem;
+    background: var(--pp-surface-hover, #f8fafc);
+    border-radius: var(--pp-radius-sm, 8px);
+}
+
+.pp-adjust-preview strong {
+    font-size: 1rem;
+}
+
+.pp-adjust-preview .amount-add {
+    color: var(--pp-accent, #2d7a5f);
+}
+
+.pp-adjust-preview .amount-deduct {
+    color: var(--pp-error, #b42318);
+}

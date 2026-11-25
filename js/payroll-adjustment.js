@@ -124,10 +124,11 @@
     /**
      * Rate for the row: a saved adjustment keeps the rate it was saved with
      * (until its Date From changes); otherwise the rate on Date From if known,
-     * else the rate shown.
+     * else the rate shown. s defaults to the row's live state; the Adjust
+     * modal passes its own draft instead, to preview without touching it.
      */
-    function rateFor(row) {
-        var s = state[row.employeeId];
+    function rateFor(row, s) {
+        s = s || state[row.employeeId];
         if (row.status && s.dateFrom === saved[row.employeeId].dateFrom) return Number(row.rate) || 0;
         var onDate = s.dateFrom && ratesByDate[s.dateFrom] ? ratesByDate[s.dateFrom][row.employeeId] : null;
         if (onDate) {
@@ -145,13 +146,17 @@
         }).catch(function () { delete ratesByDate[date]; });
     }
 
-    function compute(row) {
-        var s = state[row.employeeId];
+    function compute(row, s) {
+        s = s || state[row.employeeId];
         var days = workdays(s.dateFrom, s.dateTo);
-        var rate = rateFor(row);
+        var rate = rateFor(row, s);
         var add = round2(num(s.addHours) * days * rate);
         var deduct = round2(num(s.deductHours) * days * rate);
         return { days: days, rate: rate, add: add, deduct: deduct, total: round2(add - deduct) };
+    }
+
+    function dateShort(text) {
+        return text ? parseIso(text).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' }) : '';
     }
 
     function snapshot(row) {
@@ -242,29 +247,24 @@
             return;
         }
         el('adjustmentBody').innerHTML = grid.rows.map(function (r) {
-            var s = state[r.employeeId];
             var locked = isLocked(r);
-            var dis = locked ? ' disabled' : '';
             var id = escapeHtml(r.employeeId);
-            return '<tr data-id="' + id + '" class="' + (locked && r.status ? 'is-locked' : '') + '">' +
+            return '<tr data-id="' + id + '" class="pp-row-clickable' + (locked && r.status ? ' is-locked' : '') + '" ' +
+                    'tabindex="0" role="button" aria-label="Adjust payroll for ' + escapeHtml(r.name) + '">' +
                 '<td>' + escapeHtml(r.employeeNumber) + '</td>' +
                 '<td><strong>' + escapeHtml(r.name) + '</strong>' +
                     (r.status === 'Applied' ? '<span class="pp-adjust-lock" title="Paid when the cut-off was released"><i class="bi bi-lock-fill"></i></span>' : '') +
                     (r.inPayroll === false && r.status !== 'Applied' ? '<span class="pp-adjust-warn" title="Not Active (or hired after this cut-off), so not in this cut-off\'s payroll. Clear this row."><i class="bi bi-exclamation-triangle-fill"></i> Not in payroll</span>' : '') + '</td>' +
                 '<td>' + escapeHtml(PayrollProLayout.staffTypeLabel(r.type)) + '</td>' +
                 '<td class="text-end" data-cell="rate"></td>' +
-                '<td><div class="pp-adjust-dates">' +
-                    '<input type="date" class="form-control pp-form-control pp-cell pp-cell-date" data-field="dateFrom" value="' + escapeHtml(s.dateFrom) + '" max="' + grid.applyEnd + '" aria-label="Date from for ' + escapeHtml(r.name) + '"' + dis + '>' +
-                    '<span>–</span>' +
-                    '<input type="date" class="form-control pp-form-control pp-cell pp-cell-date" data-field="dateTo" value="' + escapeHtml(s.dateTo) + '" max="' + grid.applyEnd + '" aria-label="Date to for ' + escapeHtml(r.name) + '"' + dis + '>' +
-                '</div></td>' +
+                '<td data-cell="dates"></td>' +
                 '<td class="text-end" data-cell="days"></td>' +
-                '<td class="text-end"><input type="number" class="form-control pp-form-control pp-cell pp-cell-hours" data-field="addHours" min="0" max="24" step="0.5" inputmode="decimal" value="' + escapeHtml(s.addHours) + '" aria-label="Addition hours per day for ' + escapeHtml(r.name) + '"' + dis + '></td>' +
+                '<td class="text-end" data-cell="addHours"></td>' +
                 '<td class="text-end amount-add" data-cell="add"></td>' +
-                '<td class="text-end"><input type="number" class="form-control pp-form-control pp-cell pp-cell-hours" data-field="deductHours" min="0" max="24" step="0.5" inputmode="decimal" value="' + escapeHtml(s.deductHours) + '" aria-label="Deduction hours per day for ' + escapeHtml(r.name) + '"' + dis + '></td>' +
+                '<td class="text-end" data-cell="deductHours"></td>' +
                 '<td class="text-end amount-deduct" data-cell="deduct"></td>' +
                 '<td class="text-end amount-total" data-cell="total"></td>' +
-                '<td><input type="text" class="form-control pp-form-control pp-cell pp-cell-reason" data-field="reason" maxlength="200" placeholder="Reason" value="' + escapeHtml(s.reason) + '" aria-label="Reason for ' + escapeHtml(r.name) + '"' + dis + '></td>' +
+                '<td data-cell="reason"></td>' +
             '</tr>';
         }).join('');
         grid.rows.forEach(function (r) { updateRow(r.employeeId); });
@@ -272,20 +272,27 @@
         updateTotals();
     }
 
-    /** Recomputes one row's read-only cells, without re-rendering its inputs. */
+    /** Refreshes one row's display cells from its current state. */
     function updateRow(employeeId) {
         var tr = el('adjustmentBody').querySelector('tr[data-id="' + CSS.escape(employeeId) + '"]');
         if (!tr) return;
         var row = rowOf(employeeId);
+        var s = state[employeeId];
         var c = compute(row);
         tr.querySelector('[data-cell="rate"]').textContent = money(c.rate);
+        tr.querySelector('[data-cell="dates"]').textContent = s.dateFrom
+            ? dateShort(s.dateFrom) + (s.dateTo && s.dateTo !== s.dateFrom ? ' – ' + dateShort(s.dateTo) : '')
+            : '—';
         tr.querySelector('[data-cell="days"]').textContent = c.days || '';
+        tr.querySelector('[data-cell="addHours"]').textContent = num(s.addHours) ? Number(s.addHours) : '';
         tr.querySelector('[data-cell="add"]').textContent = c.add ? money(c.add) : '';
+        tr.querySelector('[data-cell="deductHours"]').textContent = num(s.deductHours) ? Number(s.deductHours) : '';
         tr.querySelector('[data-cell="deduct"]').textContent = c.deduct ? '−' + money(c.deduct) : '';
         var total = tr.querySelector('[data-cell="total"]');
         total.textContent = c.total ? (c.total > 0 ? '+' : '−') + money(Math.abs(c.total)) : '';
         total.classList.toggle('amount-add', c.total > 0);
         total.classList.toggle('amount-deduct', c.total < 0);
+        tr.querySelector('[data-cell="reason"]').textContent = s.reason ? s.reason : '—';
         tr.classList.toggle('is-changed', isChanged(employeeId));
     }
 
@@ -319,62 +326,155 @@
     }
 
     // ---------------------------------------------------------------
-    // Editing
+    // Editing (Adjust Payroll modal — one employee at a time)
     // ---------------------------------------------------------------
 
-    el('adjustmentBody').addEventListener('input', function (e) {
-        var input = e.target.closest('[data-field]');
-        if (!input) return;
-        var employeeId = input.closest('tr').dataset.id;
-        state[employeeId][input.dataset.field] = input.value;
-        input.classList.remove('is-invalid');
-        // Leaving Date To empty: use Date From (a single day).
-        if (input.dataset.field === 'dateFrom') {
-            var to = input.closest('tr').querySelector('[data-field="dateTo"]');
-            if (!to.value && input.value) {
-                to.value = input.value;
-                state[employeeId].dateTo = input.value;
+    var ADJUST_FIELD_INPUT = {
+        dateFrom: 'adjustDateFrom', dateTo: 'adjustDateTo',
+        addHours: 'adjustAddHours', deductHours: 'adjustDeductHours', reason: 'adjustReason'
+    };
+    var adjustModal = null;
+    var adjustEmployeeId = null;
+    var draft = null;
+
+    /** Rows with hours need dates and a reason; { field, message } of the first problem, or null. */
+    function validateRow(r, s) {
+        var bad = null;
+        [s.addHours, s.deductHours].forEach(function (v, i) {
+            var n = parseFloat(v);
+            if (!bad && String(v).trim() && (!isFinite(n) || n < 0 || n > 24)) {
+                bad = { field: i ? 'deductHours' : 'addHours', message: 'hours per day must be from 0 to 24.' };
             }
-            loadRatesFor(input.value).then(function () { updateRow(employeeId); updateTotals(); });
+        });
+        if (bad) return bad;
+        if (!num(s.addHours) && !num(s.deductHours)) return null;
+        if (!s.dateFrom) return { field: 'dateFrom', message: 'enter Date From.' };
+        if (!s.dateTo) return { field: 'dateTo', message: 'enter Date To.' };
+        if (s.dateTo < s.dateFrom) return { field: 'dateTo', message: 'Date To can\'t be before Date From.' };
+        if (s.dateTo > grid.applyEnd) return { field: 'dateTo', message: 'the dates must end on or before the cut-off.' };
+        if (s.dateTo >= s.dateFrom && !workdays(s.dateFrom, s.dateTo)) return { field: 'dateTo', message: 'those dates have no working days.' };
+        if (!String(s.reason).trim()) return { field: 'reason', message: 'enter the reason.' };
+        return null;
+    }
+
+    /** The first row (not locked) with a validation problem, or null. */
+    function firstProblem() {
+        var result = null;
+        grid.rows.some(function (r) {
+            if (isLocked(r)) return false;
+            var issue = validateRow(r, state[r.employeeId]);
+            if (issue) { result = { row: r, issue: issue }; return true; }
+            return false;
+        });
+        return result;
+    }
+
+    function clearAdjustErrors() {
+        Object.keys(ADJUST_FIELD_INPUT).forEach(function (f) { el(ADJUST_FIELD_INPUT[f]).classList.remove('is-invalid'); });
+    }
+
+    function showAdjustError(issue) {
+        clearAdjustErrors();
+        el(ADJUST_FIELD_INPUT[issue.field]).classList.add('is-invalid');
+        PPToast.error(issue.message);
+    }
+
+    function updatePreview() {
+        var row = rowOf(adjustEmployeeId);
+        var c = compute(row, draft);
+        el('adjustPreviewDays').textContent = c.days || '0';
+        el('adjustPreviewAdd').textContent = '₱' + money(c.add);
+        el('adjustPreviewDeduct').textContent = '₱' + money(c.deduct);
+        el('adjustPreviewTotal').textContent = (c.total < 0 ? '−' : c.total > 0 ? '+' : '') + '₱' + money(Math.abs(c.total));
+    }
+
+    function fillAdjustField(field, value) {
+        draft[field] = value || '';
+        el(ADJUST_FIELD_INPUT[field]).value = draft[field];
+    }
+
+    function openAdjust(employeeId) {
+        var r = rowOf(employeeId);
+        if (!r) return;
+        adjustEmployeeId = employeeId;
+        draft = Object.assign({}, state[employeeId]);
+        var locked = isLocked(r);
+
+        el('adjustModalTitle').textContent = 'Adjust Payroll — ' + r.name;
+        el('adjustEmployeeNumber').textContent = r.employeeNumber;
+        el('adjustPosition').textContent = PayrollProLayout.staffTypeLabel(r.type);
+        el('adjustRate').textContent = '₱' + money(rateFor(r, draft));
+
+        Object.keys(ADJUST_FIELD_INPUT).forEach(function (field) {
+            var input = el(ADJUST_FIELD_INPUT[field]);
+            input.value = draft[field] || '';
+            input.disabled = locked;
+            if (field === 'dateFrom' || field === 'dateTo') {
+                input.max = grid.applyEnd;
+                // The picker (if upgraded) read the max attribute once at setup;
+                // the cut-off's end date changes every time the grid reloads.
+                if (input._flatpickr) input._flatpickr.set('maxDate', grid.applyEnd);
+            }
+        });
+        el('adjustSaveBtn').classList.toggle('d-none', locked);
+        el('adjustClearBtn').classList.toggle('d-none', locked);
+        el('adjustLockedNote').classList.toggle('d-none', !locked);
+
+        clearAdjustErrors();
+        updatePreview();
+        if (!adjustModal) adjustModal = new bootstrap.Modal(el('adjustModal'));
+        adjustModal.show();
+    }
+
+    el('adjustmentBody').addEventListener('click', function (e) {
+        var tr = e.target.closest('tr[data-id]');
+        if (tr) openAdjust(tr.dataset.id);
+    });
+    el('adjustmentBody').addEventListener('keydown', function (e) {
+        if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('tr[data-id]')) {
+            e.preventDefault();
+            openAdjust(e.target.dataset.id);
         }
-        updateRow(employeeId);
-        updateTotals();
     });
 
-    /** Rows with hours need dates and a reason; marks the cells and returns the first problem. */
-    function check() {
-        var problem = null;
-        grid.rows.forEach(function (r) {
-            if (isLocked(r)) return;
-            var s = state[r.employeeId];
-            var tr = el('adjustmentBody').querySelector('tr[data-id="' + CSS.escape(r.employeeId) + '"]');
-            var hours = num(s.addHours) || num(s.deductHours);
-            function bad(field, message) {
-                tr.querySelector('[data-field="' + field + '"]').classList.add('is-invalid');
-                if (!problem) problem = r.name + ': ' + message;
-            }
-            [s.addHours, s.deductHours].forEach(function (v, i) {
-                var n = parseFloat(v);
-                if (String(v).trim() && (!isFinite(n) || n < 0 || n > 24)) bad(i ? 'deductHours' : 'addHours', 'hours per day must be from 0 to 24.');
-            });
-            if (!hours) return;
-            if (!s.dateFrom) bad('dateFrom', 'enter Date From.');
-            if (!s.dateTo) bad('dateTo', 'enter Date To.');
-            if (s.dateFrom && s.dateTo && s.dateTo < s.dateFrom) bad('dateTo', 'Date To can\'t be before Date From.');
-            if (s.dateTo && s.dateTo > grid.applyEnd) bad('dateTo', 'the dates must end on or before the cut-off.');
-            if (s.dateFrom && s.dateTo && s.dateTo >= s.dateFrom && !workdays(s.dateFrom, s.dateTo)) bad('dateTo', 'those dates have no working days.');
-            if (!String(s.reason).trim()) bad('reason', 'enter the reason.');
-        });
-        return problem;
-    }
+    el('adjustForm').addEventListener('input', function (e) {
+        var field = e.target.dataset.field;
+        if (!field || !draft) return;
+        draft[field] = e.target.value;
+        e.target.classList.remove('is-invalid');
+        // Leaving Date To empty: use Date From (a single day).
+        if (field === 'dateFrom') {
+            if (!draft.dateTo) fillAdjustField('dateTo', draft.dateFrom);
+            loadRatesFor(draft.dateFrom).then(updatePreview);
+        }
+        updatePreview();
+    });
+
+    el('adjustClearBtn').addEventListener('click', function () {
+        if (!draft) return;
+        Object.keys(ADJUST_FIELD_INPUT).forEach(function (field) { fillAdjustField(field, ''); });
+        clearAdjustErrors();
+        updatePreview();
+    });
+
+    el('adjustForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        var row = rowOf(adjustEmployeeId);
+        if (!row || isLocked(row)) return;
+        var issue = validateRow(row, draft);
+        if (issue) { showAdjustError(issue); return; }
+        state[adjustEmployeeId] = Object.assign({}, draft);
+        updateRow(adjustEmployeeId);
+        updateTotals();
+        adjustModal.hide();
+    });
 
     function save() {
         if (!grid || grid.released) return;
-        var problem = check();
+        var problem = firstProblem();
         if (problem) {
-            PPToast.error(problem);
-            var first = el('adjustmentBody').querySelector('.is-invalid');
-            if (first) first.focus();
+            openAdjust(problem.row.employeeId);
+            showAdjustError(problem.issue);
             return;
         }
         // "Are you sure?" with what will be saved for this cut-off.

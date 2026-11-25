@@ -8,6 +8,8 @@
     <link rel="icon" type="image/png" href="sti_logo.png">
     <link href="vendor/bootstrap/bootstrap.min.css" rel="stylesheet">
     <link href="vendor/bootstrap-icons/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="vendor/flatpickr/flatpickr.min.css" rel="stylesheet">
+    <link href="css/date-picker.css" rel="stylesheet">
     <link href="css/payrollpro.css" rel="stylesheet">
     <link href="css/payroll-adjustment.css" rel="stylesheet">
 </head>
@@ -37,9 +39,9 @@
                             <select class="form-select pp-form-select" id="cutoffSelect"></select>
                         </div>
                         <div class="pp-filter-group">
-                            <label for="typeSelect" class="pp-form-label">Employee Type</label>
+                            <label for="typeSelect" class="pp-form-label">Position</label>
                             <select data-clearable class="form-select pp-form-select" id="typeSelect">
-                                <option value="all" hidden data-hint>All employee types</option>
+                                <option value="all" hidden data-hint>All positions</option>
                             </select>
                         </div>
                         <div class="pp-filter-group search">
@@ -56,13 +58,14 @@
                         </div>
                     </div>
 
+                    <p class="pp-table-hint"><i class="bi bi-hand-index" aria-hidden="true"></i> Click a row to adjust that employee's payroll.</p>
                     <div class="pp-table-wrap pp-adjust-wrap">
                         <table class="pp-table pp-adjust-table" id="adjustmentTable">
                             <thead>
                                 <tr>
                                     <th>ID</th>
                                     <th>Name</th>
-                                    <th>Employee Type</th>
+                                    <th>Position</th>
                                     <th class="text-end">Rate / Hour</th>
                                     <th>Date From – Date To</th>
                                     <th class="text-end">Days</th>
@@ -84,7 +87,75 @@
         </main>
     </div>
 
+    <!-- Adjust one employee's payroll -->
+    <div class="modal fade pp-modal" id="adjustModal" tabindex="-1" aria-labelledby="adjustModalTitle" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title" id="adjustModalTitle">Adjust Payroll</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="adjustForm" novalidate>
+                    <div class="modal-body">
+                        <div class="row g-3 mb-3" id="adjustContext">
+                            <div class="col-sm-4">
+                                <span class="pp-form-label d-block">Employee ID</span>
+                                <strong id="adjustEmployeeNumber"></strong>
+                            </div>
+                            <div class="col-sm-4">
+                                <span class="pp-form-label d-block">Position</span>
+                                <strong id="adjustPosition"></strong>
+                            </div>
+                            <div class="col-sm-4">
+                                <span class="pp-form-label d-block">Rate / Hour</span>
+                                <strong id="adjustRate"></strong>
+                            </div>
+                        </div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-sm-6">
+                                <label for="adjustDateFrom" class="pp-form-label">Date From</label>
+                                <input type="date" class="form-control pp-form-control" id="adjustDateFrom" data-field="dateFrom">
+                            </div>
+                            <div class="col-sm-6">
+                                <label for="adjustDateTo" class="pp-form-label">Date To</label>
+                                <input type="date" class="form-control pp-form-control" id="adjustDateTo" data-field="dateTo">
+                            </div>
+                        </div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-sm-6">
+                                <label for="adjustAddHours" class="pp-form-label">Addition <span class="pp-sub d-inline">(hrs / day)</span></label>
+                                <input type="number" class="form-control pp-form-control" id="adjustAddHours" data-field="addHours" min="0" max="24" step="0.5" inputmode="decimal">
+                            </div>
+                            <div class="col-sm-6">
+                                <label for="adjustDeductHours" class="pp-form-label">Deduction <span class="pp-sub d-inline">(hrs / day)</span></label>
+                                <input type="number" class="form-control pp-form-control" id="adjustDeductHours" data-field="deductHours" min="0" max="24" step="0.5" inputmode="decimal">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="adjustReason" class="pp-form-label">Reason</label>
+                            <input type="text" class="form-control pp-form-control" id="adjustReason" data-field="reason" maxlength="200" placeholder="e.g. Leave not recorded in time">
+                        </div>
+                        <div class="pp-adjust-preview">
+                            <div><span class="pp-form-label d-block">Days</span><strong id="adjustPreviewDays">0</strong></div>
+                            <div><span class="pp-form-label d-block">Addition</span><strong id="adjustPreviewAdd" class="amount-add">₱0.00</strong></div>
+                            <div><span class="pp-form-label d-block">Deduction</span><strong id="adjustPreviewDeduct" class="amount-deduct">₱0.00</strong></div>
+                            <div><span class="pp-form-label d-block">Total</span><strong id="adjustPreviewTotal" class="amount-total">₱0.00</strong></div>
+                        </div>
+                        <p class="fm-note mt-3 d-none" id="adjustLockedNote">This cut-off is released, so this adjustment can no longer be changed.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-pp-outline me-auto" id="adjustClearBtn">Clear</button>
+                        <button type="button" class="btn btn-pp-outline" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-pp-primary" id="adjustSaveBtn"><i class="bi bi-check-lg me-1"></i> Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script src="vendor/bootstrap/bootstrap.bundle.min.js"></script>
+    <script src="vendor/flatpickr/flatpickr.min.js"></script>
+    <script src="js/date-picker.js"></script>
     <script src="js/data-store.js"></script>
     <script src="js/confirm-modal.js"></script>
     <script src="js/toast.js"></script>
