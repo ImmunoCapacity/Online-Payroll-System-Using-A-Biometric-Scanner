@@ -50,7 +50,7 @@
                                 <tr>
                                     <th>Employee ID</th>
                                     <th>Name</th>
-                                    <th>Employee Type</th>
+                                    <th>Position</th>
                                     <th>Reason</th>
                                     <th>Date Hired</th>
                                     <th>Archived On</th>
@@ -86,18 +86,15 @@
                         </div>
                     </div>
                     <p class="pp-table-hint" id="schedulesCount"></p>
+                    <p class="pp-table-hint"><i class="bi bi-hand-index" aria-hidden="true"></i> Click a row to view that faculty member's archived schedule.</p>
                     <div class="pp-table-wrap">
                         <table class="pp-table w-100">
                             <thead>
                                 <tr>
+                                    <th>#</th>
                                     <th>Employee ID</th>
-                                    <th>Faculty</th>
-                                    <th>Employee Type</th>
-                                    <th>Subject / Section</th>
-                                    <th>Room</th>
-                                    <th>Date</th>
-                                    <th>Scheduled</th>
-                                    <th>Status</th>
+                                    <th>Employee Name</th>
+                                    <th>Archived Schedule</th>
                                 </tr>
                             </thead>
                             <tbody id="schedulesBody"></tbody>
@@ -107,6 +104,33 @@
                 </div>
             </div>
         </main>
+    </div>
+
+    <!-- One faculty member's archived schedule -->
+    <div class="modal fade pp-modal" id="scheduleDetailModal" tabindex="-1" aria-labelledby="scheduleDetailTitle" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title" id="scheduleDetailTitle">Archived Schedule</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="pp-table-wrap">
+                        <table class="pp-table w-100">
+                            <thead>
+                                <tr>
+                                    <th>Subject / Section</th>
+                                    <th>Room</th>
+                                    <th>Day</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="scheduleDetailBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="vendor/bootstrap/bootstrap.bundle.min.js"></script>

@@ -78,16 +78,6 @@ public class NotificationController {
             }
         }
 
-        // Classes checked but not yet approved.
-        if (SystemModule.FACULTY_TEACHING_APPROVAL.allows(role)) {
-            int pending = count("SELECT COUNT(*) FROM faculty_teaching_attendance WHERE approval_status = 'Pending'");
-            if (pending > 0) {
-                items.add(item("teaching-pending-" + pending, "bi-person-check", "warning",
-                        pending + " class" + (pending == 1 ? "" : "es") + " waiting for approval",
-                        "Only approved classes are paid as teaching hours.", "teaching-hours.html"));
-            }
-        }
-
         // Classes of the last 14 days (ended) without both classroom checks.
         if (SystemModule.FACULTY_TEACHING_HOURS.allows(role)) {
             Integer unchecked = jdbc.queryForObject(

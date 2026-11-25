@@ -63,6 +63,14 @@ public class FacultyClass {
     @Column(name = "is_archived")
     private boolean archived;
 
+    /**
+     * Groups every concrete date occurrence generated from the same weekly
+     * day-of-week pattern, so editing one occurrence can update the whole
+     * series. Equal to this row's own id for a series of one.
+     */
+    @Column(name = "series_id")
+    private Integer seriesId;
+
     @Column(name = "status_reason")
     private String statusReason;
 
@@ -108,6 +116,8 @@ public class FacultyClass {
     public void setScheduleStatus(String scheduleStatus) { this.scheduleStatus = scheduleStatus; }
     public boolean isArchived() { return archived; }
     public void setArchived(boolean archived) { this.archived = archived; }
+    public Integer getSeriesId() { return seriesId; }
+    public void setSeriesId(Integer seriesId) { this.seriesId = seriesId; }
     public String getStatusReason() { return statusReason; }
     public void setStatusReason(String statusReason) { this.statusReason = statusReason; }
     public Integer getCreatedBy() { return createdBy; }

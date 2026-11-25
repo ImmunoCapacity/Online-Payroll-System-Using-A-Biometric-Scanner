@@ -9,10 +9,11 @@
  * Everyone with DTR access can view; adding, editing, cancelling and
  * restoring classes is for the Payroll Master and Attendance Monitoring
  * Staff (the server enforces this; the form and buttons are only hidden
- * here). "Archive All Schedules" (clears out classes already held) is
- * Attendance Monitoring Staff only. The grace period for classroom checks
- * is fixed at 15 minutes. Whether a class was actually taught is recorded
- * in Faculty Teaching Hours, not here.
+ * here). "Archive All Schedules" (clears out classes already held) and
+ * permanently deleting one class are both Attendance Monitoring Staff
+ * only. The grace period for classroom checks is fixed at 15 minutes.
+ * Whether a class was actually taught is recorded in Faculty Teaching
+ * Hours, not here.
  */
 (function () {
     'use strict';
@@ -40,6 +41,7 @@
     var INACTIVE = ['Inactive', 'Resigned', 'Terminated'];
 
     var teachers = [];
+    var rooms = [];           // from Room Maintenance (api/rooms)
     var weekCounts = {};      // employeeId -> classes this week
     var teacher = null;       // the faculty member being viewed
     var view = 'week';
@@ -93,6 +95,46 @@
         var d = parseIso(text);
         d.setDate(d.getDate() + days);
         return iso(d);
+    }
+
+    /** "1st Floor" sorts before "2nd Floor"; floors without a leading number sort last, alphabetically. */
+    function floorSortKey(floor) {
+        var m = /^(\d+)/.exec(String(floor || '').trim());
+        return m ? Number(m[1]) : Infinity;
+    }
+
+    function compareFloors(a, b) {
+        var ka = floorSortKey(a), kb = floorSortKey(b);
+        return ka !== kb ? ka - kb : String(a).localeCompare(String(b));
+    }
+
+    function loadRooms() {
+        return api('api/rooms').then(function (data) {
+            rooms = data.success ? data.rooms.slice().sort(function (a, b) {
+                var byFloor = compareFloors(a.floorLevel, b.floorLevel);
+                return byFloor !== 0 ? byFloor : a.name.localeCompare(b.name);
+            }) : [];
+            populateRoomSelect();
+        }).catch(function () { rooms = []; });
+    }
+
+    /** Keeps whatever room is currently selected (even a legacy one no longer in the list). */
+    function populateRoomSelect() {
+        var select = el('classRoom');
+        var current = select.value;
+        select.innerHTML = '<option value="">— No room —</option>' + rooms.map(function (r) {
+            return '<option value="' + escapeHtml(r.name) + '">' + escapeHtml(r.name) + ' — ' + escapeHtml(r.floorLevel) + '</option>';
+        }).join('');
+        setRoomValue(current);
+    }
+
+    /** Selects a room by name, adding it as a one-off option first if it's not in the managed list (legacy data). */
+    function setRoomValue(name) {
+        var select = el('classRoom');
+        if (name && !rooms.some(function (r) { return r.name === name; })) {
+            select.insertAdjacentHTML('beforeend', '<option value="' + escapeHtml(name) + '">' + escapeHtml(name) + ' (not in Room Maintenance)</option>');
+        }
+        select.value = name || '';
     }
 
     /** Monday of the week containing the date. */
@@ -221,6 +263,7 @@
         var showForm = canManage && INACTIVE.indexOf(teacher.status) === -1;
         el('classFormCol').classList.toggle('d-none', !showForm);
         el('scheduleCol').className = showForm ? 'col-xl-8' : 'col-12';
+        el('btnArchiveFacultySchedule').classList.toggle('d-none', !canArchive);
         resetForm();
         loadClasses();
     }
@@ -353,7 +396,7 @@
             (overlapNames.length
                 ? '<ul class="fm-flags mb-2"><li>Overlaps: ' + overlapNames.join('; ') + '. Review whether both classes are correct.</li></ul>' : '') +
             (c.attendanceStatus
-                ? '<p class="fm-note">Classroom checks have been recorded in Faculty Teaching Hours, so this class can no longer be edited or cancelled.</p>' : '') +
+                ? '<p class="fm-note">Classroom checks have been recorded in Faculty Teaching Hours, so this class can no longer be cancelled on its own — editing the weekly schedule still applies to it.</p>' : '') +
             '<div class="fm-section-title">Change history</div>' +
             '<ul class="fm-history" id="historyList"><li class="text-muted">Loading…</li></ul>';
 
@@ -362,16 +405,22 @@
         if (canManage) {
             if (c.scheduleStatus === 'Cancelled') {
                 footer += '<button type="button" class="btn btn-pp-primary" id="restoreBtn"><i class="bi bi-arrow-counterclockwise me-1"></i> Restore</button>';
-            } else if (!c.attendanceStatus && formShown()) {
-                footer += '<button type="button" class="btn btn-outline-danger" id="cancelBtn">Cancel Class</button>' +
-                    '<button type="button" class="btn btn-pp-primary" id="editBtn"><i class="bi bi-pencil me-1"></i> Edit</button>';
+            } else if (formShown()) {
+                if (!c.attendanceStatus) {
+                    footer += '<button type="button" class="btn btn-outline-danger" id="cancelBtn">Cancel Class</button>';
+                }
+                footer += '<button type="button" class="btn btn-pp-primary" id="editBtn"><i class="bi bi-pencil me-1"></i> Edit</button>';
             }
+        }
+        if (canArchive) {
+            footer += '<button type="button" class="btn btn-danger" id="deleteBtn"><i class="bi bi-trash3 me-1"></i> Delete</button>';
         }
         el('detailFooter').innerHTML = footer;
 
         if (el('editBtn')) el('editBtn').addEventListener('click', function () { detailModal.hide(); startEdit(c); });
         if (el('cancelBtn')) el('cancelBtn').addEventListener('click', function () { detailModal.hide(); openCancel(c); });
         if (el('restoreBtn')) el('restoreBtn').addEventListener('click', function () { restore(c); });
+        if (el('deleteBtn')) el('deleteBtn').addEventListener('click', function () { deleteClass(c); });
 
         detailModal.show();
 
@@ -428,6 +477,24 @@
         });
     }
 
+    function deleteClass(c) {
+        ConfirmModal.show({
+            title: 'Delete Class',
+            message: 'Permanently delete the whole weekly schedule for ' + escapeHtml(c.subject) + ' (' + escapeHtml(c.classSection) + ')? ' +
+                'This removes every occurrence of this class — past and upcoming — along with their change history and any recorded classroom checks, and can\'t be undone.',
+            confirmText: 'Delete',
+            tone: 'danger'
+        }).then(function (confirmed) {
+            if (!confirmed) return;
+            api('api/faculty-schedule/classes/' + c.id, { method: 'DELETE' }).then(function (data) {
+                if (!data.success) { PPToast.error(data.message); return; }
+                detailModal.hide();
+                PPToast.success((data.deleted || 1) + ' class' + (data.deleted === 1 ? '' : 'es') + ' deleted.');
+                loadClasses();
+            }).catch(function () { PPToast.error('Could not reach the server.'); });
+        });
+    }
+
     // ---------------------------------------------------------------
     // Add / edit form (on the page)
     // ---------------------------------------------------------------
@@ -436,42 +503,55 @@
         subject: 'classSubject',
         classSection: 'classSection',
         room: 'classRoom',
-        classDate: 'classDate',
+        dayOfWeek: 'classDay',
         scheduledStart: 'classStart',
         scheduledEnd: 'classEnd',
-        repeatWeeklyUntil: 'classRepeatUntil'
+        validFrom: 'classValidFrom',
+        validUntil: 'classValidUntil'
     };
+
+    function updateRepeatDayLabel() {
+        var opt = el('classDay').selectedOptions[0];
+        el('repeatDayLabel').textContent = opt ? opt.textContent : '';
+    }
 
     function resetForm() {
         editingId = null;
         classForm.reset();
         PPValidate.clear(classForm);
         el('classFormTitle').textContent = 'Add Class';
-        el('repeatGroup').classList.remove('d-none');
         el('cancelEditBtn').classList.add('d-none');
         el('saveClassBtn').innerHTML = '<i class="bi bi-plus-lg me-1"></i> Add Class';
         el('classFormCol').querySelector('.fm-form-card').classList.remove('is-editing');
-        el('classDate').value = anchorDate.value || iso(new Date());
+        var today = anchorDate.value || iso(new Date());
+        el('classValidFrom').value = today;
+        updateRepeatDayLabel();
     }
 
     function startEdit(c) {
-        resetForm();
-        editingId = c.id;
-        el('classFormTitle').textContent = 'Edit Class';
-        el('repeatGroup').classList.add('d-none');
-        el('cancelEditBtn').classList.remove('d-none');
-        el('saveClassBtn').innerHTML = '<i class="bi bi-check-lg me-1"></i> Save Changes';
-        el('classFormCol').querySelector('.fm-form-card').classList.add('is-editing');
-        el('classSubject').value = c.subject;
-        el('classSection').value = c.classSection;
-        el('classRoom').value = c.room || '';
-        el('classDate').value = c.classDate;
-        el('classStart').value = c.scheduledStart;
-        el('classEnd').value = c.scheduledEnd;
-        el('classFormCol').scrollIntoView({ behavior: 'smooth', block: 'start' });
-        el('classSubject').focus();
+        api('api/faculty-schedule/classes/' + c.id + '/series').then(function (data) {
+            resetForm();
+            if (!data.success) { PPToast.error(data.message || 'Could not load this class\'s schedule.'); return; }
+            editingId = c.id;
+            el('classFormTitle').textContent = 'Edit Class';
+            el('cancelEditBtn').classList.remove('d-none');
+            el('saveClassBtn').innerHTML = '<i class="bi bi-check-lg me-1"></i> Save Changes';
+            el('classFormCol').querySelector('.fm-form-card').classList.add('is-editing');
+            el('classSubject').value = c.subject;
+            el('classSection').value = c.classSection;
+            setRoomValue(c.room || '');
+            el('classDay').value = data.dayOfWeek;
+            el('classStart').value = c.scheduledStart;
+            el('classEnd').value = c.scheduledEnd;
+            el('classValidFrom').value = data.validFrom;
+            el('classValidUntil').value = data.validUntil;
+            updateRepeatDayLabel();
+            el('classFormCol').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            el('classSubject').focus();
+        });
     }
 
+    el('classDay').addEventListener('change', updateRepeatDayLabel);
     el('cancelEditBtn').addEventListener('click', resetForm);
 
     classForm.addEventListener('submit', function (e) {
@@ -483,10 +563,11 @@
             subject: el('classSubject').value.trim(),
             classSection: el('classSection').value.trim(),
             room: el('classRoom').value.trim(),
-            classDate: el('classDate').value,
+            dayOfWeek: el('classDay').value,
             scheduledStart: el('classStart').value,
             scheduledEnd: el('classEnd').value,
-            repeatWeeklyUntil: editingId ? null : (el('classRepeatUntil').value || null)
+            validFrom: el('classValidFrom').value,
+            validUntil: el('classValidUntil').value
         };
 
         var id = editingId;
@@ -500,17 +581,15 @@
                     return;
                 }
                 if (id) {
-                    PPToast.success('Class updated.');
-                    if (data.class && data.class.overlapsWith.length) {
-                        PPToast.error('This class overlaps another class of this faculty member — flagged for review.');
-                    }
+                    var parts = [];
+                    if (data.updated) parts.push(data.updated + ' updated');
+                    if (data.added) parts.push(data.added + ' added');
+                    if (data.removed) parts.push(data.removed + ' removed');
+                    PPToast.success('Schedule saved' + (parts.length ? ' (' + parts.join(', ') + ').' : '.'));
                 } else {
                     PPToast.success(data.created === 1 ? 'Class added.' : data.created + ' weekly classes added.');
-                    if (data.overlapDates && data.overlapDates.length) {
-                        PPToast.error('Overlaps with existing classes on ' + data.overlapDates.join(', ') + ' — flagged for review.');
-                    }
                 }
-                anchorDate.value = payload.classDate;
+                anchorDate.value = payload.validFrom;
                 resetForm();
                 loadClasses();
             })
@@ -571,6 +650,82 @@
                     if (!data.success) { PPToast.error(data.message || 'Could not archive schedules.'); return; }
                     PPToast.success(data.archived + ' class' + (data.archived === 1 ? '' : 'es') + ' archived.');
                     loadTeachers().then(renderFacultyList);
+                }).catch(function () { PPToast.error('Could not reach the server.'); });
+            });
+        });
+    }
+
+    if (canManage) {
+        el('btnImportSchedule').classList.remove('d-none');
+    }
+
+    var importModal = new bootstrap.Modal(el('importModal'));
+    el('btnImportSchedule').addEventListener('click', function () {
+        el('importForm').reset();
+        el('importResults').classList.add('d-none');
+        el('importErrors').innerHTML = '';
+        importModal.show();
+    });
+
+    el('downloadTemplateBtn').addEventListener('click', function () {
+        var csv = 'Employee ID,Subject,Class/Section,Room,Day of Week,Scheduled Start,Scheduled End,Valid From,Valid Until\n' +
+            'F3,Subject 1,BSIT 1A,Room 304,MONDAY,07:00,09:00,2026-11-26,2027-03-18\n';
+        var blob = new Blob([csv], { type: 'text/csv' });
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'faculty-schedule-import-template.csv';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+    });
+
+    el('importForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        var fileInput = el('importFile');
+        if (!fileInput.files.length) return;
+        var data = new FormData();
+        data.append('file', fileInput.files[0]);
+        var btn = el('importSubmitBtn');
+        btn.disabled = true;
+        fetch('api/faculty-schedule/import', { method: 'POST', body: data })
+            .then(function (r) { return r.json(); })
+            .then(function (result) {
+                btn.disabled = false;
+                if (!result.success) { PPToast.error(result.message || 'Could not import the file.'); return; }
+                el('importResults').classList.remove('d-none');
+                el('importSummary').textContent = result.imported + ' class series imported, ' + result.failed + ' skipped.';
+                el('importErrors').innerHTML = result.errors.map(function (er) {
+                    return '<li>Row ' + er.row + ': ' + escapeHtml(er.message) + '</li>';
+                }).join('');
+                if (result.imported > 0) {
+                    PPToast.success(result.imported + ' class series imported.');
+                    loadTeachers().then(renderFacultyList);
+                } else if (result.failed > 0) {
+                    PPToast.error('Nothing was imported — see the list below.');
+                }
+            })
+            .catch(function () {
+                btn.disabled = false;
+                PPToast.error('Could not reach the server.');
+            });
+    });
+
+    if (canArchive) {
+        el('btnArchiveFacultySchedule').addEventListener('click', function () {
+            if (!teacher) return;
+            ConfirmModal.show({
+                title: 'Archive This Faculty\'s Schedule',
+                message: 'Archive every class on ' + escapeHtml(teacher.displayName) + '\'s schedule — past and upcoming alike? ' +
+                    'They\'ll be cleared from this view (and kept, read-only, in Archive). Use this once a faculty member has ' +
+                    'retired, resigned, or otherwise stopped teaching.',
+                confirmText: 'Archive',
+                tone: 'danger'
+            }).then(function (confirmed) {
+                if (!confirmed) return;
+                postJson('api/faculty-schedule/archive-employee/' + encodeURIComponent(teacher.id), {}).then(function (data) {
+                    if (!data.success) { PPToast.error(data.message || 'Could not archive this schedule.'); return; }
+                    PPToast.success(data.archived + ' class' + (data.archived === 1 ? '' : 'es') + ' archived.');
+                    loadClasses();
                 }).catch(function () { PPToast.error('Could not reach the server.'); });
             });
         });
@@ -639,6 +794,7 @@
     anchorDate.value = new URLSearchParams(window.location.search).get('date') || iso(new Date());
 
     el('facultyBody').innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4">Loading faculty…</td></tr>';
+    loadRooms();
     Promise.all([PayrollProLayout.loadStaffTypeLabels(), PayrollProLayout.loadEmployeeTypeOptions()]).then(function (results) {
         PayrollProLayout.populateEmployeeTypeSelect(el('facultyTypeFilter'), results[1]);
         return loadTeachers();

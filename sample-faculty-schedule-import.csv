@@ -1,0 +1,4 @@
+Employee ID,Subject,Class/Section,Room,Day of Week,Scheduled Start,Scheduled End,Valid From,Valid Until
+F45,Web Systems and Technologies,BSIT 2A,101,MONDAY,09:00,10:30,2026-11-26,2027-03-18
+F59,Capstone Project 1,BSIT 4A,201,TUESDAY,10:00,11:30,2026-11-26,2027-03-18
+A103,Systems Integration,BSIT 3B,AVR 1,WEDNESDAY,09:00,10:30,2026-11-26,2027-03-18

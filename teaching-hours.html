@@ -29,7 +29,7 @@
                 <header class="pp-content-header">
                     <div>
                         <h1 class="pp-content-title">Faculty Teaching Hours</h1>
-                        <p class="pp-content-subtitle">Record the beginning and ending classroom checks for each scheduled class, then review and approve the payable teaching hours.</p>
+                        <p class="pp-content-subtitle">Record the beginning and ending classroom checks for each scheduled class.</p>
                     </div>
                 </header>
 
@@ -47,9 +47,9 @@
                                 </div>
                             </div>
                             <div class="pp-filter-group">
-                                <label for="facultyTypeFilter" class="pp-form-label">Employee Type</label>
+                                <label for="facultyTypeFilter" class="pp-form-label">Position</label>
                                 <select data-clearable class="form-select pp-form-select" id="facultyTypeFilter">
-                                    <option value="all" hidden data-hint>All employee types</option>
+                                    <option value="all" hidden data-hint>All positions</option>
                                 </select>
                             </div>
                         </div>
@@ -64,10 +64,9 @@
                                     <tr>
                                         <th>Employee ID</th>
                                         <th>Faculty</th>
-                                        <th>Employee Type</th>
+                                        <th>Position</th>
                                         <th class="text-end">Classes</th>
                                         <th class="text-end">Needs Checks</th>
-                                        <th class="text-end">Waiting for Approval</th>
                                     </tr>
                                 </thead>
                                 <tbody id="facultyBody"></tbody>
@@ -117,15 +116,25 @@
                                 </div>
                             </div>
                             <div class="pp-filter-group">
+                                <label for="timeFilter" class="pp-form-label">Time</label>
+                                <select class="form-select pp-form-select" id="timeFilter">
+                                    <option value="all">All times</option>
+                                </select>
+                            </div>
+                            <div class="pp-filter-group">
+                                <label for="floorFilter" class="pp-form-label">Floor</label>
+                                <select class="form-select pp-form-select" id="floorFilter">
+                                    <option value="all">All floors</option>
+                                </select>
+                            </div>
+                            <div class="pp-filter-group">
                                 <label for="statusFilter" class="pp-form-label">Status</label>
                                 <select data-clearable class="form-select pp-form-select" id="statusFilter">
                                     <option value="all" hidden data-hint>All Status</option>
                                     <option value="Not checked">Not checked</option>
                                     <option value="Incomplete">Incomplete (one check)</option>
-                                    <option value="Pending">Waiting for approval</option>
+                                    <option value="Complete">Complete</option>
                                     <option value="flagged">Flagged for review</option>
-                                    <option value="Approved">Approved</option>
-                                    <option value="Rejected">Rejected</option>
                                 </select>
                             </div>
                         </div>
@@ -133,7 +142,7 @@
                         <p class="fm-range-label" id="rangeLabel"></p>
                         <p class="pp-table-hint">
                             <i class="bi bi-hand-index" aria-hidden="true"></i>
-                            <span>Click a class to record its classroom checks<span id="approveHint" class="d-none"> or to approve it</span>.</span>
+                            <span>Click a class to record its classroom checks.</span>
                         </p>
 
                         <!-- Week view: timetable (hours x days) -->
@@ -143,9 +152,7 @@
                         <div class="fm-legend d-none" id="weekLegend">
                             <span class="fm-legend-item is-not-checked">Not checked</span>
                             <span class="fm-legend-item is-incomplete">Incomplete</span>
-                            <span class="fm-legend-item is-pending">Waiting for approval</span>
-                            <span class="fm-legend-item is-approved">Approved</span>
-                            <span class="fm-legend-item is-rejected">Rejected</span>
+                            <span class="fm-legend-item is-approved">Complete</span>
                         </div>
 
                         <!-- Day view: list of the classes on that day -->

@@ -420,18 +420,25 @@ INSERT IGNORE INTO leave_category (category_name, is_paid, is_active, paid_days)
     ('Paternity Leave', 1, 1, 7),
     ('Leave Without Pay', 0, 1, NULL);
 
--- 13. Leave credits per employee (Employee Records Management: "manage the
---     number of leave credits allocated per employee"; interview: 15 days).
+-- 13. Leave Credit (Maintenance): a per-employee override of one paid leave
+--     category's days-a-year for one calendar year — e.g. a correction, or
+--     an exception during probation (see leave.probationary-months in
+--     system_setting). No row here = the category's own default, unless the
+--     employee is still within the probationary period, which gives 0
+--     regardless, unless explicitly overridden here. Admin staff only —
+--     Faculty don't have leave.
 CREATE TABLE IF NOT EXISTS leave_credit (
-    leave_credit_id INT AUTO_INCREMENT PRIMARY KEY,
-    faculty_id      INT,
-    adminstaff_id   INT,
-    year_covered    YEAR NOT NULL,
-    total_credits   INT  NOT NULL DEFAULT 15,
-    UNIQUE KEY uq_credit_faculty_year (faculty_id, year_covered),
-    UNIQUE KEY uq_credit_admin_year (adminstaff_id, year_covered),
-    CONSTRAINT fk_credit_faculty FOREIGN KEY (faculty_id)    REFERENCES faculty_staff (faculty_id)  ON DELETE CASCADE,
-    CONSTRAINT fk_credit_admin   FOREIGN KEY (adminstaff_id) REFERENCES admin_staff (adminstaff_id) ON DELETE CASCADE
+    leave_credit_id   INT AUTO_INCREMENT PRIMARY KEY,
+    adminstaff_id     INT NOT NULL,
+    leave_category_id INT NOT NULL,
+    year_covered      YEAR NOT NULL,
+    total_credits     INT NOT NULL,
+    updated_by        INT,
+    updated_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_leave_credit (adminstaff_id, leave_category_id, year_covered),
+    CONSTRAINT fk_credit_admin    FOREIGN KEY (adminstaff_id)     REFERENCES admin_staff (adminstaff_id)        ON DELETE CASCADE,
+    CONSTRAINT fk_credit_category FOREIGN KEY (leave_category_id) REFERENCES leave_category (leave_category_id) ON DELETE CASCADE,
+    CONSTRAINT fk_credit_user     FOREIGN KEY (updated_by)        REFERENCES users (user_id)                    ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 -- 14. Benefit Maintenance (9.3)
@@ -787,7 +794,7 @@ CREATE TABLE IF NOT EXISTS employee_status (
     status_id   INT AUTO_INCREMENT PRIMARY KEY,
     status_name VARCHAR(20) NOT NULL UNIQUE
 ) ENGINE=InnoDB;
-INSERT IGNORE INTO employee_status (status_name) VALUES ('Inactive'), ('Resigned'), ('Terminated');
+INSERT IGNORE INTO employee_status (status_name) VALUES ('Inactive'), ('Resigned'), ('Terminated'), ('Probationary');
 
 -- Birthdate is a plain varchar, not a SQL date (databases created before this existed).
 ALTER TABLE faculty_staff MODIFY COLUMN birthdate VARCHAR(20);
@@ -801,3 +808,41 @@ ALTER TABLE daily_time_record ADD COLUMN IF NOT EXISTS notes VARCHAR(255) AFTER 
 -- Schedules" (Attendance Monitoring Staff), kept with all their history
 -- (databases created before this existed).
 ALTER TABLE faculty_class_schedule ADD COLUMN IF NOT EXISTS is_archived TINYINT(1) NOT NULL DEFAULT 0 AFTER schedule_status;
+
+-- Leave Credit (Maintenance): leave_credit was never wired up and had no way
+-- to tell leave categories apart (one row per employee per year, total).
+-- Recreated per-category (databases created before this existed; the old
+-- table was unused, so nothing is lost).
+DROP TABLE IF EXISTS leave_credit;
+CREATE TABLE leave_credit (
+    leave_credit_id   INT AUTO_INCREMENT PRIMARY KEY,
+    adminstaff_id     INT NOT NULL,
+    leave_category_id INT NOT NULL,
+    year_covered      YEAR NOT NULL,
+    total_credits     INT NOT NULL,
+    updated_by        INT,
+    updated_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_leave_credit (adminstaff_id, leave_category_id, year_covered),
+    CONSTRAINT fk_credit_admin    FOREIGN KEY (adminstaff_id)     REFERENCES admin_staff (adminstaff_id)        ON DELETE CASCADE,
+    CONSTRAINT fk_credit_category FOREIGN KEY (leave_category_id) REFERENCES leave_category (leave_category_id) ON DELETE CASCADE,
+    CONSTRAINT fk_credit_user     FOREIGN KEY (updated_by)        REFERENCES users (user_id)                    ON DELETE SET NULL
+) ENGINE=InnoDB;
+
+-- Faculty Schedule: a class is now added as a weekly day-of-week pattern
+-- (e.g. every Monday) for a date range, instead of one manual date at a
+-- time. series_id groups every concrete date occurrence generated from the
+-- same pattern, so editing one occurrence can update (or extend/shrink)
+-- the whole weekly series at once (databases created before this existed).
+ALTER TABLE faculty_class_schedule ADD COLUMN IF NOT EXISTS series_id INT NULL AFTER is_archived;
+UPDATE faculty_class_schedule SET series_id = class_schedule_id WHERE series_id IS NULL;
+CREATE INDEX IF NOT EXISTS idx_fcs_series ON faculty_class_schedule (series_id);
+
+-- Room Maintenance (Daily Time Record menu): the rooms offered as a class's
+-- Room in Faculty Schedule, each with a floor level so Faculty Teaching
+-- Hours can filter/group classes by floor (databases created before this
+-- existed).
+CREATE TABLE IF NOT EXISTS room (
+    room_id     INT AUTO_INCREMENT PRIMARY KEY,
+    room_name   VARCHAR(50) NOT NULL UNIQUE,
+    floor_level VARCHAR(20) NOT NULL
+) ENGINE=InnoDB;

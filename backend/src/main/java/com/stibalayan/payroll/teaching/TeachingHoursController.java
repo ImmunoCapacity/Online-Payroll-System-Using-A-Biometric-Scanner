@@ -1,6 +1,5 @@
 package com.stibalayan.payroll.teaching;
 
-import com.stibalayan.payroll.audit.AuditService;
 import com.stibalayan.payroll.auth.AuthInterceptor;
 import com.stibalayan.payroll.auth.RequireModule;
 import com.stibalayan.payroll.auth.SystemModule;
@@ -19,19 +18,15 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * GET  /api/teaching-hours/classes?from=&to=[&employeeId=][&status=]
  * GET  /api/teaching-hours/classes/{classId}/audit
- * POST /api/teaching-hours/classes/{classId}/checks    { check, time, status, remarks, reason }
- * POST /api/teaching-hours/classes/{classId}/approve   { note }   — Payroll Master
- * POST /api/teaching-hours/classes/{classId}/reject    { note }   — Payroll Master
+ * POST /api/teaching-hours/classes/{classId}/checks    { check, status, remarks }
  */
 @RestController
 @RequestMapping("/api/teaching-hours")
 public class TeachingHoursController {
 
     private final TeachingHoursService teaching;
-    private final AuditService audit;
 
-    public TeachingHoursController(TeachingHoursService teaching, AuditService audit) {
-        this.audit = audit;
+    public TeachingHoursController(TeachingHoursService teaching) {
         this.teaching = teaching;
     }
 
@@ -53,26 +48,6 @@ public class TeachingHoursController {
     @RequireModule(SystemModule.FACULTY_TEACHING_HOURS)
     public Map<String, Object> check(@PathVariable int classId, @RequestBody CheckRequest request, HttpServletRequest http) {
         return Map.of("success", true, "class", teaching.recordCheck(classId, request, userId(http)));
-    }
-
-    @PostMapping("/classes/{classId}/approve")
-    @RequireModule(SystemModule.FACULTY_TEACHING_APPROVAL)
-    public Map<String, Object> approve(@PathVariable int classId, @RequestBody Map<String, String> body, HttpServletRequest http) {
-        TeachingRow row = teaching.approve(classId, body.get("note"), userId(http));
-        audit.log(userId(http), "Faculty Teaching Hours", "Approved class", describe(row));
-        return Map.of("success", true, "class", row);
-    }
-
-    @PostMapping("/classes/{classId}/reject")
-    @RequireModule(SystemModule.FACULTY_TEACHING_APPROVAL)
-    public Map<String, Object> reject(@PathVariable int classId, @RequestBody Map<String, String> body, HttpServletRequest http) {
-        TeachingRow row = teaching.reject(classId, body.get("note"), userId(http));
-        audit.log(userId(http), "Faculty Teaching Hours", "Rejected class", describe(row));
-        return Map.of("success", true, "class", row);
-    }
-
-    private static String describe(TeachingRow r) {
-        return r.employeeName() + " · " + r.subject() + " · " + r.classDate();
     }
 
     private static int userId(HttpServletRequest http) {

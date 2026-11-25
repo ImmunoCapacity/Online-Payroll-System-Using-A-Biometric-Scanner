@@ -6,16 +6,16 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
  * Faculty Teaching Hours module: the manual classroom checks of one
  * scheduled class (class_schedule_id → Faculty Schedule).
  *
- * The check times are when the Attendance Monitoring Staff/Master verified the classroom —
- * never the faculty member's time-in or time-out. payableHours is set only
- * when the record is approved; payroll reads approved records only.
+ * The check times are when the Attendance Monitoring Staff/Master verified
+ * the classroom — never the faculty member's time-in or time-out. Payable
+ * hours are derived directly from the checks (TeachingHoursService.payableFor);
+ * there is no separate approval step.
  */
 @Entity
 @Table(name = "faculty_teaching_attendance")
@@ -23,15 +23,13 @@ public class TeachingAttendance {
 
     public static final String PRESENT = "Present";
     public static final String ABSENT = "Absent";
-    /** Beginning check only: came after the grace window; the minutes late are deducted from pay. */
+    /** Beginning check only: the faculty member taught, but arrived late. Paid the same as Present. */
     public static final String LATE = "Late";
 
     /** Only one of the two checks is recorded. */
     public static final String INCOMPLETE = "Incomplete";
-    /** Both checks recorded, waiting for approval. */
-    public static final String PENDING = "Pending";
-    public static final String APPROVED = "Approved";
-    public static final String REJECTED = "Rejected";
+    /** Both checks recorded; payable hours are final. */
+    public static final String COMPLETE = "Complete";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -50,7 +48,7 @@ public class TeachingAttendance {
     @Column(name = "start_checked_by")
     private Integer startCheckedBy;
 
-    /** Minutes after the scheduled start when marked Late at the beginning check (0 otherwise). */
+    /** Unused — Late no longer carries a per-minute payroll deduction; kept at 0. */
     @Column(name = "late_minutes", nullable = false)
     private int lateMinutes;
 
@@ -67,18 +65,6 @@ public class TeachingAttendance {
 
     @Column(name = "approval_status")
     private String approvalStatus = INCOMPLETE;
-
-    @Column(name = "payable_hours")
-    private BigDecimal payableHours;
-
-    @Column(name = "approved_by")
-    private Integer approvedBy;
-
-    @Column(name = "approved_at")
-    private LocalDateTime approvedAt;
-
-    @Column(name = "review_note")
-    private String reviewNote;
 
     @Column(name = "created_at", insertable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -117,14 +103,6 @@ public class TeachingAttendance {
     public void setRemarks(String remarks) { this.remarks = remarks; }
     public String getApprovalStatus() { return approvalStatus; }
     public void setApprovalStatus(String approvalStatus) { this.approvalStatus = approvalStatus; }
-    public BigDecimal getPayableHours() { return payableHours; }
-    public void setPayableHours(BigDecimal payableHours) { this.payableHours = payableHours; }
-    public Integer getApprovedBy() { return approvedBy; }
-    public void setApprovedBy(Integer approvedBy) { this.approvedBy = approvedBy; }
-    public LocalDateTime getApprovedAt() { return approvedAt; }
-    public void setApprovedAt(LocalDateTime approvedAt) { this.approvedAt = approvedAt; }
-    public String getReviewNote() { return reviewNote; }
-    public void setReviewNote(String reviewNote) { this.reviewNote = reviewNote; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
 }

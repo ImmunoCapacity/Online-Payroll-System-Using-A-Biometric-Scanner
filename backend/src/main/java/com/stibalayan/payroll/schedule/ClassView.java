@@ -10,6 +10,7 @@ import java.util.List;
  */
 public record ClassView(
         Integer id,
+        Integer seriesId,
         String employeeId,
         String employeeNumber,
         String employeeName,

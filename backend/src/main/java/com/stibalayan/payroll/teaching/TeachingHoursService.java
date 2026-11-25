@@ -19,38 +19,29 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Faculty Teaching Hours module: the Attendance Monitoring Staff or Payroll Master checks
- * the classroom at the beginning and at the end of each scheduled class and
- * records what they saw. Teaching attendance does not come from the
- * biometric scanner.
+ * Faculty Teaching Hours module: the Attendance Monitoring Staff or Payroll
+ * Master checks the classroom at the beginning and at the end of each
+ * scheduled class and records what they saw, then saves it. Teaching
+ * attendance does not come from the biometric scanner.
  *
  * Rules (the "attendance rules" payroll relies on):
  *   - A class is payable when the faculty member was Present or Late at the
- *     beginning check and Present at the ending check; then the payable hours
- *     are the scheduled duration, and payroll deducts the minutes late
- *     (rate per hour ÷ 60 × minutes). Late is only possible after the grace
- *     window (Maintenance → Grace Period). Any Absent check makes the class
- *     pay 0 hours.
- *   - A record needs both checks before it can be approved; approval is a
- *     separate permission (Payroll Master). If the class is over (scheduled
- *     end + grace period) and a check is still missing — the Attendance
- *     Monitoring Staff never got to it — the record is still shown as
- *     "Waiting for approval" so the Payroll Master can close it out (0 hours,
- *     since there's no evidence the class was taught) instead of it sitting
- *     unresolved forever.
+ *     beginning check and Present at the ending check; the payable hours are
+ *     then the full scheduled duration — Present and Late are paid the same,
+ *     there is no per-minute deduction. Any Absent check, or a check still
+ *     missing, makes the class pay 0 hours — there is no separate approval
+ *     step, payroll reads these checks directly (approvedHours).
  *   - Checks outside the grace window, missing checks and mixed
- *     Present/Absent evidence are flagged; approving a flagged record needs
- *     a review note.
- *   - Approved records are locked. Changing a recorded check needs a reason,
- *     and every check, correction, approval and rejection is kept in
- *     faculty_attendance_audit.
- *
- * Payroll reads approved records only (approvedHours).
+ *     Present/Absent evidence are flagged for review, informationally; they
+ *     don't block anything.
+ *   - Changing an already-recorded check needs an explanation in Remarks,
+ *     and every check and correction is kept in faculty_attendance_audit.
  */
 @Service
 public class TeachingHoursService {
@@ -108,12 +99,14 @@ public class TeachingHoursService {
     }
 
     /**
-     * Records (or corrects) the beginning or ending classroom check with one
-     * click: Present, Late (beginning only) or Absent. The time is the moment
-     * of the click for today's classes; a class from an earlier day that was
-     * not checked is recorded at its scheduled start or end. Late is allowed
-     * only after the grace window, and the minutes after the scheduled start
-     * are deducted from pay (PayrollHoursService).
+     * Records (or corrects) the beginning or ending classroom check: Present,
+     * Late (beginning only) or Absent, chosen directly by whoever records it
+     * — not derived from a time they enter, so there's nothing to default to
+     * the wrong answer — then saved. The verification time itself is set
+     * automatically the first time a check is recorded (the moment it's
+     * saved for today's classes; a class from an earlier day that was never
+     * checked is recorded at its own scheduled start or end) and never moves
+     * on a later correction — only the status/remarks do.
      */
     @Transactional
     public TeachingRow recordCheck(int classId, CheckRequest r, int userId) {
@@ -126,59 +119,35 @@ public class TeachingHoursService {
             throw Validation.invalid("check", "Choose the beginning or the ending check.");
         }
         String which = start ? "Beginning check" : "Ending check";
-        LocalTime time = Validation.time(r.time(), "time", "Verification time", true);
-        LocalDateTime at = c.getClassDate().atTime(time);
-        if (at.isAfter(LocalDateTime.now().plusMinutes(1))) {
-            throw Validation.invalid("time", "You can't record a check for a time that hasn't happened yet.");
-        }
-        LocalDateTime scheduledStart = c.getClassDate().atTime(c.getScheduledStart());
-        LocalDateTime scheduledEnd = c.getClassDate().atTime(c.getScheduledEnd());
-        int grace = c.getGracePeriodMinutes();
 
-        // The status follows the time (the checker may only change it to Absent):
-        //   beginning — up to start + grace: Present; until the class ends: Late; after: Absent
-        //   end       — from end − grace: Present; earlier: Absent
-        String status = statusAt(start, at, scheduledStart, scheduledEnd, grace);
-        if (TeachingAttendance.ABSENT.equals(r.status() == null ? null : r.status().trim())) {
-            status = TeachingAttendance.ABSENT;
+        String status = Validation.requiredText(r.status(), "status", "Attendance", 20);
+        Set<String> allowed = start
+                ? Set.of(TeachingAttendance.PRESENT, TeachingAttendance.LATE, TeachingAttendance.ABSENT)
+                : Set.of(TeachingAttendance.PRESENT, TeachingAttendance.ABSENT);
+        if (!allowed.contains(status)) {
+            throw Validation.invalid("status", start ? "Choose Present, Late or Absent." : "Choose Present or Absent.");
         }
-        int lateMinutes = TeachingAttendance.LATE.equals(status) ? (int) java.time.Duration.between(scheduledStart, at).toMinutes() : 0;
+
         TeachingAttendance existing = attendance.findByClassScheduleId(classId).orElse(null);
-
         TeachingAttendance a = existing;
-        boolean isNew = a == null;
-        if (isNew) {
+        if (a == null) {
             a = new TeachingAttendance(classId);
-        }
-        if (TeachingAttendance.APPROVED.equals(a.getApprovalStatus())) {
-            throw conflict("This class has been approved and is locked. Its teaching hours may already be in payroll.");
         }
         if (!start && a.getStartCheckAt() == null) {
             throw conflict("Record the beginning check first.");
         }
 
-        LocalDateTime otherAt = start ? a.getEndCheckAt() : a.getStartCheckAt();
-        if (otherAt != null && (start ? !at.isBefore(otherAt) : !at.isAfter(otherAt))) {
-            throw Validation.invalid("time", start
-                    ? "The beginning check must be earlier than the ending check (" + otherAt.toLocalTime().format(HH_MM) + ")."
-                    : "The ending check must be later than the beginning check (" + otherAt.toLocalTime().format(HH_MM) + ").");
-        }
-
         LocalDateTime oldAt = start ? a.getStartCheckAt() : a.getEndCheckAt();
         String oldStatus = start ? a.getStartCheckStatus() : a.getEndCheckStatus();
-        int oldLate = a.getLateMinutes();
         boolean replacing = oldAt != null;
-        if (replacing && oldAt.equals(at) && oldStatus.equals(status) && (!start || oldLate == lateMinutes)) {
-            return get(classId);
-        }
 
-        String reason = null;
-        if (replacing) {
-            // Corrections are allowed, never silently: a reason is required and logged.
-            reason = Validation.optionalText(r.reason(), "reason", "Reason for the correction", 255);
-            if (reason == null) {
-                throw Validation.invalid("reason", "This check was already recorded. Give a reason for the correction.");
-            }
+        LocalDateTime at = replacing ? oldAt : (c.getClassDate().isEqual(LocalDate.now())
+                ? LocalDateTime.now()
+                : c.getClassDate().atTime(start ? c.getScheduledStart() : c.getScheduledEnd()));
+
+        if (replacing && !oldStatus.equals(status)) {
+            // Corrections to the recorded status are allowed, never silently: Remarks must explain it, and it's logged.
+            Validation.requiredText(r.remarks(), "remarks", "Remarks", 255);
         }
 
         String oldRemarks = a.getRemarks();
@@ -186,116 +155,28 @@ public class TeachingHoursService {
             a.setRemarks(Validation.optionalText(r.remarks(), "remarks", "Remarks", 255));
         }
 
-        String wasStatus = a.getApprovalStatus();
         if (start) {
             a.setStartCheckAt(at);
             a.setStartCheckStatus(status);
             a.setStartCheckedBy(userId);
-            a.setLateMinutes(lateMinutes);
         } else {
             a.setEndCheckAt(at);
             a.setEndCheckStatus(status);
             a.setEndCheckedBy(userId);
         }
-        // A corrected rejection goes back for review.
-        a.setApprovalStatus(a.bothChecksRecorded() ? TeachingAttendance.PENDING : TeachingAttendance.INCOMPLETE);
-        if (TeachingAttendance.REJECTED.equals(wasStatus)) {
-            a.setReviewNote(null);
-            a.setApprovedBy(null);
-            a.setApprovedAt(null);
-            a.setPayableHours(null);
-        }
+        a.setApprovalStatus(a.bothChecksRecorded() ? TeachingAttendance.COMPLETE : TeachingAttendance.INCOMPLETE);
         attendance.saveAndFlush(a);
 
-        String described = describeCheck(at, status, start ? lateMinutes : 0);
+        String described = describeCheck(at, status);
         if (r.remarks() != null && !java.util.Objects.equals(oldRemarks, a.getRemarks())) {
             described += " · Remarks: " + (a.getRemarks() == null ? "(cleared)" : a.getRemarks());
         }
         if (replacing) {
             audit.save(new AttendanceAudit(a.getId(), which + " corrected",
-                    describeCheck(oldAt, oldStatus, start ? oldLate : 0) + "  →  " + described, reason, userId));
+                    describeCheck(oldAt, oldStatus) + "  →  " + described, null, userId));
         } else {
             audit.save(new AttendanceAudit(a.getId(), which + " recorded", described, null, userId));
         }
-        if (TeachingAttendance.REJECTED.equals(wasStatus)) {
-            audit.save(new AttendanceAudit(a.getId(), "Returned for review", "Corrected after rejection", null, userId));
-        }
-        return get(classId);
-    }
-
-    /**
-     * Approves a record; payable hours are fixed by the rules at this point.
-     * Normally both checks must be recorded first, but once the class is
-     * over (scheduled end + grace period) a record the Attendance Monitoring
-     * Staff never got to is still approvable (correctly paying 0 hours,
-     * since there is no evidence the class was taught) so it doesn't sit
-     * unresolved forever.
-     */
-    @Transactional
-    public TeachingRow approve(int classId, String noteText, int userId) {
-        FacultyClass c = findClass(classId);
-        TeachingAttendance a = attendance.findByClassScheduleId(classId).orElse(null);
-        LocalDateTime now = LocalDateTime.now();
-        String status = effectiveStatus(c, a, now);
-        if (TeachingAttendance.APPROVED.equals(status)) {
-            throw conflict("This class has been approved and is locked. Its teaching hours may already be in payroll.");
-        }
-        if (!TeachingAttendance.PENDING.equals(status)) {
-            throw conflict(TeachingAttendance.REJECTED.equals(status)
-                    ? "Only records waiting for approval can be approved (this one is rejected)."
-                    : "Both the beginning and the ending checks are needed before approval, unless the class is already over.");
-        }
-        if (a == null) {
-            a = new TeachingAttendance(classId);
-        }
-        String note = Validation.optionalText(noteText, "note", "Review note", 255);
-        List<String> flags = flags(c, a, now);
-        if (!flags.isEmpty() && note == null) {
-            throw Validation.invalid("note", "This record has issues flagged for review. Add a review note explaining the approval.");
-        }
-        BigDecimal payable = payableFor(c, a);
-        a.setApprovalStatus(TeachingAttendance.APPROVED);
-        a.setPayableHours(payable);
-        a.setApprovedBy(userId);
-        a.setApprovedAt(now);
-        a.setReviewNote(note);
-        attendance.saveAndFlush(a);
-        audit.save(new AttendanceAudit(a.getId(), "Approved",
-                "Payable teaching hours: " + payable.toPlainString()
-                        + (flags.isEmpty() ? "" : " · flags: " + String.join("; ", flags)), note, userId));
-        return get(classId);
-    }
-
-    /**
-     * Rejects a record. A record with at least one check already in (or no
-     * check at all once the class is over) can be rejected any time before
-     * approval; a class still running with nothing recorded yet cannot.
-     */
-    @Transactional
-    public TeachingRow reject(int classId, String noteText, int userId) {
-        FacultyClass c = findClass(classId);
-        TeachingAttendance a = attendance.findByClassScheduleId(classId).orElse(null);
-        LocalDateTime now = LocalDateTime.now();
-        if (a == null && !pastDeadline(c, now)) {
-            throw conflict("No classroom checks have been recorded for this class yet.");
-        }
-        if (a == null) {
-            a = new TeachingAttendance(classId);
-        }
-        if (TeachingAttendance.APPROVED.equals(a.getApprovalStatus())) {
-            throw conflict("This class has been approved and is locked.");
-        }
-        if (TeachingAttendance.REJECTED.equals(a.getApprovalStatus())) {
-            throw conflict("This record is already rejected.");
-        }
-        String note = Validation.requiredText(noteText, "note", "Reason for rejecting", 255);
-        a.setApprovalStatus(TeachingAttendance.REJECTED);
-        a.setPayableHours(BigDecimal.ZERO.setScale(2));
-        a.setApprovedBy(userId);
-        a.setApprovedAt(now);
-        a.setReviewNote(note);
-        attendance.saveAndFlush(a);
-        audit.save(new AttendanceAudit(a.getId(), "Rejected", "No teaching hours will be paid for this class.", note, userId));
         return get(classId);
     }
 
@@ -322,10 +203,10 @@ public class TeachingHoursService {
     }
 
     /**
-     * For payroll: approved payable teaching hours per employee between two
-     * dates, with the approved class periods (to exclude them from a
-     * Faculty/Admin employee's office hours) and how many classes in the
-     * range are still waiting for checks or approval.
+     * For payroll: payable teaching hours per employee between two dates,
+     * directly from the recorded checks (no approval gate), with the paid
+     * class periods (to exclude them from a Faculty/Admin employee's office
+     * hours) and how many classes in the range still need checks.
      */
     @Transactional(readOnly = true)
     public Map<String, ApprovedHours> approvedHours(LocalDate from, LocalDate to) {
@@ -336,27 +217,24 @@ public class TeachingHoursService {
                 .forEach(a -> byClass.put(a.getClassScheduleId(), a));
 
         Map<String, ApprovedHours> result = new LinkedHashMap<>();
-        LocalDateTime now = LocalDateTime.now();
         for (FacultyClass c : rows) {
             String employeeId = Teachers.employeeIdOf(c);
             ApprovedHours h = result.computeIfAbsent(employeeId, k -> new ApprovedHours());
             TeachingAttendance a = byClass.get(c.getId());
-            String status = effectiveStatus(c, a, now);
-            if (TeachingAttendance.APPROVED.equals(status)) {
-                BigDecimal hours = a.getPayableHours() == null ? BigDecimal.ZERO : a.getPayableHours();
-                h.hours = h.hours.add(hours);
-                h.hoursByDate.merge(c.getClassDate(), hours, BigDecimal::add);
+            if (a != null && a.bothChecksRecorded()) {
+                BigDecimal hrs = payableFor(c, a);
+                h.hours = h.hours.add(hrs);
+                h.hoursByDate.merge(c.getClassDate(), hrs, BigDecimal::add);
                 h.approvedClasses++;
-                if (hours.signum() > 0) h.lateMinutes += a.getLateMinutes();
-                if (hours.signum() > 0) {
+                if (hrs.signum() > 0) {
+                    h.lateMinutes += a.getLateMinutes();
                     h.periods.add(new ClassPeriod(c.getClassDate(), c.getScheduledStart(), c.getScheduledEnd()));
                 } else {
                     h.notPaid.add(new UnpaidClass(c.getClassDate(), hours(c.durationMinutes()), false));
                 }
             } else {
-                boolean pending = !TeachingAttendance.REJECTED.equals(status);
-                if (pending) h.unapprovedClasses++;
-                h.notPaid.add(new UnpaidClass(c.getClassDate(), hours(c.durationMinutes()), pending));
+                h.unapprovedClasses++;
+                h.notPaid.add(new UnpaidClass(c.getClassDate(), hours(c.durationMinutes()), true));
             }
         }
         return result;
@@ -387,42 +265,25 @@ public class TeachingHoursService {
 
     /**
      * Payable hours under the rules: the scheduled duration when the teacher was
-     * Present (or Late) at the beginning and Present at the end. Minutes late
-     * are deducted separately in payroll (rate per hour ÷ 60 × minutes late).
+     * Present (or Late) at the beginning and Present at the end; 0 when a check
+     * is missing or shows Absent. Minutes late are deducted separately in
+     * payroll (rate per hour ÷ 60 × minutes late).
      */
     static BigDecimal payableFor(FacultyClass c, TeachingAttendance a) {
-        boolean present = taught(a.getStartCheckStatus())
+        boolean present = a != null && taught(a.getStartCheckStatus())
                 && TeachingAttendance.PRESENT.equals(a.getEndCheckStatus());
         return present ? hours(c.durationMinutes()) : BigDecimal.ZERO.setScale(2);
     }
 
-    /** Whether the class is over: past its scheduled end plus the grace period. */
-    private static boolean pastDeadline(FacultyClass c, LocalDateTime now) {
-        return now.isAfter(c.getClassDate().atTime(c.getScheduledEnd()).plusMinutes(c.getGracePeriodMinutes()));
+    /** Not checked, Incomplete (one check) or Complete (both) — no approval gate. */
+    private static String effectiveStatus(TeachingAttendance a) {
+        if (a == null) {
+            return NOT_CHECKED;
+        }
+        return a.bothChecksRecorded() ? TeachingAttendance.COMPLETE : TeachingAttendance.INCOMPLETE;
     }
 
-    /**
-     * The approval status shown to the Payroll Master. Normally the stored
-     * status, except an Incomplete (or never-checked) record becomes
-     * "Pending" — shown as "Waiting for approval" — once the class is over,
-     * so a class the Attendance Monitoring Staff never got to check (busy,
-     * forgot) still reaches the Payroll Master instead of sitting forever.
-     */
-    private static String effectiveStatus(FacultyClass c, TeachingAttendance a, LocalDateTime now) {
-        if (a != null && (TeachingAttendance.APPROVED.equals(a.getApprovalStatus())
-                || TeachingAttendance.REJECTED.equals(a.getApprovalStatus()))) {
-            return a.getApprovalStatus();
-        }
-        if (a != null && a.bothChecksRecorded()) {
-            return TeachingAttendance.PENDING;
-        }
-        if (pastDeadline(c, now)) {
-            return TeachingAttendance.PENDING;
-        }
-        return a == null ? NOT_CHECKED : a.getApprovalStatus();
-    }
-
-    /** Issues needing review. Check times are verification times, compared with the grace window. */
+    /** Issues needing review: a missed deadline, or conflicting Present/Absent evidence. */
     static List<String> flags(FacultyClass c, TeachingAttendance a, LocalDateTime now) {
         List<String> flags = new ArrayList<>();
         int grace = c.getGracePeriodMinutes();
@@ -431,18 +292,11 @@ public class TeachingHoursService {
         LocalDateTime startCheck = a == null ? null : a.getStartCheckAt();
         LocalDateTime endCheck = a == null ? null : a.getEndCheckAt();
 
-        if (startCheck == null) {
-            if (now.isAfter(start.plusMinutes(grace))) flags.add("Beginning check missing");
-        } else if (!TeachingAttendance.LATE.equals(a.getStartCheckStatus())
-                && (startCheck.isBefore(start.minusMinutes(grace)) || startCheck.isAfter(start.plusMinutes(grace)))) {
-            flags.add("Beginning check at " + startCheck.toLocalTime().format(HH_MM) + " is outside the grace period ("
-                    + window(start, grace) + ")");
+        if (startCheck == null && now.isAfter(start.plusMinutes(grace))) {
+            flags.add("Beginning check missing");
         }
-        if (endCheck == null) {
-            if (now.isAfter(end.plusMinutes(grace))) flags.add("Ending check missing");
-        } else if (endCheck.isBefore(end.minusMinutes(grace)) || endCheck.isAfter(end.plusMinutes(grace))) {
-            flags.add("Ending check at " + endCheck.toLocalTime().format(HH_MM) + " is outside the grace period ("
-                    + window(end, grace) + ")");
+        if (endCheck == null && now.isAfter(end.plusMinutes(grace))) {
+            flags.add("Ending check missing");
         }
         if (startCheck != null && endCheck != null
                 && taught(a.getStartCheckStatus()) != taught(a.getEndCheckStatus())) {
@@ -458,25 +312,12 @@ public class TeachingHoursService {
         return TeachingAttendance.PRESENT.equals(status) || TeachingAttendance.LATE.equals(status);
     }
 
-    private static String window(LocalDateTime at, int grace) {
-        return at.minusMinutes(grace).toLocalTime().format(HH_MM) + "–" + at.plusMinutes(grace).toLocalTime().format(HH_MM);
-    }
-
     private static BigDecimal hours(long minutes) {
         return BigDecimal.valueOf(minutes).divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
     }
 
-    /** Present, Late or Absent from the time of the check (Late only at the beginning). */
-    static String statusAt(boolean start, LocalDateTime at, LocalDateTime scheduledStart, LocalDateTime scheduledEnd, int grace) {
-        if (start) {
-            if (!at.isAfter(scheduledStart.plusMinutes(grace))) return TeachingAttendance.PRESENT;
-            return at.isBefore(scheduledEnd) ? TeachingAttendance.LATE : TeachingAttendance.ABSENT;
-        }
-        return at.isBefore(scheduledEnd.minusMinutes(grace)) ? TeachingAttendance.ABSENT : TeachingAttendance.PRESENT;
-    }
-
-    private static String describeCheck(LocalDateTime at, String status, int lateMinutes) {
-        return at.toLocalTime().format(HH_MM) + " " + status + (lateMinutes > 0 ? " (" + lateMinutes + " min late)" : "");
+    private static String describeCheck(LocalDateTime at, String status) {
+        return at.toLocalTime().format(HH_MM) + " " + status;
     }
 
     private List<TeachingRow> rows(List<FacultyClass> list) {
@@ -492,7 +333,6 @@ public class TeachingHoursService {
         byClass.values().forEach(a -> {
             userIds.add(a.getStartCheckedBy());
             userIds.add(a.getEndCheckedBy());
-            userIds.add(a.getApprovedBy());
         });
         Map<Integer, String> names = userNames.of(userIds);
         LocalDateTime now = LocalDateTime.now();
@@ -502,8 +342,6 @@ public class TeachingHoursService {
             String employeeId = Teachers.employeeIdOf(c);
             StaffMember s = people.get(employeeId);
             TeachingAttendance a = byClass.get(c.getId());
-            String status = effectiveStatus(c, a, now);
-            boolean previewPayable = TeachingAttendance.PENDING.equals(status);
             result.add(new TeachingRow(
                     c.getId(), employeeId,
                     s == null ? "" : s.getEmployeeNumber(),
@@ -520,13 +358,9 @@ public class TeachingHoursService {
                     a == null ? null : a.getEndCheckStatus(),
                     a == null ? null : names.get(a.getEndCheckedBy()),
                     a == null ? null : a.getRemarks(),
-                    status,
+                    effectiveStatus(a),
                     flags(c, a, now),
-                    previewPayable ? (a == null ? BigDecimal.ZERO.setScale(2) : payableFor(c, a)) : null,
-                    a == null ? null : a.getPayableHours(),
-                    a == null ? null : names.get(a.getApprovedBy()),
-                    a == null || a.getApprovedAt() == null ? null : a.getApprovedAt().toString(),
-                    a == null ? null : a.getReviewNote(),
+                    payableFor(c, a),
                     a == null ? 0 : a.getLateMinutes()));
         }
         return result;

@@ -173,31 +173,93 @@
     // Faculty schedules
     // ---------------------------------------------------------------
 
-    var schedules = null;
+    var schedules = null;      // flat rows from the server, one per archived class date
+    var scheduleEmployees = []; // grouped: one entry per employee, with their deduplicated classes
+    var DAY_LABEL = {
+        MONDAY: 'Monday', TUESDAY: 'Tuesday', WEDNESDAY: 'Wednesday',
+        THURSDAY: 'Thursday', FRIDAY: 'Friday', SATURDAY: 'Saturday', SUNDAY: 'Sunday'
+    };
+    var scheduleDetailModal = null;
+
+    /**
+     * The server lists one row per archived class date (a recurring class can
+     * repeat for months), which is noisy to browse. Grouped here into one
+     * row per employee, and within that, one row per distinct recurring
+     * class (same subject/section/room/day/time) — the latest date stands
+     * in for the whole run, since the day of week is what matters, not any
+     * one occurrence.
+     */
+    function groupSchedules(rows) {
+        var byEmployee = {};
+        rows.forEach(function (c) {
+            var emp = byEmployee[c.employeeId] || (byEmployee[c.employeeId] = {
+                employeeId: c.employeeId, employeeNumber: c.employeeNumber, employeeName: c.employeeName,
+                type: c.type, classesByKey: {}
+            });
+            var key = [c.subject, c.classSection, c.room, c.dayOfWeek, c.scheduledStart, c.scheduledEnd].join('|');
+            var existing = emp.classesByKey[key];
+            if (!existing || c.classDate > existing.classDate) {
+                emp.classesByKey[key] = c;
+            }
+        });
+        return Object.keys(byEmployee).map(function (id) {
+            var emp = byEmployee[id];
+            var classes = Object.keys(emp.classesByKey).map(function (k) { return emp.classesByKey[k]; });
+            classes.sort(function (a, b) { return a.subject.localeCompare(b.subject); });
+            return {
+                employeeId: emp.employeeId, employeeNumber: emp.employeeNumber, employeeName: emp.employeeName,
+                type: emp.type, classes: classes
+            };
+        }).sort(function (a, b) { return a.employeeName.localeCompare(b.employeeName); });
+    }
 
     function renderSchedules() {
         var q = el('schedulesSearch').value.trim().toLowerCase();
-        var shown = schedules.filter(function (c) {
-            return !q || (c.employeeNumber + ' ' + c.employeeName).toLowerCase().indexOf(q) !== -1;
+        var shown = scheduleEmployees.filter(function (e) {
+            return !q || (e.employeeNumber + ' ' + e.employeeName).toLowerCase().indexOf(q) !== -1;
         });
-        el('schedulesCount').textContent = schedules.length
-            ? shown.length + ' of ' + schedules.length + ' archived class' + (schedules.length === 1 ? '' : 'es') + '.'
+        el('schedulesCount').textContent = scheduleEmployees.length
+            ? shown.length + ' of ' + scheduleEmployees.length + ' faculty member' + (scheduleEmployees.length === 1 ? '' : 's') + ' with archived classes.'
             : '';
         el('schedulesEmpty').classList.toggle('d-none', shown.length > 0);
-        el('schedulesEmpty').textContent = schedules.length ? 'No archived classes match the search.' : 'No archived classes.';
-        el('schedulesBody').innerHTML = shown.map(function (c) {
-            return '<tr>' +
-                '<td>' + escapeHtml(c.employeeNumber) + '</td>' +
-                '<td><strong>' + escapeHtml(c.employeeName) + '</strong></td>' +
-                '<td>' + escapeHtml(PayrollProLayout.staffTypeLabel(c.type)) + '</td>' +
-                '<td>' + escapeHtml(c.subject) + ' <span class="text-muted">(' + escapeHtml(c.classSection) + ')</span></td>' +
-                '<td>' + escapeHtml(c.room || '—') + '</td>' +
-                '<td>' + date(c.classDate) + '</td>' +
-                '<td>' + escapeHtml(c.scheduledStart) + ' – ' + escapeHtml(c.scheduledEnd) + '</td>' +
-                '<td>' + escapeHtml(c.status) + '</td>' +
+        el('schedulesEmpty').textContent = scheduleEmployees.length ? 'No faculty match the search.' : 'No archived classes.';
+        el('schedulesBody').innerHTML = shown.map(function (e, i) {
+            return '<tr class="pp-row-clickable" tabindex="0" role="button" data-employee="' + escapeHtml(e.employeeId) + '" ' +
+                    'aria-label="View the archived schedule of ' + escapeHtml(e.employeeName) + '">' +
+                '<td>' + (i + 1) + '</td>' +
+                '<td>' + escapeHtml(e.employeeNumber) + '</td>' +
+                '<td><strong>' + escapeHtml(e.employeeName) + '</strong></td>' +
+                '<td>' + e.classes.length + ' class' + (e.classes.length === 1 ? '' : 'es') + '</td>' +
             '</tr>';
         }).join('');
     }
+
+    function openScheduleDetail(employeeId) {
+        var e = scheduleEmployees.find(function (x) { return x.employeeId === employeeId; });
+        if (!e) return;
+        el('scheduleDetailTitle').textContent = e.employeeName + '’s Archived Schedule';
+        el('scheduleDetailBody').innerHTML = e.classes.map(function (c) {
+            return '<tr>' +
+                '<td>' + escapeHtml(c.subject) + ' <span class="text-muted">(' + escapeHtml(c.classSection) + ')</span></td>' +
+                '<td>' + escapeHtml(c.room || '—') + '</td>' +
+                '<td>' + escapeHtml(DAY_LABEL[c.dayOfWeek] || c.dayOfWeek) + '</td>' +
+                '<td>' + escapeHtml(c.status) + '</td>' +
+            '</tr>';
+        }).join('');
+        if (!scheduleDetailModal) scheduleDetailModal = new bootstrap.Modal(el('scheduleDetailModal'));
+        scheduleDetailModal.show();
+    }
+
+    el('schedulesBody').addEventListener('click', function (e) {
+        var row = e.target.closest('tr[data-employee]');
+        if (row) openScheduleDetail(row.dataset.employee);
+    });
+    el('schedulesBody').addEventListener('keydown', function (e) {
+        if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('tr[data-employee]')) {
+            e.preventDefault();
+            openScheduleDetail(e.target.dataset.employee);
+        }
+    });
 
     function loadSchedules() {
         if (schedules) { renderSchedules(); return; }
@@ -206,6 +268,7 @@
         el('schedulesEmpty').classList.remove('d-none');
         api('api/utility/archive/schedules').then(function (data) {
             schedules = data.classes;
+            scheduleEmployees = groupSchedules(schedules);
             renderSchedules();
         }).catch(function (error) {
             el('schedulesEmpty').textContent = error.message || 'Could not load the archive.';

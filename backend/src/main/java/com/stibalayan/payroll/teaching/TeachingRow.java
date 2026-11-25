@@ -8,11 +8,9 @@ import java.util.List;
  * Hours screen shows it. Schedule fields come from the Faculty Schedule
  * record (not stored again here).
  *
- * approvalStatus is "Not checked" when no check has been recorded, or
- * "Pending" (shown as "Waiting for approval") once the class is over even if
- * a check never came in, so it still reaches the Payroll Master.
- * payableHours is the approved figure; payableIfApproved is what the rules
- * would give for the checks recorded so far (0 when none were).
+ * approvalStatus is "Not checked", "Incomplete" (one check) or "Complete"
+ * (both checks). payableHours is always the live figure the rules give for
+ * whatever checks are recorded so far (0 when none, or when checked Absent).
  */
 public record TeachingRow(
         Integer classId,
@@ -37,10 +35,6 @@ public record TeachingRow(
         String remarks,
         String approvalStatus,
         List<String> flags,
-        BigDecimal payableIfApproved,
         BigDecimal payableHours,
-        String approvedBy,
-        String approvedAt,
-        String reviewNote,
         int lateMinutes) {
 }

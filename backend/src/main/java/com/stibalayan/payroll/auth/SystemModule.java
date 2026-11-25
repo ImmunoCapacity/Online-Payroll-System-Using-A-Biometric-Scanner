@@ -15,6 +15,8 @@ public enum SystemModule {
     /** Attendance Monitoring Staff only — day-to-day attendance work, not Payroll Master's job. */
     FINGERPRINT_REGISTRATION(Roles.ATTENDANCE_MONITORING_STAFF),
     DAILY_TIME_RECORD(Roles.ATTENDANCE_MONITORING_STAFF),
+    /** Present/late/absent/on-leave per employee — Attendance Monitoring Staff's own DTR, and Payroll Master's Attendance Report. */
+    ATTENDANCE_SUMMARY(Roles.PAYROLL_MASTER, Roles.ATTENDANCE_MONITORING_STAFF),
     ATTENDANCE_RECORDING(Roles.ATTENDANCE_MONITORING_STAFF),
     /** Viewing planned faculty classes (part of the Daily Time Record). */
     FACULTY_SCHEDULE(Roles.PAYROLL_MASTER, Roles.ATTENDANCE_MONITORING_STAFF),
@@ -24,10 +26,12 @@ public enum SystemModule {
     FACULTY_SCHEDULE_ARCHIVE(Roles.ATTENDANCE_MONITORING_STAFF),
     /** Reading archived classes (System Administrator's Archive page, and Attendance Monitoring Staff's own). */
     FACULTY_SCHEDULE_ARCHIVE_READ(Roles.SYSTEM_ADMINISTRATOR, Roles.ATTENDANCE_MONITORING_STAFF),
+    /** Permanently deleting a class — Attendance Monitoring Staff only, since they keep the schedule up to date. */
+    FACULTY_SCHEDULE_DELETE(Roles.ATTENDANCE_MONITORING_STAFF),
     /** Entering the beginning and ending classroom checks. */
     FACULTY_TEACHING_HOURS(Roles.PAYROLL_MASTER, Roles.ATTENDANCE_MONITORING_STAFF),
-    /** Approving or rejecting checked classes — kept apart from entering them. */
-    FACULTY_TEACHING_APPROVAL(Roles.PAYROLL_MASTER),
+    /** Room Maintenance (Daily Time Record menu) — the rooms offered as a class's Room in Faculty Schedule. */
+    ROOM_MANAGEMENT(Roles.PAYROLL_MASTER, Roles.ATTENDANCE_MONITORING_STAFF),
     MAINTENANCE(Roles.PAYROLL_MASTER),
     DEDUCTION_TABLES(Roles.PAYROLL_MASTER),
     PAYROLL(Roles.PAYROLL_MASTER),
