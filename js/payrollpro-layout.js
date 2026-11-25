@@ -37,7 +37,8 @@
         items: [
             { key: 'biometric', label: 'Biometric Records', icon: 'bi-fingerprint' },
             { key: 'schedule', label: 'Faculty Schedule', icon: 'bi-calendar-week', href: 'faculty-schedule.html' },
-            { key: 'teaching', label: 'Faculty Teaching Hours', icon: 'bi-person-workspace', href: 'teaching-hours.html' }
+            { key: 'teaching', label: 'Faculty Teaching Hours', icon: 'bi-person-workspace', href: 'teaching-hours.html' },
+            { key: 'rooms', label: 'Room Maintenance', icon: 'bi-door-open', href: 'room-maintenance.html' }
         ]
     };
 

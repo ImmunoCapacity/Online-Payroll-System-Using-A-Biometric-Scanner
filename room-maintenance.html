@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="js/auth-guard.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Room Maintenance — PayrollPro</title>
+    <link rel="icon" type="image/png" href="sti_logo.png">
+    <link href="vendor/bootstrap/bootstrap.min.css" rel="stylesheet">
+    <link href="vendor/bootstrap-icons/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="css/payrollpro.css" rel="stylesheet">
+    <link href="css/faculty-modules.css" rel="stylesheet">
+    <link href="css/maintenance.css" rel="stylesheet">
+</head>
+<body class="pp-app pp-app-shell">
+
+    <div id="pp-sidebar-mount"></div>
+
+    <div class="pp-shell-main">
+        <div id="pp-topbar-mount"></div>
+
+        <main class="pp-content">
+            <header class="pp-content-header">
+                <h1 class="pp-content-title">Room Maintenance</h1>
+                <p class="pp-content-subtitle">The rooms offered as a class's Room in Faculty Schedule, and how Faculty Teaching Hours groups classes by floor level.</p>
+            </header>
+
+            <div class="pp-maint-layout">
+                <div class="pp-maint-panel">
+                    <section class="pp-maint-section" aria-labelledby="roomsTitle">
+                        <div class="pp-maint-section-header">
+                            <div>
+                                <h2 class="pp-maint-section-title" id="roomsTitle">Rooms</h2>
+                                <p class="pp-maint-section-desc">Each room's floor level is used to filter Faculty Teaching Hours.</p>
+                            </div>
+                            <button type="button" class="btn btn-pp-maint-add" id="btnAddRoom">
+                                <i class="bi bi-plus-lg me-1"></i> Add Room
+                            </button>
+                        </div>
+                        <p class="pp-table-hint pp-maint-hint"><i class="bi bi-hand-index" aria-hidden="true"></i> <span>Click a row to edit it.</span></p>
+                        <div class="pp-maint-table-wrap">
+                            <table class="pp-table pp-table-maint w-100">
+                                <thead>
+                                    <tr>
+                                        <th>Room Name</th>
+                                        <th>Floor Level</th>
+                                        <th class="col-num">Scheduled Classes</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="roomsBody"></tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Room Modal -->
+    <div class="modal fade pp-modal" id="roomModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title" id="roomModalTitle">Add Room</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="roomForm" novalidate>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="roomName" class="pp-form-label">Room Name</label>
+                            <input type="text" class="form-control pp-form-control" id="roomName" maxlength="50" data-validate="text" data-label="Room name" placeholder="e.g. Room 304" required>
+                        </div>
+                        <div>
+                            <label for="roomFloor" class="pp-form-label">Floor Level</label>
+                            <input type="text" class="form-control pp-form-control" id="roomFloor" maxlength="20" data-validate="text" data-label="Floor level" placeholder="e.g. 1st Floor" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer justify-content-center">
+                        <button type="button" class="btn btn-pp-modal-remove d-none" id="roomRemoveBtn">Remove</button>
+                        <button type="submit" class="btn btn-pp-primary">Save Room</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="vendor/bootstrap/bootstrap.bundle.min.js"></script>
+    <script src="js/confirm-modal.js"></script>
+    <script src="js/toast.js"></script>
+    <script src="js/payrollpro-layout.js"></script>
+    <script src="js/form-validation.js"></script>
+    <script src="js/room-maintenance.js"></script>
+</body>
+</html>

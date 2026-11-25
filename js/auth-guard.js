@@ -58,6 +58,8 @@
         'faculty-schedule.html': [MASTER, STAFF],
         // Faculty Teaching Hours (classroom checks; approval is Payroll Master only)
         'teaching-hours.html': [MASTER, STAFF],
+        // Room Maintenance (the rooms offered as a class's Room in Faculty Schedule)
+        'room-maintenance.html': [MASTER, STAFF],
 
         // Maintenance + Deduction Tables (rates, leave categories, BIR, PhilHealth, Pag-IBIG)
         'maintenance.html': [MASTER],
