@@ -81,6 +81,7 @@
     var AUDIT_MODULES = {
         rates: 'Employee Rates',
         leave: 'Leave Categories',
+        leaveCredit: 'Leave Credit',
         ranks: 'Instructor Ranks',
         employeeTypes: 'Employee Types',
         employeeStatuses: 'Employee Status',
@@ -93,7 +94,7 @@
         periods: 'Payroll Periods'
     };
     var AUDIT_TARGETS = {
-        rates: 'ratesAudit', leave: 'leaveAudit', ranks: 'ranksAudit', employeeTypes: 'employeeTypesAudit',
+        rates: 'ratesAudit', leave: 'leaveAudit', leaveCredit: 'leaveCreditAudit', ranks: 'ranksAudit', employeeTypes: 'employeeTypesAudit',
         employeeStatuses: 'employeeStatusesAudit',
         holidays: 'holidaysAudit', bir: 'birAudit',
         philhealth: 'phAudit', pagibig: 'pagAudit', sss: 'sssAudit', grace: 'graceAudit', periods: 'periodsAudit'
@@ -124,6 +125,7 @@
     var sectionMap = {
         rates: 'sectionRates',
         leave: 'sectionLeave',
+        leaveCredit: 'sectionLeaveCredit',
         ranks: 'sectionRanks',
         employeeTypes: 'sectionEmployeeTypes',
         employeeStatuses: 'sectionEmployeeStatuses',
@@ -182,12 +184,12 @@
                     'data-employee="' + escapeHtml(r.employeeId) + '" data-kind="' + escapeHtml(r.kind) + '" ' +
                     'aria-label="New rate for ' + escapeHtml(r.employeeName) + '">' +
                     '<td>' + escapeHtml(r.employeeNumber) + '</td>' +
-                    '<td><strong>' + escapeHtml(r.employeeName) + '</strong><br><span class="text-muted small">' + escapeHtml(PayrollProLayout.staffTypeLabel(r.employeeType)) + '</span></td>' +
+                    '<td><strong>' + escapeHtml(r.employeeName) + '</strong></td>' +
+                    '<td>' + escapeHtml(PayrollProLayout.staffTypeLabel(r.employeeType)) + '</td>' +
                     '<td>' + escapeHtml(r.rateType) + '</td>' +
                     '<td class="col-money">' + peso(r.amount) + '</td>' +
                     '<td>' + formatDate(r.effective) + '</td>' +
                     '<td>' + (r.end ? formatDate(r.end) : '—') + '</td>' +
-                    '<td>' + (r.recordedBy ? escapeHtml(r.recordedBy) : '<span class="text-muted small">—</span>') + '</td>' +
                 '</tr>'
             );
         }).join('');
@@ -201,6 +203,26 @@
         rateType.innerHTML = emp
             ? emp.kinds.map(function (k) { return '<option value="' + k.kind + '">' + escapeHtml(k.label) + '</option>'; }).join('')
             : '<option value="" selected hidden data-hint>Select an employee first</option>';
+    }
+
+    /** Teaching is never typed in: it always follows the employee's current Instructor Rank. */
+    function syncRateAmount() {
+        var emp = rateEmployees.find(function (e) { return e.id === rateEmployee.value; });
+        var amountInput = document.getElementById('rateAmount');
+        var hint = document.getElementById('rateAmountHint');
+        if (emp && rateType.value === 'Teaching') {
+            var rank = ranks.find(function (x) { return x.name === emp.instructorRank; });
+            amountInput.value = rank ? Number(rank.ratePerHour).toFixed(2) : '';
+            amountInput.disabled = true;
+            hint.textContent = emp.instructorRank
+                ? 'Set automatically from ' + emp.instructorRank + ' (Maintenance → Instructor Ranks); not editable.'
+                : 'This employee has no Instructor Rank set in Employee Records.';
+            hint.classList.remove('d-none');
+        } else {
+            amountInput.disabled = false;
+            hint.classList.add('d-none');
+        }
+        PPValidate.setError(amountInput, '');
     }
 
     // Clicking a rate row opens a new rate for that employee and rate type.
@@ -219,6 +241,7 @@
         rateEmployee.disabled = true;
         populateRateTypes();
         if (kind && emp.kinds.some(function (k) { return k.kind === kind; })) rateType.value = kind;
+        syncRateAmount();
         document.getElementById('rateModalTitle').textContent = 'New Rate — ' + emp.name;
         document.getElementById('rateEffective').max = todayIso();
         bootstrap.Modal.getOrCreateInstance(document.getElementById('rateModal')).show();
@@ -254,10 +277,12 @@
 
     rateEmployee.addEventListener('change', function () {
         populateRateTypes();
+        syncRateAmount();
         var effective = document.getElementById('rateEffective');
         if (effective.value) PPValidate.validateField(effective);
     });
     rateType.addEventListener('change', function () {
+        syncRateAmount();
         var effective = document.getElementById('rateEffective');
         if (effective.value) PPValidate.validateField(effective);
     });
@@ -425,6 +450,226 @@
             loadAudit();
         }).catch(function () {
             PPToast.error('Could not reach the server.');
+        });
+    });
+
+    // ================================================================
+    // LEAVE CREDIT (api/leave/probation, api/leave/credits) — how long a new
+    // hire's paid leave credits stay at 0, and per-employee overrides of a
+    // leave category's paid days for one year.
+    // ================================================================
+
+    function loadProbation() {
+        return api('api/leave/probation').then(function (data) {
+            if (data.success) document.getElementById('probationMonths').value = data.months;
+        });
+    }
+
+    document.getElementById('probationForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        var form = e.target;
+        if (!PPValidate.validateForm(form)) return;
+        var btn = document.getElementById('probationSaveBtn');
+        btn.disabled = true;
+        api('api/leave/probation', 'PUT', { months: parseInt(document.getElementById('probationMonths').value, 10) })
+            .then(function (data) {
+                btn.disabled = false;
+                if (!data.success) {
+                    if (!PPValidate.showServerError(form, data, { months: 'probationMonths' })) PPToast.error(data.message);
+                    return;
+                }
+                document.getElementById('probationMonths').value = data.months;
+                PPToast.success('Probationary period saved.');
+                loadAudit();
+            }).catch(function () {
+                btn.disabled = false;
+                PPToast.error('Could not reach the server.');
+            });
+    });
+
+    // One row per admin employee for a year, with their paid leave days used
+    // across every paid category. Click a row for the per-category
+    // breakdown (editable) and the full leave history.
+    var leaveCreditRows = [];
+    var leaveCreditCurrent = null;   // the employee row open in the detail modal
+    var leaveCreditYearSelect = document.getElementById('leaveCreditYear');
+    var leaveCreditSearch = document.getElementById('leaveCreditSearch');
+
+    (function fillLeaveCreditYears() {
+        var now = new Date().getFullYear();
+        for (var y = now + 1; y >= now - 2; y--) {
+            leaveCreditYearSelect.add(new Option(String(y), String(y), false, y === now));
+        }
+    })();
+
+    function loadLeaveCredits() {
+        return api('api/leave/credits?year=' + leaveCreditYearSelect.value).then(function (data) {
+            if (!data.success) throw new Error(data.message);
+            leaveCreditRows = data.credits;
+            renderLeaveCredits();
+        }).catch(function () {
+            document.getElementById('leaveCreditBody').innerHTML =
+                '<tr><td colspan="3" class="text-center text-muted py-4">Could not load leave credits from the server.</td></tr>';
+        });
+    }
+
+    function renderLeaveCredits() {
+        var search = leaveCreditSearch.value.trim().toLowerCase();
+        var shown = leaveCreditRows.filter(function (c) {
+            return !search || (c.employeeName + ' ' + c.employeeNumber).toLowerCase().indexOf(search) !== -1;
+        });
+        if (!shown.length) {
+            document.getElementById('leaveCreditBody').innerHTML =
+                '<tr><td colspan="3" class="text-center text-muted py-4">' +
+                (leaveCreditRows.length ? 'No employees match the search.' : 'No administrative staff with paid leave categories yet.') +
+                '</td></tr>';
+            return;
+        }
+        document.getElementById('leaveCreditBody').innerHTML = shown.map(function (c) {
+            var idx = leaveCreditRows.indexOf(c);
+            return '<tr ' + rowAttrs(idx, 'Leave credit of ' + c.employeeName) + '>' +
+                '<td>' + escapeHtml(c.employeeNumber) + '</td>' +
+                '<td><strong>' + escapeHtml(c.employeeName) + '</strong></td>' +
+                '<td class="col-num">' + c.used + '</td>' +
+            '</tr>';
+        }).join('');
+    }
+
+    function openLeaveCreditDetail(row) {
+        leaveCreditCurrent = row;
+        document.getElementById('leaveCreditModalTitle').textContent = row.employeeName;
+        document.getElementById('leaveCreditSummary').innerHTML =
+            '<div><span class="fm-detail-label">Employee ID</span><span class="fm-detail-value">' + escapeHtml(row.employeeNumber) + '</span></div>' +
+            '<div><span class="fm-detail-label">Type</span><span class="fm-detail-value">' + escapeHtml(PayrollProLayout.staffTypeLabel(row.employeeType)) + '</span></div>' +
+            '<div><span class="fm-detail-label">Year</span><span class="fm-detail-value">' + row.year + '</span></div>';
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('leaveCreditModal')).show();
+        loadLeaveCreditDetail(row);
+        loadLeaveCreditHistory(row);
+    }
+
+    function detailRowHtml(d) {
+        return '<tr data-category="' + d.categoryId + '">' +
+            '<td>' + escapeHtml(d.category) + (d.overridden ? ' <span class="pp-badge-leave-paid">Override</span>' : '') + '</td>' +
+            '<td class="col-num"><input type="number" class="form-control form-control-sm pp-form-control credit-total-input" ' +
+                'min="0" max="366" step="1" inputmode="numeric" style="width: 80px; display: inline-block;" value="' + d.total + '"></td>' +
+            '<td class="col-num">' + d.used + '</td>' +
+            '<td class="col-num"><strong>' + d.remaining + '</strong></td>' +
+            '<td class="text-end">' +
+                '<button type="button" class="btn btn-sm btn-pp-outline credit-save-btn">Save</button>' +
+            '</td>' +
+        '</tr>';
+    }
+
+    function loadLeaveCreditDetail(row) {
+        var body = document.getElementById('leaveCreditDetailBody');
+        body.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">Loading…</td></tr>';
+        api('api/leave/credits/detail?employeeId=' + encodeURIComponent(row.employeeId) + '&year=' + row.year).then(function (data) {
+            if (leaveCreditCurrent !== row) return;
+            if (!data.success) { body.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">Could not load.</td></tr>'; return; }
+            body.innerHTML = data.detail.map(detailRowHtml).join('');
+        });
+    }
+
+    document.getElementById('leaveCreditDetailBody').addEventListener('click', function (e) {
+        var row = leaveCreditCurrent;
+        if (!row) return;
+        var tr = e.target.closest('tr[data-category]');
+        if (!tr) return;
+        var categoryId = parseInt(tr.dataset.category, 10);
+
+        if (e.target.classList.contains('credit-save-btn')) {
+            var input = tr.querySelector('.credit-total-input');
+            var totalCredits = parseInt(input.value, 10);
+            if (isNaN(totalCredits) || totalCredits < 0) { PPToast.error('Enter the number of paid days (0 or more).'); return; }
+            api('api/leave/credits', 'PUT', { employeeId: row.employeeId, categoryId: categoryId, year: row.year, totalCredits: totalCredits })
+                .then(function (result) {
+                    if (!result.success) { PPToast.error(result.message); return; }
+                    PPToast.success('Leave credit saved.');
+                    loadLeaveCreditDetail(row);
+                    loadLeaveCredits();
+                    loadAudit();
+                }).catch(function () { PPToast.error('Could not reach the server.'); });
+        }
+    });
+
+    function loadLeaveCreditHistory(row) {
+        var list = document.getElementById('leaveCreditHistoryList');
+        list.innerHTML = '<li class="text-muted">Loading…</li>';
+        api('api/leave/credits/history?employeeId=' + encodeURIComponent(row.employeeId) + '&year=' + row.year).then(function (data) {
+            if (leaveCreditCurrent !== row) return;
+            if (!data.success) { list.innerHTML = '<li class="text-muted">Could not load history.</li>'; return; }
+            if (!data.history.length) { list.innerHTML = '<li class="text-muted">No leave recorded for ' + row.year + '.</li>'; return; }
+            list.innerHTML = data.history.map(function (h) {
+                return '<li>' + escapeHtml(h.category) + ' · ' + formatDate(h.dateFrom) + ' – ' + formatDate(h.dateTo) + ' · ' +
+                    h.days + ' day' + (h.days === 1 ? '' : 's') + (h.paid ? '' : ' (unpaid)') +
+                    '<div class="fm-history-meta">Recorded by ' + escapeHtml(h.reviewedBy || '—') + ' · ' + formatDate(h.dateFiled) + '</div></li>';
+            }).join('');
+        });
+    }
+
+    clickableRows('leaveCreditBody', function (index) {
+        var row = leaveCreditRows[index];
+        if (row) openLeaveCreditDetail(row);
+    });
+    leaveCreditYearSelect.addEventListener('change', loadLeaveCredits);
+    leaveCreditSearch.addEventListener('input', renderLeaveCredits);
+
+    // Restore Credits for All: sets every eligible employee's override of
+    // the chosen leave type(s) for the selected year, in one go (e.g. a
+    // yearly credit renewal).
+    function openRestoreCreditsModal() {
+        document.getElementById('restoreCreditsYear').textContent = leaveCreditYearSelect.value;
+        var paid = leaveCategories.filter(function (c) { return c.paid; });
+        document.getElementById('restoreCreditsFields').innerHTML = paid.map(function (c) {
+            return '<div class="row g-2 align-items-center mb-2">' +
+                '<div class="col-auto">' +
+                    '<input type="checkbox" class="form-check-input restore-credit-check" id="restoreCat' + c.id + '" data-category="' + c.id + '" checked>' +
+                '</div>' +
+                '<div class="col">' +
+                    '<label for="restoreCat' + c.id + '" class="pp-form-label mb-0">' + escapeHtml(c.name) + ' Credits</label>' +
+                '</div>' +
+                '<div class="col-auto">' +
+                    '<input type="number" class="form-control form-control-sm pp-form-control restore-credit-days" min="0" max="366" step="1" inputmode="numeric" ' +
+                        'style="width: 90px;" value="' + (c.paidDays == null ? 0 : c.paidDays) + '" data-category="' + c.id + '">' +
+                '</div>' +
+            '</div>';
+        }).join('');
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('restoreCreditsModal')).show();
+    }
+
+    document.getElementById('btnRestoreLeaveCredits').addEventListener('click', openRestoreCreditsModal);
+
+    document.getElementById('restoreCreditsForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        var checks = document.querySelectorAll('#restoreCreditsFields .restore-credit-check:checked');
+        if (!checks.length) { PPToast.error('Check at least one leave type.'); return; }
+        var creditsList = [];
+        var invalid = false;
+        checks.forEach(function (chk) {
+            var categoryId = parseInt(chk.dataset.category, 10);
+            var input = document.querySelector('.restore-credit-days[data-category="' + categoryId + '"]');
+            var days = parseInt(input.value, 10);
+            if (isNaN(days) || days < 0) invalid = true;
+            creditsList.push({ categoryId: categoryId, totalCredits: days });
+        });
+        if (invalid) { PPToast.error('Enter the number of paid days (0 or more) for each checked leave type.'); return; }
+        var year = parseInt(leaveCreditYearSelect.value, 10);
+
+        ConfirmModal.show({
+            title: 'Restore Credits for All',
+            message: 'Set the checked leave type' + (creditsList.length === 1 ? '' : 's') + ' to these paid days for every eligible employee in ' +
+                year + '? This replaces any existing override for that employee and leave type.',
+            confirmText: 'Restore for All',
+            tone: 'danger'
+        }).then(function (confirmed) {
+            if (!confirmed) return;
+            api('api/leave/credits/restore-all', 'PUT', { year: year, credits: creditsList }).then(function (data) {
+                if (!data.success) { PPToast.error(data.message); return; }
+                bootstrap.Modal.getInstance(document.getElementById('restoreCreditsModal')).hide();
+                PPToast.success(data.updated + ' leave credit' + (data.updated === 1 ? '' : 's') + ' set.');
+                loadLeaveCredits();
+                loadAudit();
+            }).catch(function () { PPToast.error('Could not reach the server.'); });
         });
     });
 
@@ -1479,6 +1724,8 @@
 
     PayrollProLayout.loadStaffTypeLabels().then(loadRates);
     loadLeaveCategories();
+    loadProbation();
+    loadLeaveCredits();
     loadHolidays();
     loadRanks();
     loadEmployeeTypes();
@@ -1489,6 +1736,8 @@
 
     if (location.hash === '#leave') {
         document.querySelector('[data-section="leave"]').click();
+    } else if (location.hash === '#leaveCredit') {
+        document.querySelector('[data-section="leaveCredit"]').click();
     } else if (location.hash === '#holidays') {
         document.querySelector('[data-section="holidays"]').click();
     } else if (location.hash === '#ranks') {

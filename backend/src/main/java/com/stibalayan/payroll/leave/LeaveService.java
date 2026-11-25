@@ -1,5 +1,6 @@
 package com.stibalayan.payroll.leave;
 
+import com.stibalayan.payroll.audit.AuditService;
 import com.stibalayan.payroll.common.ApiException;
 import com.stibalayan.payroll.common.Validation;
 import com.stibalayan.payroll.employee.EmployeeDirectory;
@@ -9,12 +10,17 @@ import com.stibalayan.payroll.employee.StaffMember;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.springframework.http.HttpStatus;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,18 +45,32 @@ public class LeaveService {
 
     private static final Set<String> INACTIVE = Set.of("Inactive", "Resigned", "Terminated", "Archived");
     private static final int MAX_PAID_DAYS = 366;
+    /** Maternity Leave is female-only, Paternity Leave male-only. */
+    private static final String MATERNITY = "Maternity Leave";
+    private static final String PATERNITY = "Paternity Leave";
+    private static final int MAX_PROBATION_MONTHS = 60;
+    /** system_setting key: months of a new hire's leave credits being 0 (Maintenance → Leave Credit). */
+    static final String PROBATION_MONTHS_KEY = "leave.probationary-months";
+    private static final int DEFAULT_PROBATION_MONTHS = 12;
 
     private final LeaveCategoryRepository categories;
     private final EmployeeLeaveRepository leaves;
+    private final EmployeeLeaveCreditRepository credits;
     private final EmployeeDirectory employees;
     private final EmployeeService employeeService;
+    private final JdbcTemplate jdbc;
+    private final AuditService audit;
 
-    public LeaveService(LeaveCategoryRepository categories, EmployeeLeaveRepository leaves, EmployeeDirectory employees,
-                        EmployeeService employeeService) {
+    public LeaveService(LeaveCategoryRepository categories, EmployeeLeaveRepository leaves,
+                        EmployeeLeaveCreditRepository credits, EmployeeDirectory employees,
+                        EmployeeService employeeService, JdbcTemplate jdbc, AuditService audit) {
         this.categories = categories;
         this.leaves = leaves;
+        this.credits = credits;
         this.employees = employees;
         this.employeeService = employeeService;
+        this.jdbc = jdbc;
+        this.audit = audit;
     }
 
     // ---------------------------------------------------------------
@@ -173,6 +193,10 @@ public class LeaveService {
         if (!c.isActive() && !c.getId().equals(l.getCategoryId())) {
             throw Validation.invalid("categoryId", c.getName() + " is no longer offered.");
         }
+        if (!appliesTo(c, staff)) {
+            throw Validation.invalid("categoryId", c.getName() + " is only for "
+                    + (MATERNITY.equalsIgnoreCase(c.getName()) ? "female" : "male") + " employees.");
+        }
         LocalDate from = Validation.date(r.dateFrom(), "dateFrom", "Start date", true);
         LocalDate to = Validation.date(r.dateTo(), "dateTo", "End date", true);
         if (to.isBefore(from)) {
@@ -204,7 +228,7 @@ public class LeaveService {
         Integer creditTotal = null;
         Integer creditUsed = null;
         if (paid) {
-            creditTotal = c.getPaidDays() == null ? 0 : c.getPaidDays();
+            creditTotal = creditTotalFor(staff, employeeId, c, from.getYear());
             creditUsed = usedDays(employeeId, c.getId(), from.getYear(), l.getId());
             int remaining = Math.max(0, creditTotal - creditUsed);
             if (days > remaining) {
@@ -248,12 +272,12 @@ public class LeaveService {
      */
     @Transactional(readOnly = true)
     public List<Map<String, Object>> balance(String employeeId, int year, Integer excludeLeaveId) {
-        employees.require(employeeId);
+        StaffMember staff = employees.require(employeeId);
         if (EmployeeId.parse(employeeId).isFaculty()) return List.of();
         List<Map<String, Object>> result = new ArrayList<>();
         for (LeaveCategory c : categories.findAllByOrderByNameAsc()) {
-            if (!c.isPaid()) continue;
-            int total = c.getPaidDays() == null ? 0 : c.getPaidDays();
+            if (!c.isPaid() || !appliesTo(c, staff)) continue;
+            int total = creditTotalFor(staff, employeeId, c, year);
             int used = usedDays(employeeId, c.getId(), year, excludeLeaveId);
             Map<String, Object> m = new HashMap<>();
             m.put("categoryId", c.getId());
@@ -267,6 +291,18 @@ public class LeaveService {
         return result;
     }
 
+    /** Every admin employee's leave credits for a year (Reports → Leave Report). */
+    @Transactional(readOnly = true)
+    public Map<String, List<Map<String, Object>>> balanceAll(int year) {
+        Map<String, List<Map<String, Object>>> result = new LinkedHashMap<>();
+        employees.all().forEach((employeeId, staff) -> {
+            if (!EmployeeId.parse(employeeId).isFaculty()) {
+                result.put(employeeId, balance(employeeId, year, null));
+            }
+        });
+        return result;
+    }
+
     /** Paid working days of one leave type recorded for the employee in a year. */
     private int usedDays(String employeeId, int categoryId, int year, Integer excludeLeaveId) {
         int used = 0;
@@ -276,6 +312,283 @@ public class LeaveService {
             if (l.getCategoryId() != null && l.getCategoryId() == categoryId) used += l.getTotalDays();
         }
         return used;
+    }
+
+    // ---------------------------------------------------------------
+    // Leave Credit (Maintenance): the probationary period, and per-employee
+    // overrides of a category's paid days for one year.
+    // ---------------------------------------------------------------
+
+    /** Maternity Leave only applies to female employees, Paternity Leave only to male employees. */
+    private static boolean appliesTo(LeaveCategory c, StaffMember staff) {
+        if (MATERNITY.equalsIgnoreCase(c.getName())) return "Female".equalsIgnoreCase(staff.getGender());
+        if (PATERNITY.equalsIgnoreCase(c.getName())) return "Male".equalsIgnoreCase(staff.getGender());
+        return true;
+    }
+
+    /** Whether a new hire's paid leave credits are still 0 (Maintenance → Leave Credit). */
+    private boolean inProbation(StaffMember staff) {
+        LocalDate hired = staff.getDateHired();
+        return hired != null && ChronoUnit.MONTHS.between(hired, LocalDate.now()) < probationaryMonths();
+    }
+
+    /**
+     * The paid days a year this employee gets of this category, for this
+     * year: an explicit override if one is set, otherwise 0 while on
+     * probation, otherwise the category's own default.
+     */
+    private int creditTotalFor(StaffMember staff, String employeeId, LeaveCategory c, int year) {
+        EmployeeId eid = EmployeeId.parse(employeeId);
+        if (!eid.isFaculty()) {
+            Integer override = credits.findByAdminstaffIdAndCategoryIdAndYear(eid.number(), c.getId(), year)
+                    .map(EmployeeLeaveCredit::getTotalCredits).orElse(null);
+            if (override != null) return override;
+        }
+        if (inProbation(staff)) return 0;
+        return c.getPaidDays() == null ? 0 : c.getPaidDays();
+    }
+
+    public int probationaryMonths() {
+        List<String> v = jdbc.queryForList("SELECT setting_value FROM system_setting WHERE setting_key = ?",
+                String.class, PROBATION_MONTHS_KEY);
+        if (v.isEmpty() || v.get(0) == null || v.get(0).isBlank()) return DEFAULT_PROBATION_MONTHS;
+        try {
+            return Integer.parseInt(v.get(0).trim());
+        } catch (NumberFormatException e) {
+            return DEFAULT_PROBATION_MONTHS;
+        }
+    }
+
+    @Transactional
+    public Map<String, Object> saveProbationaryMonths(Integer months, int userId) {
+        if (months == null || months < 0 || months > MAX_PROBATION_MONTHS) {
+            throw Validation.invalid("months", "Enter 0 to " + MAX_PROBATION_MONTHS + " months (0 = no waiting period).");
+        }
+        jdbc.update("INSERT INTO system_setting (setting_key, setting_value) VALUES (?, ?) "
+                + "ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)", PROBATION_MONTHS_KEY, String.valueOf(months));
+        audit.log(userId, "Leave Credit", "Changed probationary period", months + " month" + (months == 1 ? "" : "s"));
+        return probationView();
+    }
+
+    public Map<String, Object> probationView() {
+        Map<String, Object> m = new HashMap<>();
+        m.put("months", probationaryMonths());
+        return m;
+    }
+
+    public record CreditRequest(String employeeId, Integer categoryId, Integer year, Integer totalCredits) {
+    }
+
+    /**
+     * One row per admin employee for a year, with their total paid leave
+     * days used across every paid category — the Maintenance → Leave Credit
+     * table. Click a row for the per-category breakdown and use history.
+     */
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> creditSummary(int year) {
+        List<LeaveCategory> paidCategories = categories.findAllByOrderByNameAsc().stream()
+                .filter(LeaveCategory::isPaid).toList();
+        List<Map<String, Object>> result = new ArrayList<>();
+        employees.all().forEach((employeeId, staff) -> {
+            if (EmployeeId.parse(employeeId).isFaculty()) return;
+            int used = 0;
+            for (LeaveCategory c : paidCategories) {
+                if (!appliesTo(c, staff)) continue;
+                used += usedDays(employeeId, c.getId(), year, null);
+            }
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("employeeId", employeeId);
+            m.put("employeeNumber", staff.getEmployeeNumber());
+            m.put("employeeName", staff.getFullName());
+            m.put("employeeType", staff.staffType());
+            m.put("year", year);
+            m.put("used", used);
+            result.add(m);
+        });
+        result.sort(Comparator.comparing(m -> String.valueOf(m.get("employeeName"))));
+        return result;
+    }
+
+    /** One employee's leave credits for a year, per paid category, with whether each is overridden. */
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> creditDetail(String employeeId, int year) {
+        StaffMember staff = employees.require(employeeId);
+        if (EmployeeId.parse(employeeId).isFaculty()) return List.of();
+        int adminId = EmployeeId.parse(employeeId).number();
+        Set<Integer> overridden = new HashSet<>();
+        for (EmployeeLeaveCredit credit : credits.findAllByYear(year)) {
+            if (credit.getAdminstaffId() == adminId) overridden.add(credit.getCategoryId());
+        }
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (LeaveCategory c : categories.findAllByOrderByNameAsc()) {
+            if (!c.isPaid() || !appliesTo(c, staff)) continue;
+            Map<String, Object> m = creditRow(staff, employeeId, c, year);
+            m.put("overridden", overridden.contains(c.getId()));
+            result.add(m);
+        }
+        return result;
+    }
+
+    /** One employee's recorded leave (every type, paid or not) for a year (Maintenance → Leave Credit → use history). */
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> creditHistory(String employeeId, int year) {
+        employees.require(employeeId);
+        Map<String, StaffMember> people = employees.all();
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (EmployeeLeave l : leavesOf(employeeId)) {
+            if (l.getDateFrom().getYear() != year || !EmployeeLeave.APPROVED.equals(l.getStatus())) continue;
+            result.add(view(l, people));
+        }
+        result.sort(Comparator.comparing(m -> String.valueOf(m.get("dateFrom"))));
+        return result;
+    }
+
+    /** Sets (or replaces) an employee's override for one category and year. */
+    @Transactional
+    public Map<String, Object> saveCreditOverride(CreditRequest r, int userId) {
+        if (r.employeeId() == null || r.employeeId().isBlank()) {
+            throw Validation.invalid("employeeId", "Select an employee.");
+        }
+        EmployeeId eid = EmployeeId.parse(r.employeeId());
+        if (eid.isFaculty()) {
+            throw Validation.invalid("employeeId", "Leave is for administrative staff only. Faculty don't have leave.");
+        }
+        StaffMember staff = employees.require(r.employeeId());
+
+        if (r.categoryId() == null) {
+            throw Validation.invalid("categoryId", "Select a leave type.");
+        }
+        LeaveCategory c = categories.findById(r.categoryId())
+                .orElseThrow(() -> Validation.invalid("categoryId", "Select a leave type."));
+        if (!c.isPaid()) {
+            throw Validation.invalid("categoryId", c.getName() + " is unpaid leave and has no credits to override.");
+        }
+        if (!appliesTo(c, staff)) {
+            throw Validation.invalid("categoryId", c.getName() + " is only for "
+                    + (MATERNITY.equalsIgnoreCase(c.getName()) ? "female" : "male") + " employees.");
+        }
+
+        int currentYear = LocalDate.now().getYear();
+        if (r.year() == null || r.year() < currentYear - 1 || r.year() > currentYear + 1) {
+            throw Validation.invalid("year", "Choose " + (currentYear - 1) + " to " + (currentYear + 1) + ".");
+        }
+
+        Integer totalCredits = Validation.wholeNumber(r.totalCredits(), "totalCredits", "Paid days", MAX_PAID_DAYS);
+        if (totalCredits == null || totalCredits < 0) {
+            throw Validation.invalid("totalCredits", "Enter the number of paid days this employee gets (0 or more).");
+        }
+
+        EmployeeLeaveCredit credit = credits.findByAdminstaffIdAndCategoryIdAndYear(eid.number(), r.categoryId(), r.year())
+                .orElseGet(EmployeeLeaveCredit::new);
+        boolean isNew = credit.getId() == null;
+        credit.setAdminstaffId(eid.number());
+        credit.setCategoryId(r.categoryId());
+        credit.setYear(r.year());
+        credit.setTotalCredits(totalCredits);
+        credit.setUpdatedBy(userId);
+        credits.save(credit);
+        audit.log(userId, "Leave Credit", isNew ? "Added override" : "Updated override",
+                staff.getFullName() + " · " + c.getName() + " · " + r.year() + " · " + totalCredits + " day" + (totalCredits == 1 ? "" : "s"));
+        Map<String, Object> row = creditRow(staff, r.employeeId(), c, r.year());
+        row.put("overridden", true);
+        return row;
+    }
+
+    /** Removes an employee's override, if any — they go back to the category's own default (or 0, on probation). */
+    @Transactional
+    public Map<String, Object> removeCreditOverride(String employeeId, int categoryId, int year, int userId) {
+        StaffMember staff = employees.require(employeeId);
+        EmployeeId eid = EmployeeId.parse(employeeId);
+        LeaveCategory c = categories.findById(categoryId).orElseThrow(() -> Validation.invalid("categoryId", "Select a leave type."));
+        credits.findByAdminstaffIdAndCategoryIdAndYear(eid.number(), categoryId, year).ifPresent(credit -> {
+            credits.delete(credit);
+            audit.log(userId, "Leave Credit", "Removed override", staff.getFullName() + " · " + c.getName() + " · " + year);
+        });
+        Map<String, Object> row = creditRow(staff, employeeId, c, year);
+        row.put("overridden", false);
+        return row;
+    }
+
+    public record CategoryAmount(Integer categoryId, Integer totalCredits) {
+    }
+
+    public record RestoreAllRequest(Integer year, List<CategoryAmount> credits) {
+    }
+
+    /**
+     * Sets every eligible admin employee's override of the given leave
+     * categories, for one year, to the given amounts in one go (e.g. a
+     * yearly credit renewal) — Maintenance → Leave Credit → Restore Credits
+     * for All. Skips an employee for a category that doesn't apply to them
+     * (Maternity/Paternity Leave).
+     */
+    @Transactional
+    public int restoreCreditsForAll(RestoreAllRequest r, int userId) {
+        int currentYear = LocalDate.now().getYear();
+        if (r.year() == null || r.year() < currentYear - 1 || r.year() > currentYear + 1) {
+            throw Validation.invalid("year", "Choose " + (currentYear - 1) + " to " + (currentYear + 1) + ".");
+        }
+        if (r.credits() == null || r.credits().isEmpty()) {
+            throw Validation.invalid("credits", "Choose at least one leave type to restore.");
+        }
+
+        List<Map.Entry<LeaveCategory, Integer>> targets = new ArrayList<>();
+        for (CategoryAmount ca : r.credits()) {
+            if (ca.categoryId() == null) {
+                throw Validation.invalid("credits", "Select a leave type.");
+            }
+            LeaveCategory c = categories.findById(ca.categoryId())
+                    .orElseThrow(() -> Validation.invalid("credits", "Select a leave type."));
+            if (!c.isPaid()) {
+                throw Validation.invalid("credits", c.getName() + " is unpaid leave and has no credits to restore.");
+            }
+            Integer totalCredits = Validation.wholeNumber(ca.totalCredits(), "credits", "Paid days", MAX_PAID_DAYS);
+            if (totalCredits == null || totalCredits < 0) {
+                throw Validation.invalid("credits", "Enter the number of paid days for " + c.getName() + " (0 or more).");
+            }
+            targets.add(Map.entry(c, totalCredits));
+        }
+
+        int updated = 0;
+        for (Map.Entry<String, StaffMember> entry : employees.all().entrySet()) {
+            String employeeId = entry.getKey();
+            if (EmployeeId.parse(employeeId).isFaculty()) continue;
+            StaffMember staff = entry.getValue();
+            int adminId = EmployeeId.parse(employeeId).number();
+            for (Map.Entry<LeaveCategory, Integer> target : targets) {
+                LeaveCategory c = target.getKey();
+                if (!appliesTo(c, staff)) continue;
+                EmployeeLeaveCredit credit = credits.findByAdminstaffIdAndCategoryIdAndYear(adminId, c.getId(), r.year())
+                        .orElseGet(EmployeeLeaveCredit::new);
+                credit.setAdminstaffId(adminId);
+                credit.setCategoryId(c.getId());
+                credit.setYear(r.year());
+                credit.setTotalCredits(target.getValue());
+                credit.setUpdatedBy(userId);
+                credits.save(credit);
+                updated++;
+            }
+        }
+        String summary = targets.stream().map(t -> t.getKey().getName() + " = " + t.getValue()).reduce((a, b) -> a + ", " + b).orElse("");
+        audit.log(userId, "Leave Credit", "Restored credits for all", r.year() + " · " + summary + " · " + updated + " override(s) set");
+        return updated;
+    }
+
+    private Map<String, Object> creditRow(StaffMember staff, String employeeId, LeaveCategory c, int year) {
+        int total = creditTotalFor(staff, employeeId, c, year);
+        int used = usedDays(employeeId, c.getId(), year, null);
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("employeeId", employeeId);
+        m.put("employeeNumber", staff.getEmployeeNumber());
+        m.put("employeeName", staff.getFullName());
+        m.put("employeeType", staff.staffType());
+        m.put("categoryId", c.getId());
+        m.put("category", c.getName());
+        m.put("year", year);
+        m.put("total", total);
+        m.put("used", used);
+        m.put("remaining", Math.max(0, total - used));
+        return m;
     }
 
     // ---------------------------------------------------------------

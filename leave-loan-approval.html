@@ -49,9 +49,9 @@
                                     placeholder="Employee name or ID">
                             </div>
                             <div class="loan-filter">
-                                <label for="loanTypeFilter" class="pp-form-label">Employee Type</label>
+                                <label for="loanTypeFilter" class="pp-form-label">Position</label>
                                 <select data-clearable class="form-select pp-form-select" id="loanTypeFilter">
-                                    <option value="all" hidden data-hint>All employee types</option>
+                                    <option value="all" hidden data-hint>All positions</option>
                                     <option value="Admin">Admin</option>
                                     <option value="Faculty">Faculty</option>
                                     <option value="Faculty/Admin">Faculty/Admin</option>
@@ -80,7 +80,7 @@
                                 <tr>
                                     <th>Employee ID</th>
                                     <th>Employee Name</th>
-                                    <th>Type</th>
+                                    <th>Position</th>
                                     <th class="text-end">Active Loans</th>
                                     <th class="text-end">Deduction / Payroll</th>
                                     <th class="text-end">Remaining Balance</th>
@@ -351,12 +351,6 @@
                                 <label for="loanEndDate" class="pp-form-label">Payment To <span class="text-danger">*</span></label>
                                 <input type="date" class="form-control pp-form-control" id="loanEndDate" required>
                                 <div class="invalid-feedback">Please choose when the payments end.</div>
-                            </div>
-
-                            <div class="col-12">
-                                <label for="loanPerPayroll" class="pp-form-label">Deduction per Payroll</label>
-                                <input type="text" class="form-control pp-form-control loan-computed" id="loanPerPayroll" value="Computed automatically" readonly tabindex="-1" aria-live="polite">
-                                <div class="form-text" id="loanPerPayrollHint"></div>
                             </div>
 
                         </div>

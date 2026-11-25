@@ -853,7 +853,7 @@
     }
 
 
-    // The read-only "Employee Type" box follows the chosen employee.
+    // The read-only "Position" box follows the chosen employee.
     const manualEmployeeType =
         document.getElementById('employeeType');
 

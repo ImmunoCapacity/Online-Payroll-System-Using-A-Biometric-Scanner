@@ -461,11 +461,30 @@
     margin: 0 0 0.25rem;
 }
 
-.fm-check-card .fm-window {
-    font-size: 0.75rem;
-    color: var(--pp-text-muted);
-    margin-bottom: 0.75rem;
+.fm-status-buttons {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
 }
+
+.fm-status-btn {
+    flex: 1 1 0;
+    min-width: 5.5rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--pp-radius-sm);
+    border: 1px solid var(--pp-border);
+    background: var(--pp-surface);
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.fm-status-btn:disabled {
+    opacity: 0.5;
+}
+
+.fm-status-btn-present.active { background: var(--pp-success); border-color: var(--pp-success); color: #fff; }
+.fm-status-btn-late.active { background: #b7791f; border-color: #b7791f; color: #fff; }
+.fm-status-btn-absent.active { background: var(--pp-error); border-color: var(--pp-error); color: #fff; }
 
 .fm-check-recorded {
     font-size: 0.75rem;
@@ -523,6 +542,3 @@
     color: var(--pp-text-muted);
 }
 
-/* Status that follows the verification time */
-.fm-status-hint { font-size: 0.8rem; color: var(--pp-text-muted); min-height: 1.2rem; }
-.fm-late-note { display: block; margin-top: 0.35rem; color: #b7791f; font-size: 0.8rem; font-weight: 600; }

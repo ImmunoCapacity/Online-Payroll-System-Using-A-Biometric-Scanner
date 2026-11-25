@@ -72,6 +72,12 @@
 
     var currentReport = 'payroll';
 
+    /* Payslip and 13th Month Pay: the record/group behind each rendered row,
+       by index, so clicking a row can look up its full breakdown. Both null
+       on every other report. */
+    var rowRecords = null;
+    var rowReportKey = null;
+
 
     /* Field keys */
     var KEYS = {
@@ -155,7 +161,7 @@
             if (!groups[key]) {
                 groups[key] = {
                     employeeId: r.employeeId,
-                    employee: r.employee + (year ? '' : ' (' + y + ')'),
+                    employee: r.employee,
                     employeeType: r.employeeType,
                     gross: 0,
                     benefits: 0,
@@ -339,11 +345,201 @@
     }
 
 
+    /* Payslip detail (offcanvas): laid out like the emailed payslip
+       (PayslipPdf on the server) — same rows, columns and wording as the
+       breakdown shown while processing (js/payroll-processing.js), fetched
+       fresh from api/payroll/runs since a released period keeps its full
+       breakdown there. */
+
+    function num2(n) {
+        return (Number(n) || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function hrs(n) {
+        return String(Math.round((Number(n) || 0) * 100) / 100);
+    }
+
+    function calcGross(emp) {
+        if (emp.earnings) {
+            return round2(emp.earnings.reduce(function (s, e) { return s + e.amount; }, 0));
+        }
+        return round2(emp.hours * emp.rate);
+    }
+
+    function calcBenefitsTotal(benefits) {
+        return round2((benefits || []).reduce(function (s, b) { return s + b.amount; }, 0));
+    }
+
+    function calcDeductionsTotal(d) {
+        return round2(d.sss + d.philhealth + d.pagibig + d.bir + d.loan);
+    }
+
+    function calcNet(emp) {
+        return round2(calcGross(emp) + calcBenefitsTotal(emp.benefits) - calcDeductionsTotal(emp.deductions));
+    }
+
+    function skippedLoans(emp) {
+        return (emp.loanItems || []).filter(function (l) { return l.skipped; });
+    }
+
+    /** Earnings lines grouped into the payslip rows (same rule as the PDF). */
+    function payslipEarnings(emp) {
+        var rows = { lecture: null, office: null, leave: null, holiday: null, adjustment: null, late: null };
+        function add(key, l) {
+            var r = rows[key] || (rows[key] = { hours: 0, amount: 0, rate: null, mixed: false });
+            r.hours += Number(l.hours) || 0;
+            r.amount += Number(l.amount) || 0;
+            if (l.rate != null) {
+                if (r.rate != null && Number(r.rate) !== Number(l.rate)) r.mixed = true;
+                r.rate = l.rate;
+            }
+        }
+        var lines = emp.earnings || [{ label: emp.type === 'Faculty' ? 'teaching' : 'office', hours: emp.hours, rate: emp.rate, amount: calcGross(emp) }];
+        lines.forEach(function (l) {
+            var label = String(l.label || '').toLowerCase();
+            add(label.indexOf('adjustment') === 0 ? 'adjustment'
+                : label.indexOf('late deduction') === 0 ? 'late'
+                : label.indexOf('holiday') !== -1 ? 'holiday'
+                : label.indexOf('teaching') !== -1 ? 'lecture'
+                : label.indexOf('office') !== -1 ? 'office'
+                : label.indexOf('leave') !== -1 ? 'leave' : 'adjustment', l);
+        });
+        return rows;
+    }
+
+    /** Loans as on the payslip: SSS loan, Pag-IBIG loan, others (the server's rule). */
+    function payslipLoans(emp) {
+        var sss = 0, pagibig = 0, other = 0;
+        if (emp.loanItems && emp.loanItems.length) {
+            emp.loanItems.forEach(function (l) {
+                var t = String(l.type || '').toLowerCase();
+                var a = Number(l.amount) || 0;
+                if (t.indexOf('sss') !== -1) sss += a;
+                else if (t.indexOf('pag-ibig') !== -1 || t.indexOf('pagibig') !== -1) pagibig += a;
+                else other += a;
+            });
+        } else {
+            other = Number(emp.deductions.loan) || 0;
+        }
+        return { sss: sss, pagibig: pagibig, other: other };
+    }
+
+    function psRow(label, hours, rate, amount) {
+        return '<tr><td>' + label + '</td>' +
+            '<td class="num">' + hours + '</td><td class="num">' + rate + '</td><td class="num">' + amount + '</td></tr>';
+    }
+
+    function showPayslip(emp, periodLabel) {
+        var ded = emp.deductions;
+        var e = payslipEarnings(emp);
+        function earningRow(label, r) {
+            return psRow(label, r ? hrs(r.hours) : '', r && r.rate != null && !r.mixed ? num2(r.rate) : '', r ? num2(r.amount) : '');
+        }
+        var applied = calcGross(emp);
+        var benefits = calcBenefitsTotal(emp.benefits);
+        var loans = payslipLoans(emp);
+
+        $('breakdownBody').innerHTML =
+            '<table class="pp-payslip">' +
+                '<tbody class="pp-payslip-info">' +
+                    '<tr><th>Payroll Computation For:</th><td colspan="3">' + escapeHtml(String(periodLabel).toUpperCase()) + '</td></tr>' +
+                    '<tr><th>Employee No.</th><td colspan="3">' + escapeHtml(emp.employeeNumber) + '</td></tr>' +
+                    '<tr><th>Employee Name</th><td colspan="3">' + escapeHtml(String(emp.name).toUpperCase()) + '</td></tr>' +
+                    '<tr><th>Designation</th><td colspan="3">' + escapeHtml(String(emp.designation || emp.type).toUpperCase()) + '</td></tr>' +
+                '</tbody>' +
+                '<tbody>' +
+                    '<tr class="pp-payslip-head"><td></td><td class="num">Hrs Worked</td><td class="num">Rate</td><td class="num">Applied Salary</td></tr>' +
+                    earningRow('No. of Hours Lecture', e.lecture) +
+                    earningRow('No. of Office Hours', e.office) +
+                    (e.leave ? earningRow('Paid Leave', e.leave) : '') +
+                    earningRow('Holiday', e.holiday) +
+                    earningRow('Adjustment', e.adjustment) +
+                    (e.late ? earningRow('Late Deduction', e.late) : '') +
+                    '<tr class="pp-payslip-total"><td></td><td colspan="2">Total Applied Salary</td><td class="num">' + num2(applied) + '</td></tr>' +
+                '</tbody>' +
+                '<tbody>' +
+                    '<tr class="pp-payslip-section"><td colspan="4">Benefits</td></tr>' +
+                    ((emp.benefits || []).length
+                        ? emp.benefits.map(function (b) {
+                            return '<tr><td colspan="3">' + escapeHtml(String(b.name).toUpperCase()) + '</td><td class="num">' + num2(b.amount) + '</td></tr>';
+                        }).join('')
+                        : '<tr><td colspan="3">NONE</td><td class="num">0.00</td></tr>') +
+                    '<tr class="pp-payslip-total"><td></td><td colspan="2">Gross Pay</td><td class="num">' + num2(applied + benefits) + '</td></tr>' +
+                '</tbody>' +
+                '<tbody>' +
+                    '<tr class="pp-payslip-section"><td colspan="4">Deductions</td></tr>' +
+                    [['SSS Contri', ded.sss], ['Pag-IBIG', ded.pagibig], ['PhilHealth', ded.philhealth], ['Tax', ded.bir],
+                     ['SSS Loan', loans.sss], ['Pag-IBIG Loan', loans.pagibig], ['Other Deductions', loans.other]].map(function (d) {
+                        return '<tr><td colspan="2">' + d[0].toUpperCase() + '</td><td class="num">' + num2(d[1]) + '</td><td></td></tr>';
+                    }).join('') +
+                    '<tr class="pp-payslip-total"><td colspan="2" class="num">Total Deductions</td><td class="num">' + num2(calcDeductionsTotal(ded)) + '</td><td></td></tr>' +
+                '</tbody>' +
+                '<tbody><tr class="pp-payslip-net"><td colspan="3">Net Pay</td><td class="num">' + num2(calcNet(emp)) + '</td></tr></tbody>' +
+            '</table>' +
+            (emp.overlapHours
+                ? '<p class="pp-payslip-note">' + emp.overlapHours + ' office hrs overlapped approved classes and were not counted twice.</p>'
+                : '') +
+            (emp.unapprovedClasses
+                ? '<p class="pp-payslip-note text-warning">' + emp.unapprovedClasses +
+                  ' scheduled class(es) not yet approved in Faculty Teaching Hours — not paid.</p>'
+                : '') +
+            skippedLoans(emp).map(function (l) {
+                return '<p class="pp-payslip-note text-danger"><i class="bi bi-exclamation-triangle-fill me-1"></i>' +
+                    escapeHtml(l.lender || l.type) + ' loan' + (l.reference ? ' ' + escapeHtml(l.reference) : '') +
+                    ' (' + peso(l.scheduled) + ') skipped — pay wasn\'t enough. The loan runs one month longer.</p>';
+            }).join('');
+
+        $('breakdownTitle').textContent = 'Payslip — ' + emp.name;
+        new bootstrap.Offcanvas($('breakdownPanel')).show();
+    }
+
+    function openPayslip(record) {
+        fetch('api/payroll/runs?from=' + encodeURIComponent(record.periodStart) + '&to=' + encodeURIComponent(record.periodEnd))
+            .then(function (response) { return response.json(); })
+            .then(function (data) {
+                if (!data.success || !data.run) throw new Error(data.message || 'Could not load this payslip.');
+                var emp = data.run.employees.find(function (e) { return e.id === record.employeeKey; });
+                if (!emp) throw new Error('This payslip could not be found.');
+                showPayslip(emp, record.periodLabel);
+            })
+            .catch(function (error) {
+                if (window.PPToast) PPToast.error(error.message || 'Could not load this payslip.');
+            });
+    }
+
+    var MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'];
+
+    /** 13th Month Pay (PD 851): gross pay earned each month of the year (Jan–Dec), then the total ÷ 12. */
+    function show13thMonthBreakdown(row) {
+        $('breakdownBody').innerHTML =
+            '<table class="pp-payslip">' +
+                '<tbody class="pp-payslip-info">' +
+                    '<tr><th>Employee No.</th><td colspan="3">' + escapeHtml(row.employeeId) + '</td></tr>' +
+                    '<tr><th>Employee Name</th><td colspan="3">' + escapeHtml(String(row.employee).toUpperCase()) + '</td></tr>' +
+                    '<tr><th>Position</th><td colspan="3">' + escapeHtml(PayrollProLayout.staffTypeLabel(row.employeeType)) + '</td></tr>' +
+                '</tbody>' +
+                '<tbody>' +
+                    '<tr class="pp-payslip-head"><td>Month</td><td class="num"></td><td class="num"></td><td class="num">Gross Pay</td></tr>' +
+                    MONTH_NAMES.map(function (name, i) {
+                        var g = row.months[i];
+                        return '<tr><td colspan="3">' + name + '</td><td class="num">' + (g == null ? '—' : num2(g)) + '</td></tr>';
+                    }).join('') +
+                    '<tr class="pp-payslip-total"><td colspan="3">Total Gross Pay</td><td class="num">' + num2(row.gross) + '</td></tr>' +
+                '</tbody>' +
+                '<tbody><tr class="pp-payslip-net"><td colspan="3">13th Month Pay (Total Gross Pay ÷ 12)</td><td class="num">' + num2(row.thirteenthMonth) + '</td></tr></tbody>' +
+            '</table>';
+
+        $('breakdownTitle').textContent = '13th Month Pay — ' + row.employee;
+        new bootstrap.Offcanvas($('breakdownPanel')).show();
+    }
+
+
     /* Payroll report */
     function renderPayrollReport(records) {
-        var columns = [col('EMP. ID'), col('EMPLOYEE', TEXT, true), col('TYPE'), col('HOURS', NUM),
+        var columns = [col('EMP. ID'), col('EMPLOYEE NAME', TEXT, true), col('POSITION'), col('TOTAL HOURS', NUM),
             col('GROSS PAY', MONEY), col('SSS', MONEY), col('PHILHEALTH', MONEY), col('PAG-IBIG', MONEY),
-            col('TAX', MONEY), col('LOAN', MONEY), col('TOTAL DED.', MONEY), col('NET PAY', MONEY, true)];
+            col('TAX', MONEY), col('LOAN', MONEY), col('TOTAL DEDUCTION', MONEY), col('NET PAY', MONEY, true)];
 
         var rows = records.map(function (record) {
             var v = getPayrollValues(record);
@@ -370,7 +566,7 @@
     /* Other reports */
     var simpleReports = {
         payslip: {
-            columns: [col('GROSS PAY', MONEY), col('TOTAL DED.', MONEY), col('NET PAY', MONEY, true)],
+            columns: [col('GROSS PAY', MONEY), col('TOTAL DEDUCTION', MONEY), col('NET PAY', MONEY, true)],
             extra: function (r, v) { return [v.gross, v.deductions, v.net]; }
         },
         thirteenth: {
@@ -404,18 +600,29 @@
         var def = simpleReports[reportKey];
         if (!def) { return; }
 
-        var columns = [col('EMP. ID'), col('EMPLOYEE', TEXT, true), col('TYPE')].concat(def.columns);
+        var columns = [col('EMP. ID'), col('EMPLOYEE NAME', TEXT, true), col('POSITION')].concat(def.columns);
         var rows = records.map(function (record) {
             return baseCells(record).concat(def.extra(record, getPayrollValues(record)));
         });
         show(columns, rows, sumColumns(rows, columns));
+
+        var clickable = reportKey === 'payslip' || reportKey === 'thirteenth';
+        rowRecords = clickable ? records : null;
+        rowReportKey = clickable ? reportKey : null;
+        tableBody.classList.toggle('report-rows-clickable', clickable);
+        $('payslipHint').classList.toggle('d-none', !clickable);
+        if (clickable) {
+            setText('payslipHintText', reportKey === 'payslip'
+                ? "Click a row to view that employee's payslip."
+                : "Click a row to view that employee's 13th month pay breakdown.");
+        }
     }
 
 
     /* Loan Report (paper, 8.5): balances and deduction history, from the database via api/loans */
     function renderLoanReport() {
-        var columns = [col('EMP. ID'), col('EMPLOYEE', TEXT, true), col('LENDER'), col('REFERENCE'),
-            col('LOAN AMOUNT', MONEY), col('INTEREST', MONEY), col('MONTHLY', MONEY), col('TOTAL DEDUCTED', MONEY), col('BALANCE', MONEY, true)];
+        var columns = [col('EMP. ID'), col('EMPLOYEE NAME', TEXT, true), col('LENDER'), col('REFERENCE'),
+            col('LOAN AMOUNT', MONEY), col('INTEREST (%)'), col('MONTHLY', MONEY), col('TOTAL DEDUCTED', MONEY), col('BALANCE', MONEY, true)];
         showLoading(columns, 'Loading loans…');
 
         fetch('api/loans')
@@ -432,7 +639,7 @@
                 });
                 var rows = loans.map(function (l) {
                     return [l.employeeId, l.employeeName, l.lenderLabel || l.type, l.reference || '',
-                        number(l.amount), number(l.interestAmount), number(l.deductionPerPayroll), number(l.totalDeducted), number(l.remainingBalance)];
+                        number(l.amount), number(l.interestRate).toFixed(2) + '%', number(l.deductionPerPayroll), number(l.totalDeducted), number(l.remainingBalance)];
                 });
                 var totals = sumColumns(rows, columns);
                 totals[6] = null; // a sum of monthly amounts means nothing
@@ -446,7 +653,7 @@
 
     /* Employee List Report (paper, 8.6): from the database via api/employees */
     function renderEmployeeListReport() {
-        var columns = [col('EMP. NO.'), col('EMPLOYEE', TEXT, true), col('TYPE'), col('EMAIL'),
+        var columns = [col('EMP. NO.'), col('EMPLOYEE NAME', TEXT, true), col('POSITION'), col('EMAIL'),
             col('CONTACT'), col('DATE HIRED')];
         showLoading(columns, 'Loading employees…');
 
@@ -503,20 +710,19 @@
     }
 
     function renderLeaveReport() {
-        var columns = [col('EMP. ID'), col('EMPLOYEE', TEXT, true), col('TYPE'), col('LEAVE TYPE'), col('DATES'),
+        var columns = [col('EMP. ID'), col('EMPLOYEE NAME', TEXT, true), col('POSITION'), col('LEAVE TYPE'), col('DATES'),
             col('PAID DAYS', NUM), col('UNPAID DAYS', NUM), col('PAID DAYS LEFT')];
         showLoading(columns, 'Loading leave…');
         var year = leaveYear.value;
 
         Promise.all([
             fetch('api/leave/requests').then(function (r) { return r.json(); }),
-            fetch('api/leave/categories').then(function (r) { return r.json(); })
+            fetch('api/leave/balance/all?year=' + year).then(function (r) { return r.json(); })
         ]).then(function (results) {
             if (currentReport !== 'leave' || leaveYear.value !== year) return;
             if (!results[0].success) throw new Error(results[0].message);
             if (!results[1].success) throw new Error(results[1].message);
-            var categories = {};
-            results[1].categories.forEach(function (c) { categories[c.id] = c; });
+            var balances = results[1].balances;
 
             var selectedType = employeeType.value;
             var search = reportSearch.value.trim().toLowerCase();
@@ -535,8 +741,8 @@
                 .forEach(function (l) {
                     var key = l.employeeId + '|' + l.categoryId;
                     var g = groups[key] || (groups[key] = {
-                        id: l.employeeNumber, name: l.employeeName, type: l.employeeType, category: l.category,
-                        categoryId: l.categoryId, dates: [], paid: 0, unpaid: 0
+                        employeeId: l.employeeId, id: l.employeeNumber, name: l.employeeName, type: l.employeeType,
+                        category: l.category, categoryId: l.categoryId, dates: [], paid: 0, unpaid: 0
                     });
                     g.dates.push(leaveDates(l) + (l.paid ? '' : ' (unpaid)'));
                     if (l.paid) g.paid += Number(l.days) || 0; else g.unpaid += Number(l.days) || 0;
@@ -545,9 +751,8 @@
             var rows = Object.keys(groups).map(function (k) { return groups[k]; })
                 .sort(function (a, b) { return a.name.localeCompare(b.name) || a.category.localeCompare(b.category); })
                 .map(function (g) {
-                    var c = categories[g.categoryId];
-                    var left = c && c.paid && c.paidDays != null
-                        ? Math.max(0, c.paidDays - g.paid) + ' of ' + c.paidDays : '—';
+                    var b = (balances[g.employeeId] || []).find(function (x) { return x.categoryId === g.categoryId; });
+                    var left = b ? b.remaining + ' of ' + b.total : '—';
                     return [g.id, g.name, PayrollProLayout.staffTypeLabel(g.type), g.category, g.dates.join(', '), g.paid, g.unpaid, left];
                 });
             var totals = sumColumns(rows, columns);
@@ -568,6 +773,11 @@
         if (!def) { return; }
 
         currentReport = reportKey;
+
+        rowRecords = null;
+        rowReportKey = null;
+        tableBody.classList.remove('report-rows-clickable');
+        $('payslipHint').classList.add('d-none');
 
         reportTitle.textContent = def.title;
         reportParent.textContent = def.parent;
@@ -615,6 +825,17 @@
     });
 
     reportSearch.addEventListener('input', function () { selectReport(currentReport); });
+
+    tableBody.addEventListener('click', function (e) {
+        if (!rowRecords) return;
+        var row = e.target.closest('tr');
+        if (!row) return;
+        var index = Array.prototype.indexOf.call(tableBody.children, row);
+        var record = rowRecords[index];
+        if (!record) return;
+        if (rowReportKey === 'payslip') openPayslip(record);
+        else if (rowReportKey === 'thirteenth') show13thMonthBreakdown(record);
+    });
 
 
     /* Filter lines printed under the title of an exported file */
@@ -737,7 +958,7 @@
     /* Init */
     var startKey = new URLSearchParams(location.search).get('report');
 
-    /** The Employee type filter's Faculty/Faculty-Admin option text follows their renamed display name; values stay fixed custom codes. */
+    /** The Position filter's Faculty/Faculty-Admin option text follows their renamed display name; values stay fixed custom codes. */
     function applyBuiltInTypeLabels() {
         var opt = employeeType.querySelector('option[value="faculty"]');
         if (opt) opt.textContent = PayrollProLayout.staffTypeLabel('Faculty');

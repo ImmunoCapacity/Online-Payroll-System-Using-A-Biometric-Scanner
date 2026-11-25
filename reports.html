@@ -10,6 +10,7 @@
     <link href="vendor/bootstrap-icons/bootstrap-icons.min.css" rel="stylesheet">
     <link href="css/payrollpro.css" rel="stylesheet">
     <link href="css/reports.css" rel="stylesheet">
+    <link href="css/payroll-processing.css" rel="stylesheet">
 </head>
 
 <body class="pp-app pp-app-shell">
@@ -86,7 +87,7 @@
                         </div>
 
                         <div class="report-filter">
-                            <label for="employeeType">Employee type</label>
+                            <label for="employeeType">Position</label>
                             <select data-clearable id="employeeType" class="form-select">
                                 <option value="all" hidden data-hint>All employees</option>
                                 <option value="faculty">Faculty</option>
@@ -120,6 +121,10 @@
                     </div>
 
                     <!-- Table -->
+                    <p class="pp-table-hint d-none" id="payslipHint">
+                        <i class="bi bi-hand-index" aria-hidden="true"></i>
+                        <span id="payslipHintText">Click a row to view the breakdown.</span>
+                    </p>
                     <div class="report-table-card">
                         <div class="report-table-wrapper">
                             <table class="report-table">
@@ -136,6 +141,15 @@
 
         </main>
 
+    </div>
+
+    <!-- Payslip offcanvas (Payslip report: click a row) -->
+    <div class="offcanvas offcanvas-end pp-breakdown-offcanvas" tabindex="-1" id="breakdownPanel" aria-labelledby="breakdownTitle">
+        <div class="offcanvas-header">
+            <h2 class="offcanvas-title" id="breakdownTitle">Payslip</h2>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body" id="breakdownBody"></div>
     </div>
 
     <!-- Scripts -->

@@ -12,6 +12,12 @@
     gap: 0.5rem;
 }
 
+/* Daily time in/out modal: muted badge for rest day / upcoming / not yet hired */
+.pp-badge.pp-att-muted {
+    background: var(--pp-surface-alt, #f1f4f6);
+    color: var(--pp-text-muted, #6b7280);
+}
+
 /* Letterhead, title and dates: only on paper */
 .pp-attendance-print-header {
     display: none;

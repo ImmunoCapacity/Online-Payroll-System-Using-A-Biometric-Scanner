@@ -189,6 +189,10 @@
     background: var(--pp-surface-alt, #f8f9fa);
 }
 
+.report-table tbody.report-rows-clickable tr {
+    cursor: pointer;
+}
+
 .report-table tbody tr:last-child td {
     border-bottom: none;
 }

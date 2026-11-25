@@ -40,6 +40,22 @@
                 </button>
             </div>
 
+            <div class="pp-filter-bar" role="search">
+                <div class="pp-filter-group search">
+                    <label for="payrollSearch" class="pp-form-label">Search</label>
+                    <div class="pp-search-input">
+                        <i class="bi bi-search"></i>
+                        <input type="search" class="form-control pp-form-control" id="payrollSearch" maxlength="100" placeholder="Search by name or employee ID…">
+                    </div>
+                </div>
+                <div class="pp-filter-group">
+                    <label for="payrollTypeFilter" class="pp-form-label">Position</label>
+                    <select data-clearable class="form-select pp-form-select" id="payrollTypeFilter">
+                        <option value="all" hidden data-hint>All positions</option>
+                    </select>
+                </div>
+            </div>
+
             <p class="pp-table-hint">
                 <i class="bi bi-hand-index" aria-hidden="true"></i>
                 Click a row to view the payroll breakdown.
@@ -50,7 +66,7 @@
                         <tr>
                             <th>Employee ID</th>
                             <th>Employee Name</th>
-                            <th>Type</th>
+                            <th>Position</th>
                             <th class="col-units">Payable Hours</th>
                             <th class="col-money">Gross Pay</th>
                             <th class="col-money">Total Deductions</th>

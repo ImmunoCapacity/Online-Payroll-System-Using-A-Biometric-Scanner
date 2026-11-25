@@ -56,9 +56,9 @@
                             <input type="date" class="form-control pp-form-control" id="reportTo">
                         </div>
                         <div class="pp-filter-group">
-                            <label for="reportType" class="pp-form-label">Employee Type</label>
+                            <label for="reportType" class="pp-form-label">Position</label>
                             <select data-clearable class="form-select pp-form-select" id="reportType">
-                                <option value="all" hidden data-hint>All employee types</option>
+                                <option value="all" hidden data-hint>All positions</option>
                                 <option value="Faculty">Faculty</option>
                                 <option value="Admin">Admin</option>
                                 <option value="Faculty/Admin">Faculty/Admin</option>
@@ -78,13 +78,14 @@
                         <p id="printSubtitle"></p>
                     </div>
 
+                    <p class="pp-table-hint"><i class="bi bi-hand-index" aria-hidden="true"></i> <span>Click a row for that employee's daily time in/out.</span></p>
                     <div class="pp-table-wrap">
                         <table class="pp-table w-100">
                             <thead>
-                                <tr>
+                                <tr id="reportHeadRow">
                                     <th>Employee ID</th>
                                     <th>Employee Name</th>
-                                    <th>Type</th>
+                                    <th>Position</th>
                                     <th class="col-num">Present</th>
                                     <th class="col-num">Late</th>
                                     <th class="col-num">Absent</th>
@@ -99,6 +100,40 @@
                 </div>
             </div>
         </main>
+    </div>
+
+    <!-- One employee's daily time in/out -->
+    <div class="modal fade pp-modal" id="employeeDaysModal" tabindex="-1" aria-labelledby="employeeDaysTitle" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div>
+                        <h2 class="modal-title" id="employeeDaysTitle">Daily Time In/Out</h2>
+                        <p class="small text-muted mb-0" id="employeeDaysSubtitle"></p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="pp-table-wrap">
+                        <table class="pp-table w-100">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Time In</th>
+                                    <th>Time Out</th>
+                                    <th class="col-num">Total Hours</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="employeeDaysBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-pp-outline" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="vendor/bootstrap/bootstrap.bundle.min.js"></script>

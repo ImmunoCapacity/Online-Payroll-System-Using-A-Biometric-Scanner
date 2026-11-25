@@ -28,9 +28,6 @@
     var currentEmployeeId = null;
     var currentLoanId = null;
 
-    var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
-        'August', 'September', 'October', 'November', 'December'];
-
     // ---------------------------------------------------------------
     // Helpers
     // ---------------------------------------------------------------
@@ -309,34 +306,9 @@
         return (b.getFullYear() - a.getFullYear()) * 12 + b.getMonth() - a.getMonth() + 1;
     }
 
-    function monthLabel(isoDate) {
-        var d = parseIso(isoDate);
-        return MONTHS[d.getMonth()] + ' ' + d.getFullYear();
-    }
-
-    /** The deduction per payroll, as the server works it out: (amount + interest) ÷ months. */
-    function updateComputed() {
-        var amount = parseFloat(el('loanAmount').value);
-        var rate = parseFloat(el('loanInterest').value) || 0;
-        var from = el('loanStartDate').value;
-        var to = el('loanEndDate').value;
-        el('loanEndDate').min = from || '';
-        var months = from && to && to >= from ? monthsBetween(from, to) : 0;
-        if (!(amount > 0) || !months || rate < 0) {
-            el('loanPerPayroll').value = 'Computed automatically';
-            el('loanPerPayrollHint').textContent = '(Loan amount + interest) ÷ number of months from Payment From to Payment To.';
-            return;
-        }
-        var cents = Math.round(amount * 100);
-        var total = cents + Math.round(cents * rate / 100);
-        var per = Math.floor(total / months);
-        var last = total - per * (months - 1);
-        el('loanPerPayroll').value = peso(per / 100);
-        el('loanPerPayrollHint').textContent =
-            (rate ? peso(amount) + ' + ' + rate + '% interest = ' + peso(total / 100) : peso(total / 100)) +
-            ' ÷ ' + months + ' month' + (months === 1 ? '' : 's') +
-            ' (' + monthLabel(from) + (months > 1 ? ' – ' + monthLabel(to) : '') + '), deducted in the first payroll of each month' +
-            (months > 1 && last !== per ? '; the last month deducts ' + peso(last / 100) + '.' : '.');
+    /** Keeps Payment To from being set before Payment From. */
+    function updatePaymentToMin() {
+        el('loanEndDate').min = el('loanStartDate').value || '';
     }
 
     function openAddLoan(employeeId) {
@@ -346,16 +318,14 @@
         el('loanEmployee').value = employeeId || '';
         var e = employees.find(function (x) { return x.id === employeeId; });
         el('recordLoanTitle').textContent = e ? 'Add Loan — ' + e.name : 'Add Loan';
-        updateComputed();
+        updatePaymentToMin();
         modal.show();
     }
 
     el('btnAddLoan').addEventListener('click', function () { openAddLoan(currentEmployeeId); });
     el('btnAddLoanAny').addEventListener('click', function () { openAddLoan(null); });
-    ['loanStartDate', 'loanEndDate', 'loanAmount', 'loanInterest'].forEach(function (id) {
-        el(id).addEventListener('input', updateComputed);
-        el(id).addEventListener('change', updateComputed);
-    });
+    el('loanStartDate').addEventListener('input', updatePaymentToMin);
+    el('loanStartDate').addEventListener('change', updatePaymentToMin);
 
     el('loanEndDate').ppValidator = function (value) {
         var from = el('loanStartDate').value;

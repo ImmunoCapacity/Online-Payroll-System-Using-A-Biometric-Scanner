@@ -6,7 +6,9 @@ import com.stibalayan.payroll.auth.RequireModule;
 import com.stibalayan.payroll.auth.SessionUser;
 import com.stibalayan.payroll.auth.SystemModule;
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.HashMap;
 import java.util.Map;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,6 +25,17 @@ import org.springframework.web.bind.annotation.RestController;
  * GET  /api/leave/requests                   POST /api/leave/requests          PUT /api/leave/requests/{id}
  *      (records approved leave: { employeeId, categoryId, dateFrom, dateTo, paid })
  * GET  /api/leave/balance?employeeId=&year=[&excludeLeaveId=]   leave credits left per paid leave type
+ * GET  /api/leave/balance/all?year=                              every admin employee's leave credits (Reports)
+ *
+ * Leave Credit (Maintenance → Leave Credit):
+ * GET  /api/leave/probation                  PUT /api/leave/probation          { months }
+ * GET  /api/leave/credits?year=                 every admin employee, with paid leave days used that year
+ * GET  /api/leave/credits/detail?employeeId=&year=   that employee's credits per paid category
+ * PUT  /api/leave/credits                      { employeeId, categoryId, year, totalCredits }  set/replace an override
+ * DELETE /api/leave/credits?employeeId=&categoryId=&year=                                      remove an override
+ * GET  /api/leave/credits/history?employeeId=&year=   that employee's recorded leave for the year
+ * PUT  /api/leave/credits/restore-all          { year, credits: [{ categoryId, totalCredits }] }
+ *      sets every eligible employee's override of each given leave type for that year
  */
 @RestController
 @RequestMapping("/api/leave")
@@ -88,6 +101,58 @@ public class LeaveController {
     public Map<String, Object> balance(@RequestParam String employeeId, @RequestParam int year,
                                        @RequestParam(required = false) Integer excludeLeaveId) {
         return Map.of("success", true, "balance", leave.balance(employeeId, year, excludeLeaveId));
+    }
+
+    @GetMapping("/balance/all")
+    public Map<String, Object> balanceAll(@RequestParam int year) {
+        return Map.of("success", true, "balances", leave.balanceAll(year));
+    }
+
+    @GetMapping("/probation")
+    public Map<String, Object> probation() {
+        Map<String, Object> result = new HashMap<>(leave.probationView());
+        result.put("success", true);
+        return result;
+    }
+
+    @PutMapping("/probation")
+    public Map<String, Object> saveProbation(@RequestBody Map<String, Object> body, HttpServletRequest http) {
+        Integer months = body.get("months") instanceof Number n ? n.intValue() : null;
+        Map<String, Object> result = new HashMap<>(leave.saveProbationaryMonths(months, user(http).id()));
+        result.put("success", true);
+        return result;
+    }
+
+    @GetMapping("/credits")
+    public Map<String, Object> credits(@RequestParam int year) {
+        return Map.of("success", true, "credits", leave.creditSummary(year));
+    }
+
+    @GetMapping("/credits/detail")
+    public Map<String, Object> creditDetail(@RequestParam String employeeId, @RequestParam int year) {
+        return Map.of("success", true, "detail", leave.creditDetail(employeeId, year));
+    }
+
+    @GetMapping("/credits/history")
+    public Map<String, Object> creditHistory(@RequestParam String employeeId, @RequestParam int year) {
+        return Map.of("success", true, "history", leave.creditHistory(employeeId, year));
+    }
+
+    @PutMapping("/credits")
+    public Map<String, Object> saveCredit(@RequestBody LeaveService.CreditRequest request, HttpServletRequest http) {
+        return Map.of("success", true, "credit", leave.saveCreditOverride(request, user(http).id()));
+    }
+
+    @DeleteMapping("/credits")
+    public Map<String, Object> removeCredit(@RequestParam String employeeId, @RequestParam int categoryId, @RequestParam int year,
+                                            HttpServletRequest http) {
+        return Map.of("success", true, "credit", leave.removeCreditOverride(employeeId, categoryId, year, user(http).id()));
+    }
+
+    @PutMapping("/credits/restore-all")
+    public Map<String, Object> restoreAllCredits(@RequestBody LeaveService.RestoreAllRequest request, HttpServletRequest http) {
+        int updated = leave.restoreCreditsForAll(request, user(http).id());
+        return Map.of("success", true, "updated", updated);
     }
 
     private static SessionUser user(HttpServletRequest http) {

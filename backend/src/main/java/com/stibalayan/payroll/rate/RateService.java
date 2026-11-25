@@ -103,6 +103,7 @@ public class RateService {
             m.put("id", id);
             m.put("name", s.getFullName());
             m.put("employeeType", s.staffType());
+            m.put("instructorRank", instructorRankOf(s));
             List<Map<String, Object>> kinds = new ArrayList<>();
             kindsOf(s).forEach(k -> kinds.add(Map.of("kind", k, "label", label(s, k))));
             m.put("kinds", kinds);
@@ -125,11 +126,23 @@ public class RateService {
         if (!kindsOf(s).contains(kind)) {
             throw Validation.invalid("kind", "Choose a rate type this employee has.");
         }
-        BigDecimal amount = Validation.money(r.amount(), "amount", "Rate amount", MAX_RATE);
-        if (amount == null || amount.signum() <= 0) {
-            throw Validation.invalid("amount", "Rate amount must be more than zero.");
+
+        BigDecimal amount;
+        if (TEACHING.equals(kind)) {
+            // Never taken from the request: the sole source of a Faculty/Faculty-Admin
+            // employee's teaching rate is their Instructor Rank (Employee Records).
+            String rank = instructorRankOf(s);
+            if (rank == null || rank.isBlank()) {
+                throw Validation.invalid("amount", s.getFullName() + " has no Instructor Rank set. Set one in Employee Records first.");
+            }
+            amount = rankRate(rank);
+        } else {
+            amount = Validation.money(r.amount(), "amount", "Rate", MAX_RATE);
+            if (amount == null || amount.signum() <= 0) {
+                throw Validation.invalid("amount", "Rate must be more than zero.");
+            }
+            amount = amount.setScale(2, RoundingMode.HALF_UP);
         }
-        amount = amount.setScale(2, RoundingMode.HALF_UP);
         LocalDate effective = Validation.date(r.effectiveDate(), "effectiveDate", "Effective date", true);
         if (effective.isAfter(LocalDate.now())) {
             throw Validation.invalid("effectiveDate", "The effective date can't be in the future.");
@@ -223,9 +236,21 @@ public class RateService {
         return List.of(OFFICE);
     }
 
+    private static String instructorRankOf(StaffMember s) {
+        if (s instanceof FacultyStaff f) return f.getInstructorRank();
+        if (s instanceof AdminStaff a && a.isFaculty()) return a.getInstructorRank();
+        return null;
+    }
+
+    /** The chosen Instructor Rank's standard rate per hour (Maintenance → Instructor Ranks). */
+    private BigDecimal rankRate(String rank) {
+        BigDecimal rate = jdbc.queryForObject(
+                "SELECT rate_per_hour FROM employee_rank WHERE rank_name = ?", BigDecimal.class, rank.trim());
+        return rate == null ? BigDecimal.ZERO.setScale(2) : rate.setScale(2, RoundingMode.HALF_UP);
+    }
+
     private static String label(StaffMember s, String kind) {
-        if (kind.equals(OFFICE)) return "Per Hour (office)";
-        return s instanceof AdminStaff ? "Per Hour/Unit (teaching)" : "Per Hour/Unit";
+        return "Per Hour";
     }
 
     private static BigDecimal recordRate(StaffMember s, String kind) {

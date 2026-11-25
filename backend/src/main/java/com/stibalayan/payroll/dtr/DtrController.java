@@ -20,7 +20,10 @@ import org.springframework.web.bind.annotation.RestController;
  * GET  /api/dtr/incomplete?from=&to= time-in with no time-out: unpaid until corrected (Payroll)
  * GET  /api/dtr/employees         employees that can be picked for a manual entry
  * POST /api/dtr/manual            save a manual entry (Attendance Recording)
- * GET  /api/dtr/summary?from=&to= present / late / absent / on-leave days per employee (Attendance Report)
+ * GET  /api/dtr/summary?from=&to= present / late / absent / on-leave days per employee
+ *      (Attendance Monitoring Staff's own DTR, and Payroll Master's Attendance Report)
+ * GET  /api/dtr/employee-days?employeeId=&from=&to= one employee's day-by-day time in/out
+ *      (same two roles as /summary)
  */
 @RestController
 @RequestMapping("/api/dtr")
@@ -37,14 +40,15 @@ public class DtrController {
     }
 
     @GetMapping("/summary")
-    @RequireModule(SystemModule.DAILY_TIME_RECORD)
+    @RequireModule(SystemModule.ATTENDANCE_SUMMARY)
     public Map<String, Object> summary(@RequestParam String from, @RequestParam String to) {
         return Map.of("success", true, "employees", summaries.summary(from, to));
     }
 
-    /** One employee day by day (Biometric Records → click a row: daily, weekly or monthly). */
+    /** One employee day by day (Biometric Records → click a row: daily, weekly or monthly;
+        also the Attendance Report → click a row). */
     @GetMapping("/employee-days")
-    @RequireModule(SystemModule.DAILY_TIME_RECORD)
+    @RequireModule(SystemModule.ATTENDANCE_SUMMARY)
     public Map<String, Object> employeeDays(@RequestParam String employeeId, @RequestParam String from, @RequestParam String to) {
         return Map.of("success", true, "attendance", summaries.employeeDays(employeeId, from, to));
     }

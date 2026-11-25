@@ -179,17 +179,32 @@
     // Record / edit
     // ---------------------------------------------------------------
 
+    /** Maternity Leave is female-only, Paternity Leave male-only; everything else applies to anyone. */
+    function categoryAppliesTo(c, employee) {
+        if (!employee) return true;
+        var name = c.name.trim().toLowerCase();
+        if (name === 'maternity leave') return employee.gender === 'Female';
+        if (name === 'paternity leave') return employee.gender === 'Male';
+        return true;
+    }
+
+    function fillCategoryChoices(employeeId, request) {
+        var employee = employees.find(function (e) { return e.id === employeeId; });
+        el('leaveCategory').innerHTML = '<option value="" selected hidden data-hint>Select leave type</option>' +
+            categories.filter(function (c) {
+                return (c.active || (request && c.id === request.categoryId)) && categoryAppliesTo(c, employee);
+            }).map(function (c) {
+                return '<option value="' + c.id + '">' + escapeHtml(c.name) + '</option>';
+            }).join('');
+    }
+
     function fillFormChoices(request) {
         el('leaveEmployee').innerHTML = '<option value="" selected hidden data-hint>Select employee</option>' +
             employees.map(function (e) {
                 return '<option value="' + escapeHtml(e.id) + '">' + escapeHtml(e.displayName) + ' — ' +
                     escapeHtml(e.employeeNumber) + ' (' + escapeHtml(PayrollProLayout.staffTypeLabel(e.department)) + ')</option>';
             }).join('');
-        el('leaveCategory').innerHTML = '<option value="" selected hidden data-hint>Select leave type</option>' +
-            categories.filter(function (c) { return c.active || (request && c.id === request.categoryId); })
-                .map(function (c) {
-                    return '<option value="' + c.id + '">' + escapeHtml(c.name) + '</option>';
-                }).join('');
+        fillCategoryChoices(request ? request.employeeId : null, request);
     }
 
     function openForm(request) {
@@ -280,6 +295,11 @@
         syncPaid();
     });
     el('leavePaid').addEventListener('change', function () { paidChosen = true; });
+
+    // Changing the employee may rule out Maternity/Paternity Leave for them.
+    el('leaveEmployee').addEventListener('change', function () {
+        fillCategoryChoices(el('leaveEmployee').value, null);
+    });
 
     ['leaveEmployee', 'leaveCategory', 'leaveFrom', 'leaveTo', 'leavePaid'].forEach(function (id) {
         el(id).addEventListener('change', updateSummary);

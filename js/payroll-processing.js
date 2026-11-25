@@ -237,7 +237,7 @@
                         '<div class="modal-body">' +
                             '<p id="loanSkipIntro" class="mb-3"></p>' +
                             '<div class="table-responsive"><table class="pp-table w-100">' +
-                                '<thead><tr><th>Employee</th><th>Loan</th><th class="text-end">Not Deducted</th><th class="text-end">Net Pay</th></tr></thead>' +
+                                '<thead><tr><th>Employee Name</th><th>Loan</th><th class="text-end">Not Deducted</th><th class="text-end">Net Pay</th></tr></thead>' +
                                 '<tbody id="loanSkipBody"></tbody>' +
                             '</table></div>' +
                             '<p class="text-muted small mt-3 mb-0">Contributions and tax are taken first, then loans (SSS and Pag-IBIG first). ' +
@@ -579,22 +579,41 @@
         }
     });
 
+    /** Visible rows after Search/Position, each keeping its original index into getEmployees() (for showBreakdown). */
+    function filteredEmployees() {
+        var search = payrollSearch.value.trim().toLowerCase();
+        var type = payrollTypeFilter.value;
+        return getEmployees()
+            .map(function (emp, idx) { return { emp: emp, idx: idx }; })
+            .filter(function (x) {
+                var matchesSearch = !search || (x.emp.name + ' ' + x.emp.employeeNumber).toLowerCase().indexOf(search) !== -1;
+                var matchesType = type === 'all' || x.emp.type === type;
+                return matchesSearch && matchesType;
+            });
+    }
+
     function render() {
-        var employees = getEmployees();
+        var all = getEmployees();
+        var shown = filteredEmployees();
         var tbody = document.getElementById('payrollBody');
         var empty = document.getElementById('emptyPayroll');
 
         document.getElementById('periodBadge').outerHTML = periodStatusBadge(currentRun().status);
 
-        if (employees.length === 0) {
+        if (all.length === 0) {
             tbody.innerHTML = '';
             empty.innerHTML = loading
                 ? 'Loading payroll…'
                 : 'No payroll data for this period. Click <strong>Run Payroll</strong> to compute.';
             empty.classList.remove('d-none');
+        } else if (shown.length === 0) {
+            tbody.innerHTML = '';
+            empty.textContent = 'No employees match the search or filter.';
+            empty.classList.remove('d-none');
         } else {
             empty.classList.add('d-none');
-            tbody.innerHTML = employees.map(function (emp, idx) {
+            tbody.innerHTML = shown.map(function (x) {
+                var emp = x.emp, idx = x.idx;
                 return (
                     '<tr class="pp-row-clickable" tabindex="0" role="button" data-idx="' + idx + '" ' +
                         'aria-label="View payroll breakdown for ' + escapeHtml(emp.name) + '">' +
@@ -875,7 +894,19 @@
         loadRun();
     });
 
+    // ================================================================
+    // SEARCH / POSITION FILTER
+    // ================================================================
+
+    var payrollSearch = document.getElementById('payrollSearch');
+    var payrollTypeFilter = document.getElementById('payrollTypeFilter');
+    payrollSearch.addEventListener('input', render);
+    payrollTypeFilter.addEventListener('change', render);
+
     PayrollProLayout.loadStaffTypeLabels().then(function () {
+        return PayrollProLayout.loadEmployeeTypeOptions();
+    }).then(function (options) {
+        PayrollProLayout.populateEmployeeTypeSelect(payrollTypeFilter, options);
         return PPPeriods.load();
     }).then(function () {
         PERIODS = buildPeriods();

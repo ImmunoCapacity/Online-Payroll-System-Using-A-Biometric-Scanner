@@ -186,9 +186,3 @@
 .loan-detail-grid > .loan-detail-wide {
     grid-column: 1 / -1;
 }
-
-/* Add Loan: amounts worked out from the form */
-.loan-computed {
-    background: var(--pp-surface-alt, #f8f9fa) !important;
-    font-weight: 600;
-}
