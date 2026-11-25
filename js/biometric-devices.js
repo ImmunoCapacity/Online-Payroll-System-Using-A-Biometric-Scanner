@@ -177,4 +177,54 @@
     deviceModalEl.addEventListener('hidden.bs.modal', resetForm);
 
     loadDevices();
+
+    // ---------------------------------------------------------------
+    // Connection Settings (api/settings/device) — how the server reaches
+    // the K40; separate from the device rows above, which are just records.
+    // ---------------------------------------------------------------
+
+    var connectionForm = document.getElementById('deviceConnectionForm');
+    var connectionIp = document.getElementById('connectionIp');
+    var connectionPort = document.getElementById('connectionPort');
+    var connectionCommKey = document.getElementById('connectionCommKey');
+    var connectionMachineNumber = document.getElementById('connectionMachineNumber');
+
+    function loadConnection() {
+        api('api/settings/device').then(function (data) {
+            if (!data.success) throw new Error(data.message);
+            connectionIp.value = data.device.ip;
+            connectionPort.value = data.device.port;
+            connectionCommKey.value = data.device.commKey;
+            connectionMachineNumber.value = data.device.machineNumber;
+        }).catch(function () {
+            PPToast.error('Could not load the connection settings.');
+        });
+    }
+
+    connectionForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        if (!PPValidate.validateForm(connectionForm)) return;
+        var payload = {
+            ip: connectionIp.value.trim(),
+            port: parseInt(connectionPort.value, 10),
+            commKey: parseInt(connectionCommKey.value, 10) || 0,
+            machineNumber: parseInt(connectionMachineNumber.value, 10) || 1
+        };
+        var btn = document.getElementById('saveConnectionBtn');
+        btn.disabled = true;
+        api('api/settings/device', 'PUT', payload).then(function (data) {
+            btn.disabled = false;
+            if (!data.success) {
+                var fields = { ip: 'connectionIp', port: 'connectionPort', commKey: 'connectionCommKey', machineNumber: 'connectionMachineNumber' };
+                if (!PPValidate.showServerError(connectionForm, data, fields)) PPToast.error(data.message);
+                return;
+            }
+            PPToast.success('Connection settings saved. Reconnecting with the new values…');
+        }).catch(function () {
+            btn.disabled = false;
+            PPToast.error('Could not reach the server.');
+        });
+    });
+
+    loadConnection();
 })();

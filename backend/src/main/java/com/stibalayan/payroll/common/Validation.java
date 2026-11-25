@@ -32,6 +32,9 @@ public final class Validation {
     /** Digits with optional dashes or spaces between groups (government ID numbers). */
     private static final Pattern GOV_ID = Pattern.compile("^\\d[\\d -]*\\d$");
 
+    private static final Pattern IPV4 = Pattern.compile(
+            "^((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)\\.){3}(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)$");
+
     private Validation() {
     }
 
@@ -78,6 +81,14 @@ public final class Validation {
         String text = requiredText(value, field, label, 100);
         if (!EMAIL.matcher(text).matches() || text.contains("..")) {
             throw invalid(field, "Enter a valid email address (e.g. name@example.com).");
+        }
+        return text;
+    }
+
+    public static String ipv4(String value, String field, String label) {
+        String text = requiredText(value, field, label, 15);
+        if (!IPV4.matcher(text).matches()) {
+            throw invalid(field, "Enter a valid IPv4 address, e.g. 192.168.1.201.");
         }
         return text;
     }

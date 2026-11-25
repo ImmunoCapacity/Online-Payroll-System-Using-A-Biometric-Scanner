@@ -26,14 +26,33 @@ repository root, so the whole system runs at `http://localhost:8080`.
 3. **ZKTeco SDK.** Install the Standalone SDK and register `zkemkeeper.dll`
    from an administrator prompt: `regsvr32 zkemkeeper.dll`. The SDK, the
    JACOB DLL and the JDK must all be 64-bit (or all 32-bit).
-4. **Settings.** Edit `src/main/resources/application.properties`:
+4. **Connect the K40.** Wire it to the same network as this server (Ethernet,
+   not USB), then on the device: **Menu → Comm. → Ethernet** — give it a
+   static IP (or a DHCP reservation) so it doesn't change later, and note
+   its Comm Key (`0` means none).
+5. **Settings.** Edit `src/main/resources/application.properties`:
    - your MySQL password, if you set one;
-   - `device.ip` / `device.comm-key`: the K40's address (Menu → Comm. → Ethernet);
+   - `device.ip` / `device.port` (default `4370`) / `device.comm-key`: match
+     what you set on the K40 in step 4 (only needed the first time — these
+     become the fallback once something is saved in step 6);
    - `bootstrap.admin.email` / `bootstrap.admin.password`: the first System
      Administrator. It is created on startup if the `users` table is empty.
      Clear these values after the first run.
-5. **Device row.** Log in as the System Administrator. On the Biometric
-   Devices page, add a row whose IP address equals `device.ip`.
+6. **Device row + connection settings.** Log in as the System Administrator.
+   On the **Biometric Device** page: under **Connection Settings**, enter
+   the same IP/Port/Comm Key/Machine Number as step 4 and save (no restart,
+   or `application.properties` edit, needed after this point — that's only
+   the one-time fallback before anything's saved here); then under
+   **Registered Devices**, add a row whose IP address equals that same IP.
+7. **Link employees.** On the K40, enroll each person's fingerprint under a
+   User ID. In the app, open **Fingerprint Registration**, select the
+   employee, and set their User ID to that same number — a punch is matched
+   to an employee by this value, not by name.
+8. **Test it.** On the Daily Time Record page, click **Sync Device** to pull
+   attendance on demand. The Dashboard/DTR page also shows a "scanner
+   offline" warning if the live sync can't reach the device — if you see
+   that, re-check steps 4–6 (IP/port/Comm Key all matching, device and
+   server on the same network).
 
 ## Emailing payslips
 

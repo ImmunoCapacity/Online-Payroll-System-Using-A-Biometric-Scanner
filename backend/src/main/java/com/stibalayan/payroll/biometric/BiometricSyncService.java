@@ -34,7 +34,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 public class BiometricSyncService {
 
     private final BiometricDevice biometricDevice;
-    private final DeviceProperties deviceProperties;
     private final DeviceRepository devices;
     private final FacultyStaffRepository faculty;
     private final AdminStaffRepository admins;
@@ -44,12 +43,11 @@ public class BiometricSyncService {
     private final AtomicLong changes = new AtomicLong();
     private volatile Instant lastSyncAt;
 
-    public BiometricSyncService(BiometricDevice biometricDevice, DeviceProperties deviceProperties,
+    public BiometricSyncService(BiometricDevice biometricDevice,
                                 DeviceRepository devices, FacultyStaffRepository faculty, AdminStaffRepository admins,
                                 DailyTimeRecordRepository dtr, TransactionTemplate transaction,
                                 SettingsService settings) {
         this.biometricDevice = biometricDevice;
-        this.deviceProperties = deviceProperties;
         this.devices = devices;
         this.faculty = faculty;
         this.admins = admins;
@@ -61,7 +59,7 @@ public class BiometricSyncService {
     /** Connects to the K40, reads every punch, and records it. Used when live sync is off. */
     public Map<String, Object> sync() {
         // Talk to the device outside the database transaction — it can be slow.
-        return record(biometricDevice.readAttendanceLogs(deviceProperties));
+        return record(biometricDevice.readAttendanceLogs(settings.deviceProperties()));
     }
 
     /**
@@ -69,9 +67,10 @@ public class BiometricSyncService {
      * reads never record at once.
      */
     public synchronized Map<String, Object> record(List<AttendanceLog> logs) {
-        Device device = devices.findFirstByIpAddress(deviceProperties.ip())
+        String ip = settings.deviceProperties().ip();
+        Device device = devices.findFirstByIpAddress(ip)
                 .orElseThrow(() -> new ApiException(HttpStatus.UNPROCESSABLE_ENTITY,
-                        "No row in the device table has ip_address = " + deviceProperties.ip()
+                        "No row in the device table has ip_address = " + ip
                                 + ". Add this scanner on the Biometric Devices page first."));
 
         Map<String, Object> result = transaction.execute(status -> record(logs, device.getId()));

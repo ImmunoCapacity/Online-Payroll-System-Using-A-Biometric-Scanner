@@ -37,6 +37,43 @@
 
             <div class="pp-widget">
                 <div class="pp-widget-header">
+                    <h2 class="pp-widget-title">Connection Settings</h2>
+                </div>
+                <div class="pp-widget-body">
+                    <p class="pp-content-subtitle mb-3">
+                        How the server actually talks to the K40 (the scanner's own network address) —
+                        separate from the device row below, which is just the record of it.
+                    </p>
+                    <form id="deviceConnectionForm" class="row g-3" novalidate>
+                        <div class="col-sm-6 col-lg-3">
+                            <label for="connectionIp" class="pp-form-label">IP Address</label>
+                            <input type="text" class="form-control pp-form-control" id="connectionIp" placeholder="192.168.1.50" maxlength="15" data-validate="ipv4" inputmode="decimal" required>
+                        </div>
+                        <div class="col-sm-6 col-lg-3">
+                            <label for="connectionPort" class="pp-form-label">Port</label>
+                            <input type="number" class="form-control pp-form-control" id="connectionPort" min="1" max="65535" value="4370" required>
+                        </div>
+                        <div class="col-sm-6 col-lg-3">
+                            <label for="connectionCommKey" class="pp-form-label">Comm Key</label>
+                            <input type="number" class="form-control pp-form-control" id="connectionCommKey" min="0" value="0">
+                            <small class="text-muted d-block mt-1">0 = none</small>
+                        </div>
+                        <div class="col-sm-6 col-lg-3">
+                            <label for="connectionMachineNumber" class="pp-form-label">Machine Number</label>
+                            <input type="number" class="form-control pp-form-control" id="connectionMachineNumber" min="1" value="1">
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-pp-primary" id="saveConnectionBtn">
+                                <i class="bi bi-check-lg me-1"></i> Save Connection Settings
+                            </button>
+                            <small class="text-muted ms-2">Saving reconnects the live sync with these values (may take a few seconds).</small>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="pp-widget">
+                <div class="pp-widget-header">
                     <h2 class="pp-widget-title">Registered Devices</h2>
                 </div>
                 <div class="pp-widget-body">

@@ -3,6 +3,7 @@ package com.stibalayan.payroll.settings;
 import com.stibalayan.payroll.auth.AuthInterceptor;
 import com.stibalayan.payroll.auth.RequireModule;
 import com.stibalayan.payroll.auth.SystemModule;
+import com.stibalayan.payroll.biometric.BiometricLiveSync;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -21,15 +22,19 @@ import org.springframework.web.bind.annotation.RestController;
  * PUT    /api/settings/grace              { officeStart, officeGraceMinutes, classGraceMinutes }
  * POST   /api/settings/period-rules       { effectiveDate, firstDay, secondDay }  change the cut-offs from a date
  * DELETE /api/settings/period-rules/{id}  remove a change that has not taken effect
+ * GET    /api/settings/device             the K40's connection settings           — System Administrator
+ * PUT    /api/settings/device             { ip, port, commKey, machineNumber }     — System Administrator
  */
 @RestController
 @RequestMapping("/api/settings")
 public class SettingsController {
 
     private final SettingsService settings;
+    private final BiometricLiveSync liveSync;
 
-    public SettingsController(SettingsService settings) {
+    public SettingsController(SettingsService settings, BiometricLiveSync liveSync) {
         this.settings = settings;
+        this.liveSync = liveSync;
     }
 
     @GetMapping
@@ -56,5 +61,19 @@ public class SettingsController {
     @RequireModule(SystemModule.MAINTENANCE)
     public Map<String, Object> removeRule(@PathVariable int id, HttpServletRequest http) {
         return Map.of("success", true, "periodRules", settings.removeRule(id, AuthInterceptor.currentUser(http).id()));
+    }
+
+    @GetMapping("/device")
+    @RequireModule(SystemModule.UTILITY)
+    public Map<String, Object> device() {
+        return Map.of("success", true, "device", settings.deviceView());
+    }
+
+    @PutMapping("/device")
+    @RequireModule(SystemModule.UTILITY)
+    public Map<String, Object> saveDevice(@RequestBody SettingsService.DeviceRequest request, HttpServletRequest http) {
+        Map<String, Object> device = settings.saveDevice(request, AuthInterceptor.currentUser(http).id());
+        liveSync.reconnect();
+        return Map.of("success", true, "device", device);
     }
 }

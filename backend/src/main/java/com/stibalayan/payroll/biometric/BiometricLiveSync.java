@@ -1,6 +1,7 @@
 package com.stibalayan.payroll.biometric;
 
 import com.stibalayan.payroll.common.ApiException;
+import com.stibalayan.payroll.settings.SettingsService;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import java.util.List;
@@ -39,7 +40,7 @@ public class BiometricLiveSync {
     private static final long BUTTON_WAIT_SECONDS = 90;
 
     private final BiometricDevice biometricDevice;
-    private final DeviceProperties deviceProperties;
+    private final SettingsService settings;
     private final BiometricSyncService syncService;
     private final boolean enabled;
     private final long pollMillis;
@@ -47,18 +48,21 @@ public class BiometricLiveSync {
     private final BlockingQueue<CompletableFuture<Map<String, Object>>> requests = new LinkedBlockingQueue<>();
     private Thread worker;
     private volatile boolean connected;
+    // Set when the connection settings are saved, so the worker reconnects
+    // with the new values instead of waiting out the current retry interval.
+    private volatile boolean reconnectRequested;
 
     // Used only on the worker thread.
     private BiometricDevice.Session session;
     private int lastCount = -1;
     private String lastProblem;
 
-    public BiometricLiveSync(BiometricDevice biometricDevice, DeviceProperties deviceProperties,
+    public BiometricLiveSync(BiometricDevice biometricDevice, SettingsService settings,
                              BiometricSyncService syncService,
                              @Value("${biometric.live-sync:true}") boolean enabled,
                              @Value("${biometric.live-poll-millis:2000}") long pollMillis) {
         this.biometricDevice = biometricDevice;
-        this.deviceProperties = deviceProperties;
+        this.settings = settings;
         this.syncService = syncService;
         this.enabled = enabled;
         this.pollMillis = Math.max(500, pollMillis);
@@ -73,8 +77,13 @@ public class BiometricLiveSync {
         worker = new Thread(this::runLoop, "biometric-live-sync");
         worker.setDaemon(true);
         worker.start();
-        log.info("Biometric live sync on: checking {}:{} every {} ms.",
-                deviceProperties.ip(), deviceProperties.port(), pollMillis);
+        DeviceProperties device = settings.deviceProperties();
+        log.info("Biometric live sync on: checking {}:{} every {} ms.", device.ip(), device.port(), pollMillis);
+    }
+
+    /** The K40's connection settings changed (Biometric Device page) — drop the current connection and pick them up. */
+    public void reconnect() {
+        reconnectRequested = true;
     }
 
     @PreDestroy
@@ -126,12 +135,18 @@ public class BiometricLiveSync {
                 break;
             }
 
+            if (reconnectRequested) {
+                reconnectRequested = false;
+                closeSession();
+            }
+
             try {
                 if (session == null) {
-                    session = biometricDevice.open(deviceProperties);
+                    DeviceProperties device = settings.deviceProperties();
+                    session = biometricDevice.open(device);
                     connected = true;
                     lastCount = -1; // read everything once after (re)connecting
-                    log.info("Biometric live sync connected to {}:{}.", deviceProperties.ip(), deviceProperties.port());
+                    log.info("Biometric live sync connected to {}:{}.", device.ip(), device.port());
                 }
                 int count = session.recordCount();
                 if (request != null) {

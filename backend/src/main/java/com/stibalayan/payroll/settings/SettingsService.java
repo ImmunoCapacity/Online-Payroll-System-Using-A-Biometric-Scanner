@@ -1,6 +1,7 @@
 package com.stibalayan.payroll.settings;
 
 import com.stibalayan.payroll.audit.AuditService;
+import com.stibalayan.payroll.biometric.DeviceProperties;
 import com.stibalayan.payroll.common.ApiException;
 import com.stibalayan.payroll.common.Validation;
 import java.sql.Date;
@@ -37,7 +38,12 @@ public class SettingsService {
     public static final String OFFICE_START = "attendance.standard-start";
     public static final String OFFICE_GRACE = "attendance.grace-minutes";
     public static final String CLASS_GRACE = "class.grace-minutes";
+    public static final String DEVICE_IP = "device.ip";
+    public static final String DEVICE_PORT = "device.port";
+    public static final String DEVICE_COMM_KEY = "device.comm-key";
+    public static final String DEVICE_MACHINE_NUMBER = "device.machine-number";
     private static final int MAX_GRACE = 60;
+    private static final int MAX_PORT = 65535;
     private static final DateTimeFormatter LONG = DateTimeFormatter.ofPattern("MMMM d, yyyy", Locale.ENGLISH);
 
     private final JdbcTemplate jdbc;
@@ -45,15 +51,18 @@ public class SettingsService {
     private final AuditService audit;
     private final String defaultStart;
     private final int defaultGrace;
+    private final DeviceProperties deviceDefaults;
 
     public SettingsService(JdbcTemplate jdbc, PayrollPeriods periods, AuditService audit,
                            @Value("${attendance.standard-start:08:00}") String defaultStart,
-                           @Value("${attendance.grace-minutes:15}") int defaultGrace) {
+                           @Value("${attendance.grace-minutes:15}") int defaultGrace,
+                           DeviceProperties deviceDefaults) {
         this.jdbc = jdbc;
         this.periods = periods;
         this.audit = audit;
         this.defaultStart = defaultStart;
         this.defaultGrace = defaultGrace;
+        this.deviceDefaults = deviceDefaults;
     }
 
     // ---------------------------------------------------------------
@@ -110,6 +119,59 @@ public class SettingsService {
         m.put("classGraceMinutes", classGraceMinutes());
         m.put("lateAfter", lateAfter().toString());
         return m;
+    }
+
+    // ---------------------------------------------------------------
+    // Biometric device connection (Biometric Device, System Administrator)
+    // ---------------------------------------------------------------
+
+    /**
+     * The K40's network settings: whatever was saved here, else
+     * application.properties' device.* (the defaults until one is saved).
+     */
+    public DeviceProperties deviceProperties() {
+        return new DeviceProperties(
+                get(DEVICE_IP, deviceDefaults.ip()),
+                intValue(get(DEVICE_PORT, String.valueOf(deviceDefaults.port())), deviceDefaults.port()),
+                intValue(get(DEVICE_COMM_KEY, String.valueOf(deviceDefaults.commKey())), deviceDefaults.commKey()),
+                intValue(get(DEVICE_MACHINE_NUMBER, String.valueOf(deviceDefaults.machineNumber())), deviceDefaults.machineNumber()));
+    }
+
+    public record DeviceRequest(String ip, Integer port, Integer commKey, Integer machineNumber) {
+    }
+
+    @Transactional
+    public Map<String, Object> saveDevice(DeviceRequest r, int userId) {
+        String ip = Validation.ipv4(r.ip(), "ip", "IP address");
+        int port = port(r.port());
+        int commKey = r.commKey() == null ? 0 : r.commKey();
+        int machineNumber = r.machineNumber() == null ? 1 : r.machineNumber();
+        if (machineNumber < 1) {
+            throw Validation.invalid("machineNumber", "Machine number must be 1 or more.");
+        }
+        put(DEVICE_IP, ip);
+        put(DEVICE_PORT, String.valueOf(port));
+        put(DEVICE_COMM_KEY, String.valueOf(commKey));
+        put(DEVICE_MACHINE_NUMBER, String.valueOf(machineNumber));
+        audit.log(userId, "Biometric Device", "Updated connection settings", ip + ":" + port);
+        return deviceView();
+    }
+
+    public Map<String, Object> deviceView() {
+        DeviceProperties d = deviceProperties();
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("ip", d.ip());
+        m.put("port", d.port());
+        m.put("commKey", d.commKey());
+        m.put("machineNumber", d.machineNumber());
+        return m;
+    }
+
+    private static int port(Integer v) {
+        if (v == null || v < 1 || v > MAX_PORT) {
+            throw Validation.invalid("port", "Port must be 1 to " + MAX_PORT + ".");
+        }
+        return v;
     }
 
     // ---------------------------------------------------------------
