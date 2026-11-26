@@ -306,8 +306,8 @@ public class TeachingHoursService {
         return a.bothChecksRecorded() ? TeachingAttendance.COMPLETE : TeachingAttendance.INCOMPLETE;
     }
 
-    /** Issues needing review: a missed deadline, or conflicting Present/Absent evidence. */
-    static List<String> flags(FacultyClass c, TeachingAttendance a, LocalDateTime now) {
+    /** Issues needing review: a missed deadline, conflicting Present/Absent evidence, or no campus scan. */
+    static List<String> flags(FacultyClass c, TeachingAttendance a, LocalDateTime now, DailyTimeRecord d) {
         List<String> flags = new ArrayList<>();
         int grace = c.getGracePeriodMinutes();
         LocalDateTime start = c.getClassDate().atTime(c.getScheduledStart());
@@ -326,6 +326,12 @@ public class TeachingHoursService {
             flags.add(taught(a.getStartCheckStatus())
                     ? "Conflicting evidence: present at the beginning, absent at the end"
                     : "Conflicting evidence: absent at the beginning, present at the end");
+        }
+        boolean checkedPresent = a != null
+                && (taught(a.getStartCheckStatus()) || TeachingAttendance.PRESENT.equals(a.getEndCheckStatus()));
+        boolean onCampus = d != null && d.getTimeIn() != null;
+        if (checkedPresent && !onCampus) {
+            flags.add("Marked present with no campus scan recorded — confirm if teaching remotely (e.g. Gmeet)");
         }
         return flags;
     }
@@ -393,7 +399,7 @@ public class TeachingHoursService {
                     a == null ? null : names.get(a.getEndCheckedBy()),
                     a == null ? null : a.getRemarks(),
                     effectiveStatus(a),
-                    flags(c, a, now),
+                    flags(c, a, now, d),
                     payableFor(c, a),
                     a == null ? 0 : a.getLateMinutes(),
                     d == null || d.getTimeIn() == null ? null : d.getTimeIn().format(HH_MM),
