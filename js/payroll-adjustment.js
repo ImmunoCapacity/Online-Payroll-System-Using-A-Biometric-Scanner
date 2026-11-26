@@ -1,13 +1,14 @@
 /**
  * Payroll Processing → Payroll Adjustment (api/payroll/adjustments/grid).
  *
- * A grid per cut-off: one row per employee. For each employee the Payroll
- * Master enters the days being corrected (Date From – Date To; days = working
- * days, Mon–Fri), hours per day to ADD and/or DEDUCT, and a reason.
- * Amounts = hours × days × rate (the rate on Date From); Total = addition −
- * deduction, added to that cut-off's pay when payroll is computed. The
- * server recomputes everything when saving; this page shows the same numbers
- * as you type. A released cut-off is read-only.
+ * A grid per cut-off: one row per employee, and each employee can have one
+ * or more adjustments. For each adjustment the Payroll Master enters the
+ * days being corrected (Date From – Date To; days = working days, Mon–Fri),
+ * hours per day to ADD and/or DEDUCT, and a reason. Amounts = hours × days ×
+ * the rate on that adjustment's own Date From; Net Total = addition −
+ * deduction summed across every adjustment, added to that cut-off's pay when
+ * payroll is computed. The server recomputes everything when saving; this
+ * page shows the same numbers as you type. A released cut-off is read-only.
  */
 (function () {
     'use strict';
@@ -21,7 +22,7 @@
 
     var el = function (id) { return document.getElementById(id); };
     var grid = null;          // { applyStart, applyEnd, released, rows }
-    var state = {};           // employeeId -> { dateFrom, dateTo, addHours, deductHours, reason }
+    var state = {};           // employeeId -> [{ dateFrom, dateTo, addHours, deductHours, reason, adjustmentId }]
     var saved = {};           // employeeId -> the same, as last saved (to spot changes)
     var ratesByDate = {};     // 'YYYY-MM-DD' -> { employeeId: { office, teaching } }
     var currentCutoff = '';
@@ -121,16 +122,35 @@
         return grid.released || row.status === 'Applied';
     }
 
+    function emptyEntry() {
+        return { adjustmentId: null, dateFrom: '', dateTo: '', addHours: '', deductHours: '', reason: '' };
+    }
+
+    function snapshotEntries(row) {
+        return (row.entries || []).map(function (e) {
+            return {
+                adjustmentId: e.adjustmentId,
+                dateFrom: e.dateFrom || '',
+                dateTo: e.dateTo || '',
+                addHours: e.addHours != null && Number(e.addHours) ? String(Number(e.addHours)) : '',
+                deductHours: e.deductHours != null && Number(e.deductHours) ? String(Number(e.deductHours)) : '',
+                reason: e.reason || '',
+                rate: e.rate // the rate it was actually saved with, kept while dateFrom doesn't change
+            };
+        });
+    }
+
     /**
-     * Rate for the row: a saved adjustment keeps the rate it was saved with
-     * (until its Date From changes); otherwise the rate on Date From if known,
-     * else the rate shown. s defaults to the row's live state; the Adjust
-     * modal passes its own draft instead, to preview without touching it.
+     * Rate for one entry: an already-saved entry keeps the rate it was saved
+     * with until its Date From changes; otherwise the rate on Date From if
+     * known, else the employee's current rate (row.rate).
      */
-    function rateFor(row, s) {
-        s = s || state[row.employeeId];
-        if (row.status && s.dateFrom === saved[row.employeeId].dateFrom) return Number(row.rate) || 0;
-        var onDate = s.dateFrom && ratesByDate[s.dateFrom] ? ratesByDate[s.dateFrom][row.employeeId] : null;
+    function rateForEntry(row, e) {
+        if (e.adjustmentId != null && e.rate != null) {
+            var original = (saved[row.employeeId] || []).find(function (o) { return o.adjustmentId === e.adjustmentId; });
+            if (original && original.dateFrom === e.dateFrom) return Number(e.rate) || 0;
+        }
+        var onDate = e.dateFrom && ratesByDate[e.dateFrom] ? ratesByDate[e.dateFrom][row.employeeId] : null;
         if (onDate) {
             var r = row.type === 'Faculty' ? onDate.teaching : onDate.office;
             if (r != null) return Number(r);
@@ -146,35 +166,41 @@
         }).catch(function () { delete ratesByDate[date]; });
     }
 
-    function compute(row, s) {
-        s = s || state[row.employeeId];
-        var days = workdays(s.dateFrom, s.dateTo);
-        var rate = rateFor(row, s);
-        var add = round2(num(s.addHours) * days * rate);
-        var deduct = round2(num(s.deductHours) * days * rate);
+    /** One entry's computed days/rate/add/deduct/total. */
+    function computeEntry(row, e) {
+        var days = workdays(e.dateFrom, e.dateTo);
+        var rate = rateForEntry(row, e);
+        var add = round2(num(e.addHours) * days * rate);
+        var deduct = round2(num(e.deductHours) * days * rate);
         return { days: days, rate: rate, add: add, deduct: deduct, total: round2(add - deduct) };
     }
 
-    function dateShort(text) {
-        return text ? parseIso(text).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' }) : '';
+    /** An employee row's entries, summed. */
+    function computeRow(row) {
+        var entries = state[row.employeeId] || [];
+        var add = 0, deduct = 0, count = 0;
+        entries.forEach(function (e) {
+            var c = computeEntry(row, e);
+            if (c.add || c.deduct) {
+                add += c.add;
+                deduct += c.deduct;
+                count++;
+            }
+        });
+        return { count: count, add: round2(add), deduct: round2(deduct), total: round2(add - deduct) };
     }
 
-    function snapshot(row) {
-        return {
-            dateFrom: row.dateFrom || '',
-            dateTo: row.dateTo || '',
-            addHours: row.addHours != null && Number(row.addHours) ? String(Number(row.addHours)) : '',
-            deductHours: row.deductHours != null && Number(row.deductHours) ? String(Number(row.deductHours)) : '',
-            reason: row.reason || ''
-        };
+    function entrySignature(e) {
+        return ['dateFrom', 'dateTo', 'addHours', 'deductHours', 'reason'].map(function (k) {
+            return String(e[k] || '').trim();
+        }).join('|');
     }
 
     function isChanged(employeeId) {
-        var a = state[employeeId];
-        var b = saved[employeeId];
-        return ['dateFrom', 'dateTo', 'addHours', 'deductHours', 'reason'].some(function (k) {
-            return String(a[k] || '').trim() !== String(b[k] || '').trim();
-        });
+        var a = (state[employeeId] || []).map(entrySignature);
+        var b = (saved[employeeId] || []).map(entrySignature);
+        if (a.length !== b.length) return true;
+        return a.some(function (sig, i) { return sig !== b[i]; });
     }
 
     function hasChanges() {
@@ -198,7 +224,7 @@
 
     function load() {
         var c = el('cutoffSelect').value.split('|');
-        el('adjustmentBody').innerHTML = '<tr><td colspan="12" class="text-center text-muted py-4">Loading…</td></tr>';
+        el('adjustmentBody').innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Loading…</td></tr>';
         el('adjustmentFoot').innerHTML = '';
         return api('api/payroll/adjustments/grid?from=' + c[0] + '&to=' + c[1]).then(function (data) {
             if (!data.success) {
@@ -210,12 +236,13 @@
             state = {};
             saved = {};
             grid.rows.forEach(function (r) {
-                state[r.employeeId] = snapshot(r);
-                saved[r.employeeId] = snapshot(r);
+                state[r.employeeId] = snapshotEntries(r);
+                saved[r.employeeId] = snapshotEntries(r);
             });
             // Rates on the saved Date From values, so the totals match the saved amounts.
-            var dates = grid.rows.map(function (r) { return r.dateFrom; }).filter(Boolean);
-            return Promise.all(dates.filter(function (d, i) { return dates.indexOf(d) === i; }).map(loadRatesFor));
+            var dates = [];
+            grid.rows.forEach(function (r) { (r.entries || []).forEach(function (e) { dates.push(e.dateFrom); }); });
+            return Promise.all(dates.filter(function (d, i) { return d && dates.indexOf(d) === i; }).map(loadRatesFor));
         }).then(function () {
             if (grid) render();
         }).catch(function (error) {
@@ -235,7 +262,7 @@
             hint.textContent = grid.released
                 ? 'This cut-off\'s payroll is released, so its adjustments are paid and can no longer be changed.'
                 : 'Addition and Deduction are hours per day. Days are working days (Mon–Fri) from Date From to Date To; ' +
-                  'amounts = hours × days × rate. The Total is added to (or taken from) this cut-off\'s pay when payroll is computed.';
+                  'amounts = hours × days × rate. The Net Total is added to (or taken from) this cut-off\'s pay when payroll is computed.';
         }
         el('saveAdjustmentsBtn').title = grid.released
             ? 'This cut-off\'s payroll is released, so its adjustments can no longer be changed.' : '';
@@ -256,15 +283,9 @@
                     (r.status === 'Applied' ? '<span class="pp-adjust-lock" title="Paid when the cut-off was released"><i class="bi bi-lock-fill"></i></span>' : '') +
                     (r.inPayroll === false && r.status !== 'Applied' ? '<span class="pp-adjust-warn" title="Not Active (or hired after this cut-off), so not in this cut-off\'s payroll. Clear this row."><i class="bi bi-exclamation-triangle-fill"></i> Not in payroll</span>' : '') + '</td>' +
                 '<td>' + escapeHtml(PayrollProLayout.staffTypeLabel(r.type)) + '</td>' +
-                '<td class="text-end" data-cell="rate"></td>' +
-                '<td data-cell="dates"></td>' +
-                '<td class="text-end" data-cell="days"></td>' +
-                '<td class="text-end" data-cell="addHours"></td>' +
-                '<td class="text-end amount-add" data-cell="add"></td>' +
-                '<td class="text-end" data-cell="deductHours"></td>' +
-                '<td class="text-end amount-deduct" data-cell="deduct"></td>' +
+                '<td class="text-end" data-cell="count"></td>' +
                 '<td class="text-end amount-total" data-cell="total"></td>' +
-                '<td data-cell="reason"></td>' +
+                '<td data-cell="reasons"></td>' +
             '</tr>';
         }).join('');
         grid.rows.forEach(function (r) { updateRow(r.employeeId); });
@@ -277,39 +298,31 @@
         var tr = el('adjustmentBody').querySelector('tr[data-id="' + CSS.escape(employeeId) + '"]');
         if (!tr) return;
         var row = rowOf(employeeId);
-        var s = state[employeeId];
-        var c = compute(row);
-        tr.querySelector('[data-cell="rate"]').textContent = money(c.rate);
-        tr.querySelector('[data-cell="dates"]').textContent = s.dateFrom
-            ? dateShort(s.dateFrom) + (s.dateTo && s.dateTo !== s.dateFrom ? ' – ' + dateShort(s.dateTo) : '')
-            : '—';
-        tr.querySelector('[data-cell="days"]').textContent = c.days || '';
-        tr.querySelector('[data-cell="addHours"]').textContent = num(s.addHours) ? Number(s.addHours) : '';
-        tr.querySelector('[data-cell="add"]').textContent = c.add ? money(c.add) : '';
-        tr.querySelector('[data-cell="deductHours"]').textContent = num(s.deductHours) ? Number(s.deductHours) : '';
-        tr.querySelector('[data-cell="deduct"]').textContent = c.deduct ? '−' + money(c.deduct) : '';
+        var entries = state[employeeId] || [];
+        var c = computeRow(row);
+        tr.querySelector('[data-cell="count"]').textContent = c.count || '';
         var total = tr.querySelector('[data-cell="total"]');
         total.textContent = c.total ? (c.total > 0 ? '+' : '−') + money(Math.abs(c.total)) : '';
         total.classList.toggle('amount-add', c.total > 0);
         total.classList.toggle('amount-deduct', c.total < 0);
-        tr.querySelector('[data-cell="reason"]').textContent = s.reason ? s.reason : '—';
+        var reasons = entries.map(function (e) { return e.reason; }).filter(Boolean).join('; ');
+        tr.querySelector('[data-cell="reasons"]').textContent = reasons || '—';
+        tr.querySelector('[data-cell="reasons"]').title = reasons;
         tr.classList.toggle('is-changed', isChanged(employeeId));
     }
 
     function updateTotals() {
-        var add = 0, deduct = 0, count = 0;
+        var add = 0, deduct = 0, employeeCount = 0;
         grid.rows.forEach(function (r) {
-            var c = compute(r);
+            var c = computeRow(r);
             add += c.add;
             deduct += c.deduct;
-            if (c.add || c.deduct) count++;
+            if (c.count) employeeCount++;
         });
         var total = round2(add - deduct);
         el('adjustmentFoot').innerHTML = '<tr>' +
-            '<th colspan="7">' + count + ' employee' + (count === 1 ? '' : 's') + ' adjusted</th>' +
-            '<th class="text-end amount-add">' + money(add) + '</th>' +
+            '<th colspan="3">' + employeeCount + ' employee' + (employeeCount === 1 ? '' : 's') + ' adjusted</th>' +
             '<th></th>' +
-            '<th class="text-end amount-deduct">' + (deduct ? '−' + money(deduct) : money(0)) + '</th>' +
             '<th class="text-end amount-total">' + (total < 0 ? '−' : total > 0 ? '+' : '') + money(Math.abs(total)) + '</th>' +
             '<th></th></tr>';
     }
@@ -326,102 +339,139 @@
     }
 
     // ---------------------------------------------------------------
-    // Editing (Adjust Payroll modal — one employee at a time)
+    // Editing (Adjust Payroll modal — one employee, one or more entries)
     // ---------------------------------------------------------------
 
-    var ADJUST_FIELD_INPUT = {
-        dateFrom: 'adjustDateFrom', dateTo: 'adjustDateTo',
-        addHours: 'adjustAddHours', deductHours: 'adjustDeductHours', reason: 'adjustReason'
-    };
     var adjustModal = null;
     var adjustEmployeeId = null;
-    var draft = null;
+    var draft = null; // [{ adjustmentId, dateFrom, dateTo, addHours, deductHours, reason }]
 
-    /** Rows with hours need dates and a reason; { field, message } of the first problem, or null. */
-    function validateRow(r, s) {
+    /** An entry with hours needs dates and a reason; { field, message } of the first problem, or null. */
+    function validateEntry(e) {
         var bad = null;
-        [s.addHours, s.deductHours].forEach(function (v, i) {
+        [e.addHours, e.deductHours].forEach(function (v, i) {
             var n = parseFloat(v);
             if (!bad && String(v).trim() && (!isFinite(n) || n < 0 || n > 24)) {
                 bad = { field: i ? 'deductHours' : 'addHours', message: 'hours per day must be from 0 to 24.' };
             }
         });
         if (bad) return bad;
-        if (!num(s.addHours) && !num(s.deductHours)) return null;
-        if (!s.dateFrom) return { field: 'dateFrom', message: 'enter Date From.' };
-        if (!s.dateTo) return { field: 'dateTo', message: 'enter Date To.' };
-        if (s.dateTo < s.dateFrom) return { field: 'dateTo', message: 'Date To can\'t be before Date From.' };
-        if (s.dateTo > grid.applyEnd) return { field: 'dateTo', message: 'the dates must end on or before the cut-off.' };
-        if (s.dateTo >= s.dateFrom && !workdays(s.dateFrom, s.dateTo)) return { field: 'dateTo', message: 'those dates have no working days.' };
-        if (!String(s.reason).trim()) return { field: 'reason', message: 'enter the reason.' };
+        if (!num(e.addHours) && !num(e.deductHours)) return { field: 'addHours', message: 'enter an addition or a deduction, or remove this adjustment.' };
+        if (!e.dateFrom) return { field: 'dateFrom', message: 'enter Date From.' };
+        if (!e.dateTo) return { field: 'dateTo', message: 'enter Date To.' };
+        if (e.dateTo < e.dateFrom) return { field: 'dateTo', message: 'Date To can\'t be before Date From.' };
+        if (e.dateTo > grid.applyEnd) return { field: 'dateTo', message: 'the dates must end on or before the cut-off.' };
+        if (e.dateTo >= e.dateFrom && !workdays(e.dateFrom, e.dateTo)) return { field: 'dateTo', message: 'those dates have no working days.' };
+        if (!String(e.reason).trim()) return { field: 'reason', message: 'enter the reason.' };
         return null;
     }
 
-    /** The first row (not locked) with a validation problem, or null. */
+    /** The first entry (of a non-locked row) with a validation problem, or null. */
     function firstProblem() {
         var result = null;
         grid.rows.some(function (r) {
             if (isLocked(r)) return false;
-            var issue = validateRow(r, state[r.employeeId]);
-            if (issue) { result = { row: r, issue: issue }; return true; }
-            return false;
+            var entries = state[r.employeeId] || [];
+            return entries.some(function (e, index) {
+                var issue = validateEntry(e);
+                if (issue) { result = { row: r, index: index, issue: issue }; return true; }
+                return false;
+            });
         });
         return result;
     }
 
-    function clearAdjustErrors() {
-        Object.keys(ADJUST_FIELD_INPUT).forEach(function (f) { el(ADJUST_FIELD_INPUT[f]).classList.remove('is-invalid'); });
+    function previewHtml(c) {
+        return '<span>Rate <strong>₱' + money(c.rate) + '</strong></span>' +
+            '<span>Days <strong>' + c.days + '</strong></span>' +
+            '<span class="amount-add">+₱' + money(c.add) + '</span>' +
+            '<span class="amount-deduct">−₱' + money(c.deduct) + '</span>' +
+            '<span class="amount-total">' + (c.total < 0 ? '−' : c.total > 0 ? '+' : '') + '₱' + money(Math.abs(c.total)) + '</span>';
     }
 
-    function showAdjustError(issue) {
-        clearAdjustErrors();
-        el(ADJUST_FIELD_INPUT[issue.field]).classList.add('is-invalid');
-        PPToast.error(issue.message);
+    function entryCard(index, e, row, locked) {
+        return '<div class="pp-adjust-entry" data-index="' + index + '">' +
+            '<div class="pp-adjust-entry-head">' +
+                '<strong>Adjustment ' + (index + 1) + '</strong>' +
+                (locked ? '' : '<button type="button" class="pp-adjust-entry-remove" data-index="' + index + '" aria-label="Remove this adjustment"><i class="bi bi-trash"></i></button>') +
+            '</div>' +
+            '<div class="row g-2">' +
+                '<div class="col-sm-6"><label class="pp-form-label">Date From</label>' +
+                    '<input type="date" class="form-control pp-form-control" data-field="dateFrom" data-index="' + index + '" value="' + escapeHtml(e.dateFrom) + '" max="' + grid.applyEnd + '"' + (locked ? ' disabled' : '') + '></div>' +
+                '<div class="col-sm-6"><label class="pp-form-label">Date To</label>' +
+                    '<input type="date" class="form-control pp-form-control" data-field="dateTo" data-index="' + index + '" value="' + escapeHtml(e.dateTo) + '" max="' + grid.applyEnd + '"' + (locked ? ' disabled' : '') + '></div>' +
+            '</div>' +
+            '<div class="row g-2 mt-0">' +
+                '<div class="col-sm-6"><label class="pp-form-label">Addition <span class="pp-sub d-inline">(hrs / day)</span></label>' +
+                    '<input type="number" class="form-control pp-form-control" data-field="addHours" data-index="' + index + '" value="' + escapeHtml(e.addHours) + '" min="0" max="24" step="0.5" inputmode="decimal"' + (locked ? ' disabled' : '') + '></div>' +
+                '<div class="col-sm-6"><label class="pp-form-label">Deduction <span class="pp-sub d-inline">(hrs / day)</span></label>' +
+                    '<input type="number" class="form-control pp-form-control" data-field="deductHours" data-index="' + index + '" value="' + escapeHtml(e.deductHours) + '" min="0" max="24" step="0.5" inputmode="decimal"' + (locked ? ' disabled' : '') + '></div>' +
+            '</div>' +
+            '<div class="mb-0"><label class="pp-form-label">Reason</label>' +
+                '<input type="text" class="form-control pp-form-control" data-field="reason" data-index="' + index + '" value="' + escapeHtml(e.reason) + '" maxlength="200" placeholder="e.g. Leave not recorded in time"' + (locked ? ' disabled' : '') + '></div>' +
+            '<div class="pp-adjust-entry-preview">' + previewHtml(computeEntry(row, e)) + '</div>' +
+        '</div>';
     }
 
-    function updatePreview() {
+    function renderEntries() {
         var row = rowOf(adjustEmployeeId);
-        var c = compute(row, draft);
-        el('adjustPreviewDays').textContent = c.days || '0';
-        el('adjustPreviewAdd').textContent = '₱' + money(c.add);
-        el('adjustPreviewDeduct').textContent = '₱' + money(c.deduct);
-        el('adjustPreviewTotal').textContent = (c.total < 0 ? '−' : c.total > 0 ? '+' : '') + '₱' + money(Math.abs(c.total));
+        var locked = isLocked(row);
+        el('adjustEmptyEntries').classList.toggle('d-none', draft.length > 0);
+        el('adjustEntries').innerHTML = draft.map(function (e, i) { return entryCard(i, e, row, locked); }).join('');
+        if (window.PPDatePicker) PPDatePicker.upgrade(el('adjustEntries'));
+        updateGrandTotal();
     }
 
-    function fillAdjustField(field, value) {
-        draft[field] = value || '';
-        el(ADJUST_FIELD_INPUT[field]).value = draft[field];
+    /** Refreshes one entry's preview numbers in place, without rebuilding any input (keeps focus). */
+    function refreshEntryPreview(index) {
+        var card = el('adjustEntries').querySelector('.pp-adjust-entry[data-index="' + index + '"]');
+        if (!card || !draft[index]) return;
+        card.querySelector('.pp-adjust-entry-preview').innerHTML = previewHtml(computeEntry(rowOf(adjustEmployeeId), draft[index]));
+        updateGrandTotal();
+    }
+
+    function updateGrandTotal() {
+        var row = rowOf(adjustEmployeeId);
+        var add = 0, deduct = 0;
+        draft.forEach(function (e) {
+            var c = computeEntry(row, e);
+            add += c.add;
+            deduct += c.deduct;
+        });
+        var total = round2(add - deduct);
+        var strong = el('adjustGrandTotal');
+        strong.textContent = (total < 0 ? '−' : total > 0 ? '+' : '') + '₱' + money(Math.abs(total));
+        strong.classList.toggle('amount-add', total > 0);
+        strong.classList.toggle('amount-deduct', total < 0);
+    }
+
+    function clearEntryErrors() {
+        el('adjustEntries').querySelectorAll('.is-invalid').forEach(function (i) { i.classList.remove('is-invalid'); });
+    }
+
+    function showEntryError(index, issue) {
+        clearEntryErrors();
+        var input = el('adjustEntries').querySelector('[data-index="' + index + '"][data-field="' + issue.field + '"]');
+        if (input) input.classList.add('is-invalid');
+        PPToast.error('Adjustment ' + (index + 1) + ': ' + issue.message);
     }
 
     function openAdjust(employeeId) {
         var r = rowOf(employeeId);
         if (!r) return;
         adjustEmployeeId = employeeId;
-        draft = Object.assign({}, state[employeeId]);
+        draft = (state[employeeId] || []).map(function (e) { return Object.assign({}, e); });
         var locked = isLocked(r);
 
         el('adjustModalTitle').textContent = 'Adjust Payroll — ' + r.name;
         el('adjustEmployeeNumber').textContent = r.employeeNumber;
         el('adjustPosition').textContent = PayrollProLayout.staffTypeLabel(r.type);
-        el('adjustRate').textContent = '₱' + money(rateFor(r, draft));
-
-        Object.keys(ADJUST_FIELD_INPUT).forEach(function (field) {
-            var input = el(ADJUST_FIELD_INPUT[field]);
-            input.value = draft[field] || '';
-            input.disabled = locked;
-            if (field === 'dateFrom' || field === 'dateTo') {
-                input.max = grid.applyEnd;
-                // The picker (if upgraded) read the max attribute once at setup;
-                // the cut-off's end date changes every time the grid reloads.
-                if (input._flatpickr) input._flatpickr.set('maxDate', grid.applyEnd);
-            }
-        });
+        el('addEntryBtn').classList.toggle('d-none', locked);
         el('adjustSaveBtn').classList.toggle('d-none', locked);
-        el('adjustClearBtn').classList.toggle('d-none', locked);
         el('adjustLockedNote').classList.toggle('d-none', !locked);
 
-        clearAdjustErrors();
-        updatePreview();
+        clearEntryErrors();
+        renderEntries();
         if (!adjustModal) adjustModal = new bootstrap.Modal(el('adjustModal'));
         adjustModal.show();
     }
@@ -437,33 +487,46 @@
         }
     });
 
-    el('adjustForm').addEventListener('input', function (e) {
+    el('addEntryBtn').addEventListener('click', function () {
+        draft.push(emptyEntry());
+        renderEntries();
+    });
+
+    el('adjustEntries').addEventListener('click', function (e) {
+        var btn = e.target.closest('.pp-adjust-entry-remove');
+        if (!btn) return;
+        draft.splice(Number(btn.dataset.index), 1);
+        renderEntries();
+    });
+
+    el('adjustEntries').addEventListener('input', function (e) {
         var field = e.target.dataset.field;
-        if (!field || !draft) return;
-        draft[field] = e.target.value;
+        var index = e.target.dataset.index;
+        if (!field || index == null || !draft[index]) return;
+        draft[index][field] = e.target.value;
         e.target.classList.remove('is-invalid');
         // Leaving Date To empty: use Date From (a single day).
         if (field === 'dateFrom') {
-            if (!draft.dateTo) fillAdjustField('dateTo', draft.dateFrom);
-            loadRatesFor(draft.dateFrom).then(updatePreview);
+            if (!draft[index].dateTo) {
+                draft[index].dateTo = draft[index].dateFrom;
+                var toInput = el('adjustEntries').querySelector('[data-index="' + index + '"][data-field="dateTo"]');
+                if (toInput) toInput.value = draft[index].dateTo;
+            }
+            loadRatesFor(draft[index].dateFrom).then(function () { refreshEntryPreview(index); });
+            return;
         }
-        updatePreview();
-    });
-
-    el('adjustClearBtn').addEventListener('click', function () {
-        if (!draft) return;
-        Object.keys(ADJUST_FIELD_INPUT).forEach(function (field) { fillAdjustField(field, ''); });
-        clearAdjustErrors();
-        updatePreview();
+        refreshEntryPreview(index);
     });
 
     el('adjustForm').addEventListener('submit', function (e) {
         e.preventDefault();
         var row = rowOf(adjustEmployeeId);
         if (!row || isLocked(row)) return;
-        var issue = validateRow(row, draft);
-        if (issue) { showAdjustError(issue); return; }
-        state[adjustEmployeeId] = Object.assign({}, draft);
+        for (var i = 0; i < draft.length; i++) {
+            var issue = validateEntry(draft[i]);
+            if (issue) { showEntryError(i, issue); return; }
+        }
+        state[adjustEmployeeId] = draft.map(function (e) { return Object.assign({}, e); });
         updateRow(adjustEmployeeId);
         updateTotals();
         adjustModal.hide();
@@ -474,18 +537,18 @@
         var problem = firstProblem();
         if (problem) {
             openAdjust(problem.row.employeeId);
-            showAdjustError(problem.issue);
+            showEntryError(problem.index, problem.issue);
             return;
         }
         // "Are you sure?" with what will be saved for this cut-off.
         var adjusted = 0, removed = 0, net = 0;
         grid.rows.forEach(function (r) {
             if (isLocked(r)) return;
-            var c = compute(r);
-            if (c.add || c.deduct) {
+            var c = computeRow(r);
+            if (c.count) {
                 adjusted++;
                 net += c.total;
-            } else if (saved[r.employeeId].addHours || saved[r.employeeId].deductHours) {
+            } else if ((saved[r.employeeId] || []).length) {
                 removed++;
             }
         });
@@ -495,7 +558,7 @@
             message: 'Save the adjustments for ' + cutoffLabel(grid.applyStart, grid.applyEnd) + '? ' +
                 adjusted + ' employee' + (adjusted === 1 ? '' : 's') + ' adjusted, net ' +
                 (net < 0 ? '−' : net > 0 ? '+' : '') + '₱' + money(Math.abs(net)) +
-                (removed ? ', ' + removed + ' adjustment' + (removed === 1 ? '' : 's') + ' removed' : '') + '.',
+                (removed ? ', ' + removed + ' employee' + (removed === 1 ? '' : 's') + ' cleared' : '') + '.',
             confirmText: 'Save'
         }).then(function (confirmed) {
             if (confirmed) send();
@@ -504,14 +567,18 @@
 
     function send() {
         var rows = grid.rows.filter(function (r) { return !isLocked(r); }).map(function (r) {
-            var s = state[r.employeeId];
+            var entries = (state[r.employeeId] || []).filter(function (e) { return num(e.addHours) || num(e.deductHours); });
             return {
                 employeeId: r.employeeId,
-                dateFrom: s.dateFrom || null,
-                dateTo: s.dateTo || null,
-                addHours: num(s.addHours) || null,
-                deductHours: num(s.deductHours) || null,
-                reason: String(s.reason || '').trim()
+                entries: entries.map(function (e) {
+                    return {
+                        dateFrom: e.dateFrom || null,
+                        dateTo: e.dateTo || null,
+                        addHours: num(e.addHours) || null,
+                        deductHours: num(e.deductHours) || null,
+                        reason: String(e.reason || '').trim()
+                    };
+                })
             };
         });
         var btn = el('saveAdjustmentsBtn');

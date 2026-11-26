@@ -699,8 +699,8 @@ CREATE TABLE IF NOT EXISTS payroll_adjustment (
     payroll_run_id INT,
     recorded_by    INT,
     created_at     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE KEY uq_adjust_faculty (faculty_id, apply_start),
-    UNIQUE KEY uq_adjust_admin   (adminstaff_id, apply_start),
+    KEY idx_adjust_faculty (faculty_id, apply_start),
+    KEY idx_adjust_admin   (adminstaff_id, apply_start),
     KEY idx_adjust_period (apply_start, apply_end),
     CONSTRAINT fk_adjust_faculty FOREIGN KEY (faculty_id)     REFERENCES faculty_staff (faculty_id)  ON DELETE CASCADE,
     CONSTRAINT fk_adjust_admin   FOREIGN KEY (adminstaff_id)  REFERENCES admin_staff (adminstaff_id) ON DELETE CASCADE,
@@ -885,3 +885,37 @@ CREATE TABLE IF NOT EXISTS leave_conversion (
     CONSTRAINT fk_leaveconv_run      FOREIGN KEY (payroll_run_id)    REFERENCES payroll_run (payroll_run_id)       ON DELETE SET NULL,
     CONSTRAINT fk_leaveconv_user     FOREIGN KEY (created_by)        REFERENCES users (user_id)                    ON DELETE SET NULL
 ) ENGINE=InnoDB;
+
+-- Payroll Adjustment: an employee can now have more than one adjustment in
+-- the same cut-off (each its own date range, hours and reason), so the old
+-- one-per-employee-per-cut-off unique keys are replaced with plain indexes
+-- (databases created before this existed; a fresh database never had the
+-- unique ones). The replacement indexes are created first so faculty_id/
+-- adminstaff_id always have a covering index for their foreign keys.
+SET @idx := (SELECT COUNT(1) FROM information_schema.statistics
+             WHERE table_schema = DATABASE() AND table_name = 'payroll_adjustment' AND index_name = 'idx_adjust_faculty');
+SET @sql := IF(@idx = 0, 'CREATE INDEX idx_adjust_faculty ON payroll_adjustment (faculty_id, apply_start)', 'SELECT 1');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @idx := (SELECT COUNT(1) FROM information_schema.statistics
+             WHERE table_schema = DATABASE() AND table_name = 'payroll_adjustment' AND index_name = 'idx_adjust_admin');
+SET @sql := IF(@idx = 0, 'CREATE INDEX idx_adjust_admin ON payroll_adjustment (adminstaff_id, apply_start)', 'SELECT 1');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @idx := (SELECT COUNT(1) FROM information_schema.statistics
+             WHERE table_schema = DATABASE() AND table_name = 'payroll_adjustment' AND index_name = 'uq_adjust_faculty');
+SET @sql := IF(@idx > 0, 'ALTER TABLE payroll_adjustment DROP INDEX uq_adjust_faculty', 'SELECT 1');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @idx := (SELECT COUNT(1) FROM information_schema.statistics
+             WHERE table_schema = DATABASE() AND table_name = 'payroll_adjustment' AND index_name = 'uq_adjust_admin');
+SET @sql := IF(@idx > 0, 'ALTER TABLE payroll_adjustment DROP INDEX uq_adjust_admin', 'SELECT 1');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;

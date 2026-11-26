@@ -14,13 +14,19 @@
 }
 
 .pp-adjust-table {
-    min-width: 1280px;
+    min-width: 720px;
 }
 
 .pp-adjust-table th,
 .pp-adjust-table td {
     vertical-align: middle;
     white-space: nowrap;
+}
+
+.pp-adjust-table td[data-cell="reasons"] {
+    max-width: 360px;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .pp-adjust-table .pp-sub {
@@ -102,24 +108,62 @@
     font-weight: 600;
 }
 
-/* Adjust Payroll modal: live preview of Days / Addition / Deduction / Total */
-.pp-adjust-preview {
-    display: flex;
-    gap: 2rem;
-    flex-wrap: wrap;
+/* Adjust Payroll modal: one card per adjustment, each with its own live preview */
+.pp-adjust-entry {
+    border: 1px solid var(--pp-border, #e2e8f0);
+    border-radius: var(--pp-radius-sm, 8px);
     padding: 0.875rem 1rem;
-    background: var(--pp-surface-hover, #f8fafc);
+    margin-bottom: 0.75rem;
+}
+
+.pp-adjust-entry-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+
+.pp-adjust-entry-remove {
+    border: none;
+    background: transparent;
+    color: var(--pp-error, #b42318);
+    padding: 0.25rem 0.5rem;
     border-radius: var(--pp-radius-sm, 8px);
 }
 
-.pp-adjust-preview strong {
-    font-size: 1rem;
+.pp-adjust-entry-remove:hover {
+    background: var(--pp-error-bg, #fde8e6);
 }
 
-.pp-adjust-preview .amount-add {
+.pp-adjust-entry-preview {
+    display: flex;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+    margin-top: 0.625rem;
+    padding: 0.625rem 0.75rem;
+    background: var(--pp-surface-hover, #f8fafc);
+    border-radius: var(--pp-radius-sm, 8px);
+    font-size: 0.8125rem;
+}
+
+.pp-adjust-entry-preview .amount-add {
     color: var(--pp-accent, #2d7a5f);
 }
 
-.pp-adjust-preview .amount-deduct {
+.pp-adjust-entry-preview .amount-deduct {
     color: var(--pp-error, #b42318);
+}
+
+.pp-adjust-grand-total {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    background: var(--pp-accent-light, #eef6f2);
+    border-radius: var(--pp-radius-sm, 8px);
+    font-size: 0.9375rem;
+}
+
+.pp-adjust-grand-total strong {
+    font-size: 1.125rem;
 }

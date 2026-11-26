@@ -16,9 +16,9 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * Payroll Processing → Payroll Adjustment (a grid per cut-off).
  *
- * GET /api/payroll/adjustments/grid?from=&to=     one row per employee, with any saved adjustment
- * PUT /api/payroll/adjustments/grid               { applyStart, applyEnd, rows: [{ employeeId, dateFrom, dateTo,
- *                                                   addHours, deductHours, reason }] }  (empty hours = remove)
+ * GET /api/payroll/adjustments/grid?from=&to=     one row per employee, with any saved adjustments (one or more)
+ * PUT /api/payroll/adjustments/grid               { applyStart, applyEnd, rows: [{ employeeId, entries: [{ dateFrom,
+ *                                                   dateTo, addHours, deductHours, reason }] }] }  (empty entries = remove all)
  * GET /api/payroll/adjustments/period?from=&to=   earnings lines per employee (Payroll Computation)
  */
 @RestController
@@ -44,7 +44,7 @@ public class PayrollAdjustmentController {
         int userId = AuthInterceptor.currentUser(http).id();
         Map<String, Integer> result = adjustments.saveGrid(request, userId);
         audit.log(userId, "Payroll Adjustment", "Saved adjustments", "Cut-off " + request.applyStart() + " to " + request.applyEnd()
-                + " · " + result.get("saved") + " employee(s) adjusted, " + result.get("removed") + " removed");
+                + " · " + result.get("saved") + " adjustment(s) saved, " + result.get("removed") + " employee(s) cleared");
         return Map.of("success", true, "result", result,
                 "grid", adjustments.grid(request.applyStart(), request.applyEnd()));
     }

@@ -66,15 +66,9 @@
                                     <th>ID</th>
                                     <th>Name</th>
                                     <th>Position</th>
-                                    <th class="text-end">Rate / Hour</th>
-                                    <th>Date From – Date To</th>
-                                    <th class="text-end">Days</th>
-                                    <th class="text-end">Addition<span class="pp-sub">hrs / day</span></th>
-                                    <th class="text-end">Addition<span class="pp-sub">amount</span></th>
-                                    <th class="text-end">Deduction<span class="pp-sub">hrs / day</span></th>
-                                    <th class="text-end">Deduction<span class="pp-sub">amount</span></th>
+                                    <th class="text-end">Adjustments</th>
                                     <th class="text-end">Total</th>
-                                    <th>Reason</th>
+                                    <th>Reasons</th>
                                 </tr>
                             </thead>
                             <tbody id="adjustmentBody"></tbody>
@@ -98,53 +92,25 @@
                 <form id="adjustForm" novalidate>
                     <div class="modal-body">
                         <div class="row g-3 mb-3" id="adjustContext">
-                            <div class="col-sm-4">
+                            <div class="col-sm-6">
                                 <span class="pp-form-label d-block">Employee ID</span>
                                 <strong id="adjustEmployeeNumber"></strong>
                             </div>
-                            <div class="col-sm-4">
+                            <div class="col-sm-6">
                                 <span class="pp-form-label d-block">Position</span>
                                 <strong id="adjustPosition"></strong>
                             </div>
-                            <div class="col-sm-4">
-                                <span class="pp-form-label d-block">Rate / Hour</span>
-                                <strong id="adjustRate"></strong>
-                            </div>
                         </div>
-                        <div class="row g-3 mb-3">
-                            <div class="col-sm-6">
-                                <label for="adjustDateFrom" class="pp-form-label">Date From</label>
-                                <input type="date" class="form-control pp-form-control" id="adjustDateFrom" data-field="dateFrom">
-                            </div>
-                            <div class="col-sm-6">
-                                <label for="adjustDateTo" class="pp-form-label">Date To</label>
-                                <input type="date" class="form-control pp-form-control" id="adjustDateTo" data-field="dateTo">
-                            </div>
+                        <div id="adjustEntries"></div>
+                        <div class="pp-empty-state d-none" id="adjustEmptyEntries">No adjustments yet.</div>
+                        <button type="button" class="btn btn-pp-outline mt-2" id="addEntryBtn"><i class="bi bi-plus-lg me-1"></i>Add Adjustment</button>
+                        <div class="pp-adjust-grand-total mt-3">
+                            <span>Net Total</span>
+                            <strong id="adjustGrandTotal" class="amount-total">₱0.00</strong>
                         </div>
-                        <div class="row g-3 mb-3">
-                            <div class="col-sm-6">
-                                <label for="adjustAddHours" class="pp-form-label">Addition <span class="pp-sub d-inline">(hrs / day)</span></label>
-                                <input type="number" class="form-control pp-form-control" id="adjustAddHours" data-field="addHours" min="0" max="24" step="0.5" inputmode="decimal">
-                            </div>
-                            <div class="col-sm-6">
-                                <label for="adjustDeductHours" class="pp-form-label">Deduction <span class="pp-sub d-inline">(hrs / day)</span></label>
-                                <input type="number" class="form-control pp-form-control" id="adjustDeductHours" data-field="deductHours" min="0" max="24" step="0.5" inputmode="decimal">
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label for="adjustReason" class="pp-form-label">Reason</label>
-                            <input type="text" class="form-control pp-form-control" id="adjustReason" data-field="reason" maxlength="200" placeholder="e.g. Leave not recorded in time">
-                        </div>
-                        <div class="pp-adjust-preview">
-                            <div><span class="pp-form-label d-block">Days</span><strong id="adjustPreviewDays">0</strong></div>
-                            <div><span class="pp-form-label d-block">Addition</span><strong id="adjustPreviewAdd" class="amount-add">₱0.00</strong></div>
-                            <div><span class="pp-form-label d-block">Deduction</span><strong id="adjustPreviewDeduct" class="amount-deduct">₱0.00</strong></div>
-                            <div><span class="pp-form-label d-block">Total</span><strong id="adjustPreviewTotal" class="amount-total">₱0.00</strong></div>
-                        </div>
-                        <p class="fm-note mt-3 d-none" id="adjustLockedNote">This cut-off is released, so this adjustment can no longer be changed.</p>
+                        <p class="fm-note mt-3 d-none" id="adjustLockedNote">This cut-off is released, so these adjustments can no longer be changed.</p>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-pp-outline me-auto" id="adjustClearBtn">Clear</button>
                         <button type="button" class="btn btn-pp-outline" data-bs-dismiss="modal">Cancel</button>
                         <button type="submit" class="btn btn-pp-primary" id="adjustSaveBtn"><i class="bi bi-check-lg me-1"></i> Save</button>
                     </div>
