@@ -316,6 +316,13 @@
     padding: 0.5rem 1rem;
 }
 
+/* With a separate Cancel button too (3 in the footer), keep Remove/Deactivate
+   to the left, away from Cancel/Save — centered footers (Remove + Save only)
+   are left alone. */
+.modal-footer:not(.justify-content-center) .btn-pp-modal-remove {
+    margin-right: auto;
+}
+
 .btn-pp-modal-remove:hover:not(:disabled) {
     background: var(--pp-error-bg);
     border-color: var(--pp-error);
