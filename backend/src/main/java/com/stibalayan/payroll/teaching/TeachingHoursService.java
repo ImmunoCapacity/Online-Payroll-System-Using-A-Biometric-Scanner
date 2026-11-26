@@ -2,6 +2,8 @@ package com.stibalayan.payroll.teaching;
 
 import com.stibalayan.payroll.common.ApiException;
 import com.stibalayan.payroll.common.Validation;
+import com.stibalayan.payroll.dtr.DailyTimeRecord;
+import com.stibalayan.payroll.dtr.DailyTimeRecordRepository;
 import com.stibalayan.payroll.employee.StaffMember;
 import com.stibalayan.payroll.schedule.FacultyClass;
 import com.stibalayan.payroll.schedule.FacultyClassRepository;
@@ -55,14 +57,35 @@ public class TeachingHoursService {
     private final AttendanceAuditRepository audit;
     private final Teachers teachers;
     private final UserNames userNames;
+    private final DailyTimeRecordRepository dtr;
 
     public TeachingHoursService(FacultyClassRepository classes, TeachingAttendanceRepository attendance,
-                                AttendanceAuditRepository audit, Teachers teachers, UserNames userNames) {
+                                AttendanceAuditRepository audit, Teachers teachers, UserNames userNames,
+                                DailyTimeRecordRepository dtr) {
         this.classes = classes;
         this.attendance = attendance;
         this.audit = audit;
         this.teachers = teachers;
         this.userNames = userNames;
+        this.dtr = dtr;
+    }
+
+    /**
+     * Today's biometric scan per teaching employee ("F3" / "A5" -> { timeIn,
+     * timeOut }, times "HH:mm" or null), for the Faculty Teaching Hours
+     * faculty list — context only, not evidence any class was taught.
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Object> onCampusToday() {
+        Map<String, Object> result = new LinkedHashMap<>();
+        for (var r : dtr.findByRecordDate(LocalDate.now())) {
+            String employeeId = r.getFacultyId() != null ? "F" + r.getFacultyId() : "A" + r.getAdminstaffId();
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("timeIn", r.getTimeIn() == null ? null : r.getTimeIn().format(HH_MM));
+            m.put("timeOut", r.getTimeOut() == null ? null : r.getTimeOut().format(HH_MM));
+            result.put(employeeId, m);
+        }
+        return result;
     }
 
     /**
@@ -337,11 +360,22 @@ public class TeachingHoursService {
         Map<Integer, String> names = userNames.of(userIds);
         LocalDateTime now = LocalDateTime.now();
 
+        // That day's biometric punch, if any — just context for whoever
+        // records the check, never evidence the class itself was taught.
+        LocalDate minDate = list.stream().map(FacultyClass::getClassDate).min(LocalDate::compareTo).orElseThrow();
+        LocalDate maxDate = list.stream().map(FacultyClass::getClassDate).max(LocalDate::compareTo).orElseThrow();
+        Map<String, DailyTimeRecord> dtrByEmployeeDate = new HashMap<>();
+        dtr.findByRecordDateBetween(minDate, maxDate).forEach(r -> {
+            String empId = r.getFacultyId() != null ? "F" + r.getFacultyId() : "A" + r.getAdminstaffId();
+            dtrByEmployeeDate.put(empId + "|" + r.getRecordDate(), r);
+        });
+
         List<TeachingRow> result = new ArrayList<>();
         for (FacultyClass c : list) {
             String employeeId = Teachers.employeeIdOf(c);
             StaffMember s = people.get(employeeId);
             TeachingAttendance a = byClass.get(c.getId());
+            DailyTimeRecord d = dtrByEmployeeDate.get(employeeId + "|" + c.getClassDate());
             result.add(new TeachingRow(
                     c.getId(), employeeId,
                     s == null ? "" : s.getEmployeeNumber(),
@@ -361,7 +395,9 @@ public class TeachingHoursService {
                     effectiveStatus(a),
                     flags(c, a, now),
                     payableFor(c, a),
-                    a == null ? 0 : a.getLateMinutes()));
+                    a == null ? 0 : a.getLateMinutes(),
+                    d == null || d.getTimeIn() == null ? null : d.getTimeIn().format(HH_MM),
+                    d == null || d.getTimeOut() == null ? null : d.getTimeOut().format(HH_MM)));
         }
         return result;
     }

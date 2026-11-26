@@ -36,6 +36,7 @@
 
     var teachers = [];
     var weekStats = {};       // employeeId -> { classes, needsChecks, pending } this week
+    var onCampusByEmployee = {}; // employeeId -> { timeIn, timeOut } today (api/teaching-hours/on-campus)
     var teacher = null;       // the faculty member being viewed
     var view = 'day';
     var rows = [];
@@ -111,6 +112,14 @@
             '<span class="fm-check-status ' + String(status).toLowerCase() + '">' + escapeHtml(status) + '</span></span>';
     }
 
+    /** A biometric scanner record (that day's, or today's) — context only, not evidence a class was taught. */
+    function onCampusBadge(timeIn, timeOut) {
+        return timeIn
+            ? '<span class="fm-status approved" title="Daily Time Record">' + time12(timeIn) +
+                (timeOut ? ' – ' + time12(timeOut) : ' – (not yet out)') + '</span>'
+            : '<span class="fm-status no-scan" title="No Daily Time Record">No scanner record</span>';
+    }
+
     function addDays(text, days) {
         var d = parseIso(text);
         d.setDate(d.getDate() + days);
@@ -161,7 +170,8 @@
         var from = weekStart(iso(new Date()));
         return Promise.all([
             api('api/faculty-schedule/teachers'),
-            api('api/teaching-hours/classes?from=' + from + '&to=' + addDays(from, 6))
+            api('api/teaching-hours/classes?from=' + from + '&to=' + addDays(from, 6)),
+            api('api/teaching-hours/on-campus')
         ]).then(function (results) {
             if (!results[0].success) throw new Error(results[0].message || 'Could not load faculty.');
             teachers = results[0].teachers;
@@ -171,6 +181,7 @@
                 s.classes++;
                 if (r.approvalStatus === 'Not checked' || r.approvalStatus === 'Incomplete') s.needsChecks++;
             });
+            onCampusByEmployee = results[2].success ? results[2].onCampus : {};
         });
     }
 
@@ -193,11 +204,13 @@
         el('facultyEmpty').classList.add('d-none');
         el('facultyBody').innerHTML = shown.map(function (t) {
             var s = weekStats[t.id] || { classes: 0, needsChecks: 0 };
+            var onCampus = onCampusByEmployee[t.id] || {};
             return '<tr class="pp-row-clickable" tabindex="0" role="button" data-employee="' + escapeHtml(t.id) + '" ' +
                     'aria-label="Open the classes of ' + escapeHtml(t.displayName) + '">' +
                 '<td>' + escapeHtml(t.employeeNumber) + '</td>' +
                 '<td><strong>' + escapeHtml(t.displayName) + '</strong></td>' +
                 '<td>' + escapeHtml(PayrollProLayout.staffTypeLabel(t.type)) + '</td>' +
+                '<td>' + onCampusBadge(onCampus.timeIn, onCampus.timeOut) + '</td>' +
                 '<td class="text-end">' + s.classes + '</td>' +
                 '<td class="text-end">' + (s.needsChecks ? '<span class="fm-status incomplete">' + s.needsChecks + '</span>' : '0') + '</td>' +
             '</tr>';
@@ -244,7 +257,7 @@
         el('rangeLabel').textContent = view === 'day'
             ? prettyDate(r.from)
             : 'Week of ' + prettyDate(r.from) + ' – ' + prettyDate(r.to);
-        body.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">Loading classes…</td></tr>';
+        body.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Loading classes…</td></tr>';
         emptyState.classList.add('d-none');
         return api('api/teaching-hours/classes?from=' + r.from + '&to=' + r.to + '&employeeId=' + encodeURIComponent(teacher.id))
             .then(function (data) {
@@ -354,6 +367,7 @@
                     '<span class="fm-sub">' + escapeHtml(r.classSection) + (r.room ? ' · ' + escapeHtml(r.room) : '') + '</span>' +
                     (r.flags.length ? '<span class="fm-flag" title="' + escapeHtml(r.flags.join('\n')) + '"><i class="bi bi-flag-fill"></i> ' + r.flags.length + '</span>' : '') +
                     '</td>' +
+                '<td>' + onCampusBadge(r.biometricTimeIn, r.biometricTimeOut) + '</td>' +
                 '<td>' + checkCell(r.startCheckAt, r.startCheckStatus) + '</td>' +
                 '<td>' + checkCell(r.endCheckAt, r.endCheckStatus) + '</td>' +
                 '<td class="text-end">' + payable + '</td>' +
@@ -446,7 +460,9 @@
                 detailItem('Scheduled hours', hours(r.scheduledHours)) +
                 detailItem('Room', r.room ? escapeHtml(r.room) : '—') +
                 detailItem('Status', statusBadge(r.approvalStatus)) +
+                detailItem('On Campus', onCampusBadge(r.biometricTimeIn, r.biometricTimeOut)) +
             '</div>' +
+            '<p class="fm-note mb-3">On Campus is that day\'s biometric scanner record (Daily Time Record) — it shows the faculty member was on campus, not that this specific class was taught. Record the classroom check itself below.</p>' +
             (r.flags.length
                 ? '<ul class="fm-flags mb-3">' + r.flags.map(function (f) { return '<li>' + escapeHtml(f) + '</li>'; }).join('') + '</ul>'
                 : '') +
@@ -645,7 +661,7 @@
         statusFilter.value = params.get('status');
     }
 
-    el('facultyBody').innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Loading faculty…</td></tr>';
+    el('facultyBody').innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">Loading faculty…</td></tr>';
     Promise.all([PayrollProLayout.loadStaffTypeLabels(), PayrollProLayout.loadEmployeeTypeOptions(), loadRooms()]).then(function (results) {
         PayrollProLayout.populateEmployeeTypeSelect(el('facultyTypeFilter'), results[1]);
         return loadTeachers();

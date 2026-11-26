@@ -11,6 +11,10 @@ import java.util.List;
  * approvalStatus is "Not checked", "Incomplete" (one check) or "Complete"
  * (both checks). payableHours is always the live figure the rules give for
  * whatever checks are recorded so far (0 when none, or when checked Absent).
+ *
+ * biometricTimeIn/Out is that day's Daily Time Record punch, if any — just
+ * context for whoever records the classroom check (the faculty member was
+ * on campus), never evidence that the class itself was taught.
  */
 public record TeachingRow(
         Integer classId,
@@ -36,5 +40,7 @@ public record TeachingRow(
         String approvalStatus,
         List<String> flags,
         BigDecimal payableHours,
-        int lateMinutes) {
+        int lateMinutes,
+        String biometricTimeIn,
+        String biometricTimeOut) {
 }

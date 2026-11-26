@@ -382,6 +382,7 @@
 .fm-status.pending { background: var(--pp-info-bg); color: var(--pp-info); }
 .fm-status.approved { background: var(--pp-success-bg); color: var(--pp-success); }
 .fm-status.rejected { background: var(--pp-error-bg); color: var(--pp-error); }
+.fm-status.no-scan { background: var(--pp-error-bg); color: var(--pp-error); }
 
 .fm-flag {
     display: inline-flex;

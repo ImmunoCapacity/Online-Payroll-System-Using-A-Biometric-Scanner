@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * GET  /api/teaching-hours/classes?from=&to=[&employeeId=][&status=]
  * GET  /api/teaching-hours/classes/{classId}/audit
+ * GET  /api/teaching-hours/on-campus    today's biometric scan per teaching employee, for the faculty list
  * POST /api/teaching-hours/classes/{classId}/checks    { check, status, remarks }
  */
 @RestController
@@ -42,6 +43,12 @@ public class TeachingHoursController {
     @RequireModule(SystemModule.FACULTY_TEACHING_HOURS)
     public Map<String, Object> audit(@PathVariable int classId) {
         return Map.of("success", true, "audit", teaching.auditHistory(classId));
+    }
+
+    @GetMapping("/on-campus")
+    @RequireModule(SystemModule.FACULTY_TEACHING_HOURS)
+    public Map<String, Object> onCampus() {
+        return Map.of("success", true, "onCampus", teaching.onCampusToday());
     }
 
     @PostMapping("/classes/{classId}/checks")
