@@ -851,3 +851,37 @@ CREATE TABLE IF NOT EXISTS room (
 -- alongside an Absent ending check (deducted from pay like late_minutes;
 -- databases created before this existed).
 ALTER TABLE faculty_teaching_attendance ADD COLUMN IF NOT EXISTS early_leave_minutes INT NOT NULL DEFAULT 0 AFTER end_checked_by;
+
+-- Leave Category Maintenance: which paid categories convert unused credits to
+-- cash on the employee's hire-date anniversary (databases created before
+-- this existed).
+ALTER TABLE leave_category ADD COLUMN IF NOT EXISTS is_convertible TINYINT(1) NOT NULL DEFAULT 0 AFTER paid_days;
+
+-- Leave Credit conversion (cash-out of unused leave credits): computed
+-- automatically in Payroll Processing whenever an admin employee's
+-- hire-date anniversary falls inside the pay period being run, for each
+-- convertible paid category. covered_year is the calendar year just
+-- completed as of that anniversary (its leave_credit balance is what gets
+-- cashed out); recording a row here also resets that year's leave_credit
+-- override to 0 remaining, so it is never counted or paid again. Recorded
+-- only once the pay period is released (payroll_run_id), same as when loan
+-- deductions are recorded.
+CREATE TABLE IF NOT EXISTS leave_conversion (
+    conversion_id     INT AUTO_INCREMENT PRIMARY KEY,
+    adminstaff_id     INT NOT NULL,
+    leave_category_id INT NOT NULL,
+    covered_year      YEAR NOT NULL,
+    anniversary_date  DATE NOT NULL,
+    unused_days       INT NOT NULL,
+    daily_rate        DECIMAL(10,2) NOT NULL,
+    exempt_amount     DECIMAL(10,2) NOT NULL DEFAULT 0,
+    taxable_amount    DECIMAL(10,2) NOT NULL DEFAULT 0,
+    payroll_run_id    INT NULL,
+    created_by        INT,
+    created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_leave_conversion (adminstaff_id, leave_category_id, covered_year),
+    CONSTRAINT fk_leaveconv_admin    FOREIGN KEY (adminstaff_id)     REFERENCES admin_staff (adminstaff_id)        ON DELETE CASCADE,
+    CONSTRAINT fk_leaveconv_category FOREIGN KEY (leave_category_id) REFERENCES leave_category (leave_category_id) ON DELETE CASCADE,
+    CONSTRAINT fk_leaveconv_run      FOREIGN KEY (payroll_run_id)    REFERENCES payroll_run (payroll_run_id)       ON DELETE SET NULL,
+    CONSTRAINT fk_leaveconv_user     FOREIGN KEY (created_by)        REFERENCES users (user_id)                    ON DELETE SET NULL
+) ENGINE=InnoDB;

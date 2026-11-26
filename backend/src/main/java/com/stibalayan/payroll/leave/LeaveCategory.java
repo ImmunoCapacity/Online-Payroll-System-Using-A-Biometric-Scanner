@@ -34,6 +34,10 @@ public class LeaveCategory {
     @Column(name = "paid_days")
     private Integer paidDays;
 
+    /** Paid leave only: unused credits cash out automatically on the employee's hire-date anniversary. */
+    @Column(name = "is_convertible", nullable = false)
+    private boolean convertible;
+
     public Integer getId() { return id; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
@@ -43,4 +47,6 @@ public class LeaveCategory {
     public void setActive(boolean active) { this.active = active; }
     public Integer getPaidDays() { return paidDays; }
     public void setPaidDays(Integer paidDays) { this.paidDays = paidDays; }
+    public boolean isConvertible() { return convertible; }
+    public void setConvertible(boolean convertible) { this.convertible = convertible; }
 }

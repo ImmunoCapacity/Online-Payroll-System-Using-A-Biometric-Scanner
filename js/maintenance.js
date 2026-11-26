@@ -346,20 +346,23 @@
                         (c.active ? '' : ' <span class="pp-badge-inactive">Inactive</span>') + '</td>' +
                     '<td>' + (c.paid ? '<span class="pp-badge-leave-paid">Paid</span>' : '<span class="pp-badge-leave-unpaid">Unpaid</span>') + '</td>' +
                     '<td class="col-num">' + (c.paid && c.paidDays != null ? c.paidDays : '—') + '</td>' +
+                    '<td>' + (c.paid && c.convertible ? '<i class="bi bi-check-lg text-success"></i>' : '—') + '</td>' +
                 '</tr>'
             );
         }).join('');
     }
 
-    /** Paid for how many days only applies to paid leave. */
+    /** Paid for how many days, and converting unused days to cash, only apply to paid leave. */
     function syncLeavePaidDays() {
         var paid = document.getElementById('leavePaid').value === 'Paid';
         var input = document.getElementById('leavePaidDays');
         document.getElementById('leavePaidDaysGroup').classList.toggle('d-none', !paid);
+        document.getElementById('leaveConvertibleGroup').classList.toggle('d-none', !paid);
         input.required = paid;
         if (!paid) {
             input.value = '';
-            PPValidate.clear(input.closest('.mb-0'));
+            PPValidate.clear(input.closest('.mb-3'));
+            document.getElementById('leaveConvertible').checked = false;
         }
     }
 
@@ -372,6 +375,7 @@
             document.getElementById('leaveName').value = cat.name;
             document.getElementById('leavePaid').value = cat.paid ? 'Paid' : 'Unpaid';
             document.getElementById('leavePaidDays').value = cat.paidDays == null ? '' : cat.paidDays;
+            document.getElementById('leaveConvertible').checked = !!cat.convertible;
         }
         syncLeavePaidDays();
         setRemoveButton('leaveRemoveBtn', cat && !cat.active ? 'Reactivate' : 'Deactivate', !!cat, cat && !cat.active);
@@ -388,7 +392,7 @@
     document.getElementById('leavePaid').addEventListener('change', syncLeavePaidDays);
 
     function setLeaveActive(cat, active) {
-        saveLeaveCategory(cat.id, { name: cat.name, paid: cat.paid, paidDays: cat.paidDays, active: active }).then(function (data) {
+        saveLeaveCategory(cat.id, { name: cat.name, paid: cat.paid, paidDays: cat.paidDays, convertible: cat.convertible, active: active }).then(function (data) {
             if (!data.success) { PPToast.error(data.message); return; }
             bootstrap.Modal.getOrCreateInstance(document.getElementById('leaveModal')).hide();
             PPToast.success('"' + cat.name + '" ' + (active ? 'reactivated.' : 'deactivated.'));
@@ -436,6 +440,7 @@
             name: document.getElementById('leaveName').value.trim(),
             paid: paid,
             paidDays: paid ? parseInt(document.getElementById('leavePaidDays').value, 10) : null,
+            convertible: paid && document.getElementById('leaveConvertible').checked,
             active: existing ? existing.active : true
         };
         saveLeaveCategory(leaveEditId, data).then(function (result) {

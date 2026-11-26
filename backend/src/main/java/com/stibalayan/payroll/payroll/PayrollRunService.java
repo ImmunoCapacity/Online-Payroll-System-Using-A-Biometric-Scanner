@@ -9,6 +9,7 @@ import com.stibalayan.payroll.common.Validation;
 import com.stibalayan.payroll.employee.EmployeeDirectory;
 import com.stibalayan.payroll.employee.EmployeeId;
 import com.stibalayan.payroll.employee.StaffMember;
+import com.stibalayan.payroll.leave.LeaveService;
 import com.stibalayan.payroll.loan.LoanService;
 import com.stibalayan.payroll.settings.PayrollPeriods;
 import java.math.BigDecimal;
@@ -52,19 +53,21 @@ public class PayrollRunService {
     private final ObjectMapper json;
     private final EmployeeDirectory employees;
     private final LoanService loans;
+    private final LeaveService leave;
     private final PayrollPeriods periods;
     private final AuditService audit;
 
     private final PayrollAdjustmentService adjustments;
 
     public PayrollRunService(JdbcTemplate jdbc, ObjectMapper json, EmployeeDirectory employees, LoanService loans,
-                             AuditService audit, PayrollAdjustmentService adjustments, PayrollPeriods periods) {
+                             LeaveService leave, AuditService audit, PayrollAdjustmentService adjustments, PayrollPeriods periods) {
         this.periods = periods;
         this.adjustments = adjustments;
         this.jdbc = jdbc;
         this.json = json;
         this.employees = employees;
         this.loans = loans;
+        this.leave = leave;
         this.audit = audit;
     }
 
@@ -179,6 +182,12 @@ public class PayrollRunService {
         BigDecimal totalNet = BigDecimal.ZERO;
         for (Map<String, Object> r : rows) {
             Map<String, Object> b = breakdown(r);
+            String employeeId = EmployeeDirectory.idOf((Integer) r.get("faculty_id"), (Integer) r.get("adminstaff_id"));
+            for (Object o : list(b.get("leaveConversions"))) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> entry = (Map<String, Object>) o;
+                leave.commitConversion(employeeId, entry, runId, userId);
+            }
             for (Object item : list(b.get("loanItems"))) {
                 Map<?, ?> l = (Map<?, ?>) item;
                 BigDecimal amount = money(l.get("amount"));
@@ -399,6 +408,26 @@ public class PayrollRunService {
         BigDecimal deductions = sss.add(philhealth).add(pagibig).add(tax).add(loan);
         BigDecimal net = gross.add(benefitTotal).subtract(deductions);
 
+        // Bookkeeping only (LeaveService.leaveConversions) -- the actual pay is
+        // already in the earnings/benefits lines above; this is what commitConversion()
+        // reads at release() to record the history and reset that year's credit.
+        List<Map<String, Object>> leaveConversions = new ArrayList<>();
+        for (Object o : list(e.get("leaveConversions"))) {
+            Map<?, ?> l = (Map<?, ?>) o;
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("categoryId", l.get("categoryId"));
+            item.put("category", l.get("category") == null ? null : String.valueOf(l.get("category")));
+            item.put("coveredYear", l.get("coveredYear"));
+            item.put("anniversaryDate", l.get("anniversaryDate") == null ? null : String.valueOf(l.get("anniversaryDate")));
+            item.put("unusedDays", l.get("unusedDays"));
+            item.put("exemptDays", l.get("exemptDays"));
+            item.put("taxableDays", l.get("taxableDays"));
+            item.put("dailyRate", check(money(l.get("dailyRate")), "leaveConversions"));
+            item.put("exemptAmount", check(money(l.get("exemptAmount")), "leaveConversions"));
+            item.put("taxableAmount", check(money(l.get("taxableAmount")), "leaveConversions"));
+            leaveConversions.add(item);
+        }
+
         Map<String, Object> breakdown = new LinkedHashMap<>();
         breakdown.put("id", employeeId);
         breakdown.put("employeeNumber", s.getEmployeeNumber());
@@ -413,6 +442,7 @@ public class PayrollRunService {
         breakdown.put("benefits", benefits);
         breakdown.put("deductions", Map.of("sss", sss, "philhealth", philhealth, "pagibig", pagibig, "bir", tax, "loan", loan));
         breakdown.put("loanItems", loanItems);
+        breakdown.put("leaveConversions", leaveConversions);
 
         EmployeeId eid = EmployeeId.parse(employeeId);
         jdbc.update("INSERT INTO payroll (faculty_id, adminstaff_id, firstname, middlename, lastname, basic_salary, gross_pay, net_pay, "

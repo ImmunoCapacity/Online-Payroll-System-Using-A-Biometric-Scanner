@@ -127,6 +127,7 @@
                                         <th>Category Name</th>
                                         <th>Paid / Unpaid</th>
                                         <th class="col-num">Paid Days / Year</th>
+                                        <th>Converts to Cash</th>
                                     </tr>
                                 </thead>
                                 <tbody id="leaveBody"></tbody>
@@ -775,13 +776,20 @@
                                 <option value="Unpaid">Unpaid</option>
                             </select>
                         </div>
-                        <div class="mb-0" id="leavePaidDaysGroup">
+                        <div class="mb-3" id="leavePaidDaysGroup">
                             <label for="leavePaidDays" class="pp-form-label">Paid for How Many Days</label>
                             <div class="input-group">
                                 <input type="number" class="form-control pp-form-control" id="leavePaidDays" min="1" max="366" step="1" data-validate="number" data-decimals="0" data-label="Paid days" inputmode="numeric" required>
                                 <span class="input-group-text">days a year</span>
                             </div>
                             <div class="invalid-feedback">Enter how many days a year this leave is paid.</div>
+                        </div>
+                        <div class="mb-0" id="leaveConvertibleGroup">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="leaveConvertible">
+                                <label class="form-check-label pp-form-label mb-0" for="leaveConvertible">Converts unused days to cash</label>
+                            </div>
+                            <div class="form-text mb-0">Unused credits of this type are paid out automatically in Payroll Processing, on each employee's hire-date anniversary.</div>
                         </div>
                     </div>
                     <div class="modal-footer">

@@ -6,6 +6,7 @@ import com.stibalayan.payroll.auth.SystemModule;
 import com.stibalayan.payroll.benefit.BenefitService;
 import com.stibalayan.payroll.common.Validation;
 import com.stibalayan.payroll.contribution.ContributionTableService;
+import com.stibalayan.payroll.leave.LeaveService;
 import com.stibalayan.payroll.loan.LoanService;
 import com.stibalayan.payroll.notification.EmailLog;
 import com.stibalayan.payroll.rate.RateService;
@@ -26,6 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
  * Inputs for computing a pay period:
  * GET  /api/payroll/hours?from=&to=             office (biometric) and approved teaching hours per employee
  * GET  /api/payroll/benefits                    each employee's benefits (Benefits Table)
+ * GET  /api/payroll/leave-conversions?from=&to= unused leave credits to cash out this period (hire-date anniversary)
  * GET  /api/payroll/loan-deductions?from=&to=   loan deductions for the period
  * GET  /api/payroll/contribution-tables         BIR, PhilHealth, Pag-IBIG and SSS tables by year
  * GET  /api/payroll/rates?date=                 each employee's rates in effect on a date
@@ -49,19 +51,21 @@ public class PayrollController {
     private final PayrollHoursService payrollHours;
     private final LoanService loans;
     private final BenefitService benefits;
+    private final LeaveService leave;
     private final ContributionTableService contributionTables;
     private final RateService rates;
     private final PayrollRunService runs;
     private final EmailLog emailLog;
 
     public PayrollController(PayslipMailService payslipMail, PayrollHoursService payrollHours, LoanService loans,
-                             BenefitService benefits, ContributionTableService contributionTables, RateService rates,
-                             PayrollRunService runs, EmailLog emailLog) {
+                             BenefitService benefits, LeaveService leave, ContributionTableService contributionTables,
+                             RateService rates, PayrollRunService runs, EmailLog emailLog) {
         this.emailLog = emailLog;
         this.payslipMail = payslipMail;
         this.payrollHours = payrollHours;
         this.loans = loans;
         this.benefits = benefits;
+        this.leave = leave;
         this.contributionTables = contributionTables;
         this.rates = rates;
         this.runs = runs;
@@ -71,6 +75,13 @@ public class PayrollController {
     @GetMapping("/benefits")
     public Map<String, Object> benefits() {
         return Map.of("success", true, "benefits", benefits.perEmployee());
+    }
+
+    /** Unused leave credits to cash out this period (an employee's hire-date anniversary falls inside it). */
+    @GetMapping("/leave-conversions")
+    public Map<String, Object> leaveConversions(@RequestParam String from, @RequestParam String to) {
+        return Map.of("success", true, "conversions", leave.leaveConversions(
+                Validation.date(from, "from", "Start date", true), Validation.date(to, "to", "End date", true)));
     }
 
     @GetMapping("/hours")

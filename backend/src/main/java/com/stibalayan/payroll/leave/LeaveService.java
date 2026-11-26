@@ -3,10 +3,13 @@ package com.stibalayan.payroll.leave;
 import com.stibalayan.payroll.audit.AuditService;
 import com.stibalayan.payroll.common.ApiException;
 import com.stibalayan.payroll.common.Validation;
+import com.stibalayan.payroll.employee.AdminStaff;
 import com.stibalayan.payroll.employee.EmployeeDirectory;
 import com.stibalayan.payroll.employee.EmployeeId;
 import com.stibalayan.payroll.employee.EmployeeService;
 import com.stibalayan.payroll.employee.StaffMember;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -53,20 +56,25 @@ public class LeaveService {
     static final String PROBATION_MONTHS_KEY = "leave.probationary-months";
     private static final int DEFAULT_PROBATION_MONTHS = 12;
 
+    /** The BIR RR 29-2025 de-minimis exemption: the first 12 days a year of monetized Vacation Leave. */
+    private static final int VL_EXEMPT_DAYS = 12;
+
     private final LeaveCategoryRepository categories;
     private final EmployeeLeaveRepository leaves;
     private final EmployeeLeaveCreditRepository credits;
+    private final LeaveConversionRepository conversions;
     private final EmployeeDirectory employees;
     private final EmployeeService employeeService;
     private final JdbcTemplate jdbc;
     private final AuditService audit;
 
     public LeaveService(LeaveCategoryRepository categories, EmployeeLeaveRepository leaves,
-                        EmployeeLeaveCreditRepository credits, EmployeeDirectory employees,
-                        EmployeeService employeeService, JdbcTemplate jdbc, AuditService audit) {
+                        EmployeeLeaveCreditRepository credits, LeaveConversionRepository conversions,
+                        EmployeeDirectory employees, EmployeeService employeeService, JdbcTemplate jdbc, AuditService audit) {
         this.categories = categories;
         this.leaves = leaves;
         this.credits = credits;
+        this.conversions = conversions;
         this.employees = employees;
         this.employeeService = employeeService;
         this.jdbc = jdbc;
@@ -77,8 +85,13 @@ public class LeaveService {
     // Categories
     // ---------------------------------------------------------------
 
-    /** paidDays: for paid leave, the days a year each employee is paid for. */
-    public record CategoryRequest(String name, Boolean paid, Integer paidDays, Boolean active) {
+    /**
+     * paidDays: for paid leave, the days a year each employee is paid for.
+     * convertible: for paid leave, whether unused credits cash out
+     * automatically on the employee's hire-date anniversary (Payroll
+     * Processing) — ignored (always false) for unpaid leave.
+     */
+    public record CategoryRequest(String name, Boolean paid, Integer paidDays, Boolean convertible, Boolean active) {
     }
 
     @Transactional(readOnly = true)
@@ -108,6 +121,7 @@ public class LeaveService {
         c.setName(name);
         c.setPaid(paid);
         c.setPaidDays(paidDays);
+        c.setConvertible(paid && r.convertible() != null && r.convertible());
         c.setActive(r.active() == null || r.active());
         return categoryView(categories.save(c));
     }
@@ -118,6 +132,7 @@ public class LeaveService {
         m.put("name", c.getName());
         m.put("paid", c.isPaid());
         m.put("paidDays", c.isPaid() ? c.getPaidDays() : null);
+        m.put("convertible", c.isPaid() && c.isConvertible());
         m.put("active", c.isActive());
         return m;
     }
@@ -594,6 +609,163 @@ public class LeaveService {
     // ---------------------------------------------------------------
     // Payroll
     // ---------------------------------------------------------------
+
+    /**
+     * Unused leave credits to cash out this pay period: one entry per
+     * employee whose hire-date anniversary falls inside [from, to], per
+     * convertible paid category that applies to them. covered_year is the
+     * calendar year just completed as of that anniversary — that year's
+     * leave_credit balance (its own default, or an override) is what's
+     * being cashed out here, same number Maintenance → Leave Credit would
+     * show for that employee/category/year. An employee/category/year
+     * already recorded in leave_conversion (a previous period's release)
+     * is skipped — it was already paid out.
+     *
+     * Pure and read-only: recomputed fresh every time Payroll Processing
+     * runs or recomputes a period. Nothing is written here — Payroll
+     * Processing folds these amounts into the employee's regular earnings
+     * (taxable) and benefits (exempt) lines so they're actually paid, and
+     * only when the period is released does commitConversion() record the
+     * history and reset that year's credit.
+     */
+    @Transactional(readOnly = true)
+    public Map<String, List<Map<String, Object>>> leaveConversions(LocalDate from, LocalDate to) {
+        Map<String, List<Map<String, Object>>> result = new LinkedHashMap<>();
+        List<LeaveCategory> convertible = categories.findAllByOrderByNameAsc().stream()
+                .filter(LeaveCategory::isPaid).filter(LeaveCategory::isConvertible).toList();
+        if (convertible.isEmpty()) {
+            return result;
+        }
+        for (Map.Entry<String, StaffMember> entry : employees.all().entrySet()) {
+            String employeeId = entry.getKey();
+            EmployeeId eid = EmployeeId.parse(employeeId);
+            if (eid.isFaculty()) continue;
+            StaffMember staff = entry.getValue();
+            LocalDate hired = staff.getDateHired();
+            if (hired == null) continue;
+            BigDecimal dailyRate = dailyRateFor(staff);
+            if (dailyRate.signum() <= 0) continue;
+
+            for (LocalDate anniversary : anniversariesBetween(hired, from, to)) {
+                int coveredYear = anniversary.getYear() - 1;
+                if (coveredYear < hired.getYear()) continue; // no full completed year yet
+                for (LeaveCategory c : convertible) {
+                    if (!appliesTo(c, staff)) continue;
+                    if (conversions.findByAdminstaffIdAndCategoryIdAndCoveredYear(eid.number(), c.getId(), coveredYear).isPresent()) {
+                        continue;
+                    }
+                    int total = creditTotalFor(staff, employeeId, c, coveredYear);
+                    int used = usedDays(employeeId, c.getId(), coveredYear, null);
+                    int unused = Math.max(0, total - used);
+                    if (unused <= 0) continue;
+
+                    int exemptDays = isVacationLeave(c) ? Math.min(unused, VL_EXEMPT_DAYS) : 0;
+                    int taxableDays = unused - exemptDays;
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("categoryId", c.getId());
+                    m.put("category", c.getName());
+                    m.put("coveredYear", coveredYear);
+                    m.put("anniversaryDate", anniversary.toString());
+                    m.put("unusedDays", unused);
+                    m.put("exemptDays", exemptDays);
+                    m.put("taxableDays", taxableDays);
+                    m.put("dailyRate", dailyRate);
+                    m.put("exemptAmount", dailyRate.multiply(BigDecimal.valueOf(exemptDays)).setScale(2, RoundingMode.HALF_UP));
+                    m.put("taxableAmount", dailyRate.multiply(BigDecimal.valueOf(taxableDays)).setScale(2, RoundingMode.HALF_UP));
+                    result.computeIfAbsent(employeeId, k -> new ArrayList<>()).add(m);
+                }
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Records one employee's leave conversion once its pay period is
+     * released (PayrollRunService.release): the history row, and the
+     * covered year's leave_credit override reset to exactly what was used
+     * (remaining 0 from then on, so it can't be used or converted again).
+     * Does nothing if this employee/category/year was already recorded.
+     */
+    @Transactional
+    public void commitConversion(String employeeId, Map<String, Object> entry, int payrollRunId, int userId) {
+        EmployeeId eid = EmployeeId.parse(employeeId);
+        if (eid.isFaculty()) return;
+        Integer categoryId = asInt(entry.get("categoryId"));
+        Integer coveredYear = asInt(entry.get("coveredYear"));
+        if (categoryId == null || coveredYear == null) return;
+        if (conversions.findByAdminstaffIdAndCategoryIdAndCoveredYear(eid.number(), categoryId, coveredYear).isPresent()) {
+            return;
+        }
+        LeaveCategory c = categories.findById(categoryId).orElse(null);
+
+        LeaveConversion lc = new LeaveConversion();
+        lc.setAdminstaffId(eid.number());
+        lc.setCategoryId(categoryId);
+        lc.setCoveredYear(coveredYear);
+        lc.setAnniversaryDate(LocalDate.parse(String.valueOf(entry.get("anniversaryDate"))));
+        lc.setUnusedDays(asInt(entry.get("unusedDays")));
+        lc.setDailyRate(asMoney(entry.get("dailyRate")));
+        lc.setExemptAmount(asMoney(entry.get("exemptAmount")));
+        lc.setTaxableAmount(asMoney(entry.get("taxableAmount")));
+        lc.setPayrollRunId(payrollRunId);
+        lc.setCreatedBy(userId);
+        conversions.save(lc);
+
+        // This year's credit is settled now — reset so it reads as fully used, never counted again.
+        int used = usedDays(employeeId, categoryId, coveredYear, null);
+        EmployeeLeaveCredit credit = credits.findByAdminstaffIdAndCategoryIdAndYear(eid.number(), categoryId, coveredYear)
+                .orElseGet(EmployeeLeaveCredit::new);
+        credit.setAdminstaffId(eid.number());
+        credit.setCategoryId(categoryId);
+        credit.setYear(coveredYear);
+        credit.setTotalCredits(used);
+        credit.setUpdatedBy(userId);
+        credits.save(credit);
+
+        StaffMember staff = employees.require(employeeId);
+        audit.log(userId, "Leave Credit", "Converted to cash", staff.getFullName() + " · " + (c == null ? "" : c.getName())
+                + " · " + coveredYear + " · " + entry.get("unusedDays") + " day(s) · exempt ₱" + entry.get("exemptAmount")
+                + " + taxable ₱" + entry.get("taxableAmount"));
+    }
+
+    /** BIR RR 29-2025: only Vacation Leave gets the de-minimis exemption on monetization. */
+    private static boolean isVacationLeave(LeaveCategory c) {
+        return "Vacation Leave".equalsIgnoreCase(c.getName());
+    }
+
+    /**
+     * Daily rate = rate per hour × office hours a day. For this system's
+     * hourly-paid admin staff this is exactly the DOLE 261-working-day
+     * divisor's daily rate (annual pay ÷ 261 = hourly rate × office hours ×
+     * 261 ÷ 261), without needing a separate monthly-salary figure.
+     */
+    private static BigDecimal dailyRateFor(StaffMember staff) {
+        if (!(staff instanceof AdminStaff a) || a.getRatePerHour() == null || a.getOfficeHours() == null) {
+            return BigDecimal.ZERO;
+        }
+        return a.getRatePerHour().multiply(a.getOfficeHours()).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    /** Every anniversary (month/day) of hireDate that falls within [from, to]. */
+    private static List<LocalDate> anniversariesBetween(LocalDate hireDate, LocalDate from, LocalDate to) {
+        List<LocalDate> result = new ArrayList<>();
+        for (int year = from.getYear(); year <= to.getYear(); year++) {
+            // plusYears resolves Feb 29 to Feb 28 in a non-leap target year.
+            LocalDate candidate = hireDate.plusYears((long) year - hireDate.getYear());
+            if (!candidate.isBefore(from) && !candidate.isAfter(to)) {
+                result.add(candidate);
+            }
+        }
+        return result;
+    }
+
+    private static Integer asInt(Object value) {
+        return value instanceof Number n ? n.intValue() : null;
+    }
+
+    private static BigDecimal asMoney(Object value) {
+        return value == null ? BigDecimal.ZERO : new BigDecimal(String.valueOf(value)).setScale(2, RoundingMode.HALF_UP);
+    }
 
     /** Approved paid leave: the working days per employee falling inside [from, to]. */
     @Transactional(readOnly = true)

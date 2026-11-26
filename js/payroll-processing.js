@@ -338,6 +338,11 @@
         return String(line.label || '').toLowerCase().indexOf('holiday') === 0;
     }
 
+    /** Leave conversion lines carry days in "hours", not hours worked. */
+    function isLeaveConversionLine(line) {
+        return String(line.label || '').toLowerCase().indexOf('unused ') === 0;
+    }
+
     function calcDeductionsTotal(d) {
         return round2(d.sss + d.philhealth + d.pagibig + d.bir + d.loan);
     }
@@ -366,12 +371,13 @@
             api('api/payroll/hours?from=' + period.from + '&to=' + period.to),
             api('api/payroll/loan-deductions?from=' + period.from + '&to=' + period.to),
             api('api/payroll/benefits'),
+            api('api/payroll/leave-conversions?from=' + period.from + '&to=' + period.to),
             api('api/payroll/contribution-tables'),
             api('api/payroll/rates?date=' + period.to),
             api('api/payroll/adjustments/period?from=' + period.from + '&to=' + period.to),
             api('api/dtr/incomplete?from=' + period.from + '&to=' + period.to)
         ]).then(function (results) {
-            var incompleteData = results[7];
+            var incompleteData = results[8];
             lastIncomplete = (incompleteData && incompleteData.success) ? (incompleteData.records || []) : [];
             var employeesData = results[0];
             var hoursData = results[1];
@@ -383,12 +389,15 @@
             var benefitData = results[3];
             if (!benefitData.success) throw new Error(benefitData.message || 'Could not load benefits.');
             var benefitsById = benefitData.benefits || {};
-            if (!results[4].success) throw new Error(results[4].message || 'Could not load the deduction tables.');
-            TABLES = results[4].tables;
-            if (!results[5].success) throw new Error(results[5].message || 'Could not load employee rates.');
+            var conversionData = results[4];
+            if (!conversionData.success) throw new Error(conversionData.message || 'Could not load leave conversions.');
+            var conversionsById = conversionData.conversions || {};
+            if (!results[5].success) throw new Error(results[5].message || 'Could not load the deduction tables.');
+            TABLES = results[5].tables;
+            if (!results[6].success) throw new Error(results[6].message || 'Could not load employee rates.');
             // Rates in effect at the end of the period (Maintenance → Employee Rates),
             // so an earlier period is paid at the rate that applied then.
-            var ratesById = results[5].rates || {};
+            var ratesById = results[6].rates || {};
             employeesData.employees.forEach(function (e) {
                 var r = ratesById[e.id];
                 if (!r) return;
@@ -405,8 +414,8 @@
 
             // Payroll Adjustment: corrections paid in this cut-off (+ add, − deduct).
             // They are part of gross pay, so contributions and tax follow them.
-            if (!results[6].success) throw new Error(results[6].message || 'Could not load payroll adjustments.');
-            var adjustmentsById = results[6].adjustments || {};
+            if (!results[7].success) throw new Error(results[7].message || 'Could not load payroll adjustments.');
+            var adjustmentsById = results[7].adjustments || {};
 
             var year = Number(period.to.slice(0, 4));
 
@@ -421,25 +430,44 @@
                     var worked = hoursById[e.id] || {
                         officeHours: 0, teachingHours: 0, daysWorked: 0, overlapHours: 0, unapprovedClasses: 0, paidLeaveDays: 0
                     };
+                    // Leave Category Maintenance: unused leave of a convertible paid category,
+                    // cashed out this period (the employee's hire-date anniversary falls inside
+                    // it) — exempt days (Vacation Leave, up to 12/year) as a benefit, any
+                    // taxable excess as a regular earnings line.
+                    var conversions = conversionsById[e.id] || [];
+                    var conversionLines = [];
+                    conversions.forEach(function (c) {
+                        if (c.exemptAmount > 0) {
+                            conversionLines.push({ type: 'benefit', name: 'Unused ' + c.category + ' conversion (tax-exempt, ' + c.exemptDays + ' day' + (c.exemptDays === 1 ? '' : 's') + ')', amount: round2(c.exemptAmount) });
+                        }
+                        if (c.taxableAmount > 0) {
+                            conversionLines.push({ type: 'earning', label: 'Unused ' + c.category + ' conversion (' + c.taxableDays + ' day' + (c.taxableDays === 1 ? '' : 's') + ')', hours: c.taxableDays, rate: Number(c.dailyRate) || 0, amount: round2(c.taxableAmount) });
+                        }
+                    });
                     var earnings = buildEarnings(e, worked).concat((adjustmentsById[e.id] || []).map(function (a) {
                         return { label: a.label, hours: Number(a.hours) || 0, rate: Number(a.rate) || 0, amount: round2(Number(a.amount) || 0) };
-                    }));
+                    })).concat(conversionLines.filter(function (l) { return l.type === 'earning'; }));
                     var emp = {
                         id: e.id,
                         employeeNumber: e.employeeNumber,
                         name: e.displayName,
                         type: e.department,
                         designation: e.position || e.instructorRank || e.department,
-                        hours: round2(earnings.reduce(function (s, l) { return isHolidayLine(l) ? s : s + l.hours; }, 0)),
+                        hours: round2(earnings.reduce(function (s, l) { return (isHolidayLine(l) || isLeaveConversionLine(l)) ? s : s + l.hours; }, 0)),
                         daysWorked: worked.daysWorked,
                         overlapHours: Number(worked.overlapHours) || 0,
                         unapprovedClasses: worked.unapprovedClasses || 0,
                         rate: Number(e.rate) || 0,
                         earnings: earnings,
-                        // Benefits Table: paid every payroll period.
+                        // Benefits Table (paid every period) + any tax-exempt leave conversion this period.
                         benefits: (benefitsById[e.id] || []).map(function (b) {
                             return { name: b.name, amount: round2(Number(b.amount) || 0) };
-                        }),
+                        }).concat(conversionLines.filter(function (l) { return l.type === 'benefit'; }).map(function (l) {
+                            return { name: l.name, amount: l.amount };
+                        })),
+                        // Bookkeeping only, read by the server at Release to record the
+                        // conversion history and reset that year's credit — not displayed.
+                        leaveConversions: conversions,
                         status: 'computed'
                     };
                     emp.deductions = computeDeductions(calcGross(emp), year);
