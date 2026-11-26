@@ -437,8 +437,11 @@
                     var conversions = conversionsById[e.id] || [];
                     var conversionLines = [];
                     conversions.forEach(function (c) {
+                        // Benefit names are capped at 50 characters server-side, so the
+                        // category name is kept short here regardless of how long it is.
+                        var shortName = c.category.length > 25 ? c.category.slice(0, 24) + '…' : c.category;
                         if (c.exemptAmount > 0) {
-                            conversionLines.push({ type: 'benefit', name: 'Unused ' + c.category + ' conversion (tax-exempt, ' + c.exemptDays + ' day' + (c.exemptDays === 1 ? '' : 's') + ')', amount: round2(c.exemptAmount) });
+                            conversionLines.push({ type: 'benefit', name: 'Unused ' + shortName + ' (' + c.exemptDays + 'd exempt)', amount: round2(c.exemptAmount) });
                         }
                         if (c.taxableAmount > 0) {
                             conversionLines.push({ type: 'earning', label: 'Unused ' + c.category + ' conversion (' + c.taxableDays + ' day' + (c.taxableDays === 1 ? '' : 's') + ')', hours: c.taxableDays, rate: Number(c.dailyRate) || 0, amount: round2(c.taxableAmount) });
