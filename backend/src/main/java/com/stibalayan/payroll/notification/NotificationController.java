@@ -142,7 +142,8 @@ public class NotificationController {
                     : action.startsWith("Reset code") && (SystemModule.UTILITY.allows(role) || mine);
             if (!visible) return;
             boolean failed = action.contains(" not ");
-            java.time.LocalDateTime at = ((java.sql.Timestamp) e.get("created_at")).toLocalDateTime();
+            Object createdAt = e.get("created_at");
+            java.time.LocalDateTime at = createdAt instanceof java.sql.Timestamp t ? t.toLocalDateTime() : (java.time.LocalDateTime) createdAt;
             String href = action.startsWith("Payslips") ? "payroll-processing.html"
                     : action.startsWith("Fingerprint") ? "fingerprint-registration.html"
                     : SystemModule.UTILITY.allows(role) ? "audit-trail.html" : null;
