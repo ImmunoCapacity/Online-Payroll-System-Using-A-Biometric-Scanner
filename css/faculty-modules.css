@@ -487,6 +487,20 @@
 .fm-status-btn-late.active { background: #b7791f; border-color: #b7791f; color: #fff; }
 .fm-status-btn-absent.active { background: var(--pp-error); border-color: var(--pp-error); color: #fff; }
 
+.fm-minutes-row {
+    margin-top: 0.75rem;
+}
+
+.fm-minutes-fields {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.fm-minutes-fields input {
+    width: 4.5rem;
+}
+
 .fm-check-recorded {
     font-size: 0.75rem;
     color: var(--pp-text-muted);

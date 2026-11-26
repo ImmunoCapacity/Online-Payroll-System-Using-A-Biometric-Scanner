@@ -296,15 +296,9 @@
         if (e.department === 'Faculty/Admin') {
             add('Approved teaching hours', h.teachingHours, e.teachingRate);
         }
-        // Minutes late at approved classes (Faculty Teaching Hours): deducted at
-        // rate per hour ÷ 60 × minutes late. Hours are kept to 4 decimals.
-        var lateMinutes = Number(h.teachingLateMinutes) || 0;
-        if (lateMinutes > 0 && (e.department === 'Faculty' || e.department === 'Faculty/Admin')) {
-            var teachRate = e.department === 'Faculty/Admin' ? e.teachingRate : e.rate;
-            var perMinute = (Number(teachRate) || 0) / 60;
-            add('Late deduction (' + lateMinutes + ' min × ₱' + perMinute.toFixed(2) + '/min)',
-                -Math.round(lateMinutes / 60 * 10000) / 10000, teachRate);
-        }
+        // Minutes late and minutes left early are already subtracted from
+        // h.teachingHours itself (Faculty Teaching Hours payableFor) — no
+        // separate deduction line here, or it would be docked twice.
         // Approved paid leave on days with classes: the classes missed are paid
         // at the teaching rate (their scheduled hours) — Faculty only. A
         // Faculty/Admin employee's leave day is already paid above as a full

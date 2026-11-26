@@ -412,8 +412,12 @@
     /**
      * Pick Present, Late (beginning only) or Absent — chosen directly, never
      * guessed from a time, so there's nothing to default to the wrong
-     * answer — then Save. Changing an already-recorded status needs an
-     * explanation in Remarks.
+     * answer — then Save. Late and Absent-at-the-end also ask how many
+     * minutes (hr/min fields, no time picker): how late they arrived, or how
+     * early they left before the scheduled end. Those minutes — never the
+     * clock time the check happens to be recorded — are what payable hours
+     * are measured against. Changing an already-recorded status or minutes
+     * needs an explanation in Remarks.
      */
     function checkForm(r, which) {
         var start = which === 'start';
@@ -432,9 +436,24 @@
                 opt + '</button>';
         }).join('');
 
+        var minutesStatus = start ? 'Late' : 'Absent';
+        var minutesLabel = start ? 'How late did they arrive?' : 'How early did they leave?';
+        var totalMinutes = (start ? r.lateMinutes : r.earlyLeaveMinutes) || 0;
+        var minutesInput =
+            '<div class="fm-minutes-row' + (status === minutesStatus ? '' : ' d-none') + '" data-minutes-for="' + minutesStatus + '">' +
+                '<label class="pp-form-label mb-1">' + minutesLabel + '</label>' +
+                '<div class="fm-minutes-fields">' +
+                    '<input type="number" min="0" max="23" class="form-control pp-form-control fm-minutes-hrs" value="' +
+                        Math.floor(totalMinutes / 60) + '"' + (disabled ? ' disabled' : '') + '> hr' +
+                    '<input type="number" min="0" max="59" class="form-control pp-form-control fm-minutes-mins" value="' +
+                        (totalMinutes % 60) + '"' + (disabled ? ' disabled' : '') + '> min' +
+                '</div>' +
+            '</div>';
+
         return '<div class="col-md-6"><form class="fm-check-card" id="' + id + 'Form" data-check="' + which + '" novalidate>' +
             '<h3>' + (start ? 'Beginning of Class' : 'End of Class') + '</h3>' +
             '<div class="fm-status-buttons">' + buttons + '</div>' +
+            minutesInput +
             (waiting ? '<p class="fm-note mt-2 mb-0">Record the beginning check first.</p>' : '') +
             (time ? '<div class="fm-check-recorded">Recorded by ' + escapeHtml(by || '—') + '</div>' : '') +
             '<button type="submit" class="btn btn-pp-primary mt-3"' + (disabled ? ' disabled' : '') + '><i class="bi bi-check-lg me-1"></i> Save</button>' +
@@ -450,7 +469,7 @@
 
         var payable = '<div class="fm-payable"><span>' + (r.approvalStatus === 'Complete' ? 'Payable teaching hours' : 'Payable so far') + '</span>' +
             '<strong>' + hours(r.payableHours) + '</strong>' +
-            '<span class="fm-note">Paid only when the faculty member was present (or late) at the start and present at the end.</span></div>';
+            '<span class="fm-note">The scheduled hours, less any minutes late or left early. 0 if absent at the start.</span></div>';
 
         el('checkBody').innerHTML =
             '<div class="fm-detail-grid">' +
@@ -486,10 +505,14 @@
             var form = el(which + 'CheckForm');
             if (!form) return;
             PPValidate.attach(form);
+            var minutesRow = form.querySelector('.fm-minutes-row');
             form.querySelectorAll('.fm-status-btn').forEach(function (btn) {
                 btn.addEventListener('click', function () {
                     form.querySelectorAll('.fm-status-btn').forEach(function (b) { b.classList.remove('active'); });
                     btn.classList.add('active');
+                    if (minutesRow) {
+                        minutesRow.classList.toggle('d-none', btn.dataset.status !== minutesRow.dataset.minutesFor);
+                    }
                 });
             });
             form.addEventListener('submit', function (e) {
@@ -530,9 +553,23 @@
         var which = form.dataset.check;
         if (!PPValidate.validateForm(form) || !PPValidate.validateForm(el('remarksForm'))) return;
 
+        var minutesRow = form.querySelector('.fm-minutes-row');
+        var minutes = null;
+        if (minutesRow && active.dataset.status === minutesRow.dataset.minutesFor) {
+            var hrs = Math.max(0, parseInt(minutesRow.querySelector('.fm-minutes-hrs').value, 10) || 0);
+            var mins = Math.max(0, parseInt(minutesRow.querySelector('.fm-minutes-mins').value, 10) || 0);
+            minutes = hrs * 60 + mins;
+            if (minutes <= 0) {
+                PPToast.error(which === 'start' ? 'Enter how many minutes late they arrived.' : 'Enter how many minutes before the end they left.');
+                return;
+            }
+        }
+
         var payload = {
             check: which,
             status: active.dataset.status,
+            lateMinutes: which === 'start' ? minutes : null,
+            earlyLeaveMinutes: which === 'end' ? minutes : null,
             remarks: el('checkRemarks').value.trim()
         };
         var controls = form.querySelectorAll('.fm-status-btn, button[type="submit"]');

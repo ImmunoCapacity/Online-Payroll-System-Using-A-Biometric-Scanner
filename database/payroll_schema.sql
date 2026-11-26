@@ -846,3 +846,8 @@ CREATE TABLE IF NOT EXISTS room (
     room_name   VARCHAR(50) NOT NULL UNIQUE,
     floor_level VARCHAR(20) NOT NULL
 ) ENGINE=InnoDB;
+
+-- Faculty Teaching Hours: minutes left before the scheduled end, recorded
+-- alongside an Absent ending check (deducted from pay like late_minutes;
+-- databases created before this existed).
+ALTER TABLE faculty_teaching_attendance ADD COLUMN IF NOT EXISTS early_leave_minutes INT NOT NULL DEFAULT 0 AFTER end_checked_by;

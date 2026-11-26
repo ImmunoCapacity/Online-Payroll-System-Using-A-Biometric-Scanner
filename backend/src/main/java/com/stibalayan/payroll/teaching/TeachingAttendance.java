@@ -48,7 +48,7 @@ public class TeachingAttendance {
     @Column(name = "start_checked_by")
     private Integer startCheckedBy;
 
-    /** Unused — Late no longer carries a per-minute payroll deduction; kept at 0. */
+    /** Set only when the beginning check is Late: minutes late, deducted from pay. */
     @Column(name = "late_minutes", nullable = false)
     private int lateMinutes;
 
@@ -60,6 +60,10 @@ public class TeachingAttendance {
 
     @Column(name = "end_checked_by")
     private Integer endCheckedBy;
+
+    /** Set only when the ending check is Absent: minutes left before the scheduled end, deducted from pay. */
+    @Column(name = "early_leave_minutes", nullable = false)
+    private int earlyLeaveMinutes;
 
     private String remarks;
 
@@ -99,6 +103,8 @@ public class TeachingAttendance {
     public void setEndCheckStatus(String endCheckStatus) { this.endCheckStatus = endCheckStatus; }
     public Integer getEndCheckedBy() { return endCheckedBy; }
     public void setEndCheckedBy(Integer endCheckedBy) { this.endCheckedBy = endCheckedBy; }
+    public int getEarlyLeaveMinutes() { return earlyLeaveMinutes; }
+    public void setEarlyLeaveMinutes(int earlyLeaveMinutes) { this.earlyLeaveMinutes = earlyLeaveMinutes; }
     public String getRemarks() { return remarks; }
     public void setRemarks(String remarks) { this.remarks = remarks; }
     public String getApprovalStatus() { return approvalStatus; }

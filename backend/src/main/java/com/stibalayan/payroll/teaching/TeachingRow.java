@@ -15,6 +15,11 @@ import java.util.List;
  * biometricTimeIn/Out is that day's Daily Time Record punch, if any — just
  * context for whoever records the classroom check (the faculty member was
  * on campus), never evidence that the class itself was taught.
+ *
+ * lateMinutes/earlyLeaveMinutes are what was entered when the beginning
+ * check is Late or the ending check is Absent (0 otherwise) — already
+ * subtracted out of payableHours, shown here only so the checks form can
+ * pre-fill them when reopening an already-recorded class.
  */
 public record TeachingRow(
         Integer classId,
@@ -41,6 +46,7 @@ public record TeachingRow(
         List<String> flags,
         BigDecimal payableHours,
         int lateMinutes,
+        int earlyLeaveMinutes,
         String biometricTimeIn,
         String biometricTimeOut) {
 }

@@ -33,12 +33,15 @@ import org.springframework.transaction.annotation.Transactional;
  * attendance does not come from the biometric scanner.
  *
  * Rules (the "attendance rules" payroll relies on):
- *   - A class is payable when the faculty member was Present or Late at the
- *     beginning check and Present at the ending check; the payable hours are
- *     then the full scheduled duration — Present and Late are paid the same,
- *     there is no per-minute deduction. Any Absent check, or a check still
- *     missing, makes the class pay 0 hours — there is no separate approval
- *     step, payroll reads these checks directly (approvedHours).
+ *   - A class is payable once the beginning check is Present or Late and the
+ *     ending check is Present or Absent; payable hours are the scheduled
+ *     duration less minutes late (Late) and less minutes left early (Absent
+ *     at the end) — always measured from the class's own scheduled
+ *     start/end, never from when the checks happen to be recorded (a check
+ *     recorded hours after the fact doesn't change what's paid). An Absent
+ *     beginning check, or a check still missing, makes the class pay 0
+ *     hours — there is no separate approval step, payroll reads these
+ *     checks directly (approvedHours).
  *   - Checks outside the grace window, missing checks and mixed
  *     Present/Absent evidence are flagged for review, informationally; they
  *     don't block anything.
@@ -151,6 +154,22 @@ public class TeachingHoursService {
             throw Validation.invalid("status", start ? "Choose Present, Late or Absent." : "Choose Present or Absent.");
         }
 
+        int durationMinutes = (int) c.durationMinutes();
+        int minutes = 0;
+        if (start && TeachingAttendance.LATE.equals(status)) {
+            Integer m = Validation.wholeNumber(r.lateMinutes(), "lateMinutes", "Minutes late", Math.max(0, durationMinutes - 1));
+            if (m == null || m <= 0) {
+                throw Validation.invalid("lateMinutes", "Enter how many minutes late the faculty member arrived.");
+            }
+            minutes = m;
+        } else if (!start && TeachingAttendance.ABSENT.equals(status)) {
+            Integer m = Validation.wholeNumber(r.earlyLeaveMinutes(), "earlyLeaveMinutes", "Minutes left early", Math.max(0, durationMinutes - 1));
+            if (m == null || m <= 0) {
+                throw Validation.invalid("earlyLeaveMinutes", "Enter how many minutes before the scheduled end the faculty member left.");
+            }
+            minutes = m;
+        }
+
         TeachingAttendance existing = attendance.findByClassScheduleId(classId).orElse(null);
         TeachingAttendance a = existing;
         if (a == null) {
@@ -162,13 +181,18 @@ public class TeachingHoursService {
 
         LocalDateTime oldAt = start ? a.getStartCheckAt() : a.getEndCheckAt();
         String oldStatus = start ? a.getStartCheckStatus() : a.getEndCheckStatus();
+        int oldMinutes = start ? a.getLateMinutes() : a.getEarlyLeaveMinutes();
         boolean replacing = oldAt != null;
 
+        // The check time is only ever used to say when it was recorded (the
+        // audit trail) — payable hours are always measured from the class's
+        // own scheduled start/end plus lateMinutes/earlyLeaveMinutes, never
+        // from this timestamp.
         LocalDateTime at = replacing ? oldAt : (c.getClassDate().isEqual(LocalDate.now())
                 ? LocalDateTime.now()
                 : c.getClassDate().atTime(start ? c.getScheduledStart() : c.getScheduledEnd()));
 
-        if (replacing && !oldStatus.equals(status)) {
+        if (replacing && (!oldStatus.equals(status) || oldMinutes != minutes)) {
             // Corrections to the recorded status are allowed, never silently: Remarks must explain it, and it's logged.
             Validation.requiredText(r.remarks(), "remarks", "Remarks", 255);
         }
@@ -182,21 +206,23 @@ public class TeachingHoursService {
             a.setStartCheckAt(at);
             a.setStartCheckStatus(status);
             a.setStartCheckedBy(userId);
+            a.setLateMinutes(minutes);
         } else {
             a.setEndCheckAt(at);
             a.setEndCheckStatus(status);
             a.setEndCheckedBy(userId);
+            a.setEarlyLeaveMinutes(minutes);
         }
         a.setApprovalStatus(a.bothChecksRecorded() ? TeachingAttendance.COMPLETE : TeachingAttendance.INCOMPLETE);
         attendance.saveAndFlush(a);
 
-        String described = describeCheck(at, status);
+        String described = describeCheck(at, status, minutes, start);
         if (r.remarks() != null && !java.util.Objects.equals(oldRemarks, a.getRemarks())) {
             described += " · Remarks: " + (a.getRemarks() == null ? "(cleared)" : a.getRemarks());
         }
         if (replacing) {
             audit.save(new AttendanceAudit(a.getId(), which + " corrected",
-                    describeCheck(oldAt, oldStatus) + "  →  " + described, null, userId));
+                    describeCheck(oldAt, oldStatus, oldMinutes, start) + "  →  " + described, null, userId));
         } else {
             audit.save(new AttendanceAudit(a.getId(), which + " recorded", described, null, userId));
         }
@@ -287,15 +313,33 @@ public class TeachingHoursService {
     // ---------------------------------------------------------------
 
     /**
-     * Payable hours under the rules: the scheduled duration when the teacher was
-     * Present (or Late) at the beginning and Present at the end; 0 when a check
-     * is missing or shows Absent. Minutes late are deducted separately in
-     * payroll (rate per hour ÷ 60 × minutes late).
+     * Payable hours under the rules: 0 when the beginning check is Absent or
+     * still missing (never taught), or the ending check is still missing.
+     * Otherwise the scheduled duration, less lateMinutes (set only when the
+     * beginning check is Late) and less earlyLeaveMinutes (set only when the
+     * ending check is Absent — left before the scheduled end). Always
+     * measured from the class's own scheduled start/end, never from when the
+     * checks happen to be recorded.
      */
     static BigDecimal payableFor(FacultyClass c, TeachingAttendance a) {
-        boolean present = a != null && taught(a.getStartCheckStatus())
-                && TeachingAttendance.PRESENT.equals(a.getEndCheckStatus());
-        return present ? hours(c.durationMinutes()) : BigDecimal.ZERO.setScale(2);
+        if (a == null || !taught(a.getStartCheckStatus())) {
+            return BigDecimal.ZERO.setScale(2);
+        }
+        String endStatus = a.getEndCheckStatus();
+        if (!TeachingAttendance.PRESENT.equals(endStatus) && !TeachingAttendance.ABSENT.equals(endStatus)) {
+            return BigDecimal.ZERO.setScale(2);
+        }
+        long minutes = c.durationMinutes() - a.getLateMinutes();
+        if (TeachingAttendance.ABSENT.equals(endStatus)) {
+            // earlyLeaveMinutes is required going forward (recordCheck), but a
+            // record from before this existed has it at 0 — treat that the
+            // same as before (not payable) rather than suddenly paying it in full.
+            if (a.getEarlyLeaveMinutes() <= 0) {
+                return BigDecimal.ZERO.setScale(2);
+            }
+            minutes -= a.getEarlyLeaveMinutes();
+        }
+        return hours(Math.max(0, minutes));
     }
 
     /** Not checked, Incomplete (one check) or Complete (both) — no approval gate. */
@@ -321,11 +365,9 @@ public class TeachingHoursService {
         if (endCheck == null && now.isAfter(end.plusMinutes(grace))) {
             flags.add("Ending check missing");
         }
-        if (startCheck != null && endCheck != null
-                && taught(a.getStartCheckStatus()) != taught(a.getEndCheckStatus())) {
-            flags.add(taught(a.getStartCheckStatus())
-                    ? "Conflicting evidence: present at the beginning, absent at the end"
-                    : "Conflicting evidence: absent at the beginning, present at the end");
+        if (startCheck != null && endCheck != null && !taught(a.getStartCheckStatus())
+                && TeachingAttendance.PRESENT.equals(a.getEndCheckStatus())) {
+            flags.add("Conflicting evidence: absent at the beginning, present at the end");
         }
         boolean checkedPresent = a != null
                 && (taught(a.getStartCheckStatus()) || TeachingAttendance.PRESENT.equals(a.getEndCheckStatus()));
@@ -345,8 +387,14 @@ public class TeachingHoursService {
         return BigDecimal.valueOf(minutes).divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
     }
 
-    private static String describeCheck(LocalDateTime at, String status) {
-        return at.toLocalTime().format(HH_MM) + " " + status;
+    private static String describeCheck(LocalDateTime at, String status, int minutes, boolean start) {
+        String described = at.toLocalTime().format(HH_MM) + " " + status;
+        if (start && TeachingAttendance.LATE.equals(status) && minutes > 0) {
+            described += " (" + minutes + " min late)";
+        } else if (!start && TeachingAttendance.ABSENT.equals(status) && minutes > 0) {
+            described += " (" + minutes + " min early)";
+        }
+        return described;
     }
 
     private List<TeachingRow> rows(List<FacultyClass> list) {
@@ -402,6 +450,7 @@ public class TeachingHoursService {
                     flags(c, a, now, d),
                     payableFor(c, a),
                     a == null ? 0 : a.getLateMinutes(),
+                    a == null ? 0 : a.getEarlyLeaveMinutes(),
                     d == null || d.getTimeIn() == null ? null : d.getTimeIn().format(HH_MM),
                     d == null || d.getTimeOut() == null ? null : d.getTimeOut().format(HH_MM)));
         }
