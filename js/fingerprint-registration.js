@@ -23,9 +23,34 @@
     const enrollPanel = document.getElementById('enrollPanel');
     const deviceDot = document.getElementById('deviceDot');
     const deviceNameLabel = document.getElementById('deviceNameLabel');
+    const deviceStatusLabel = document.getElementById('deviceStatusLabel');
 
     deviceNameLabel.textContent = 'ZKTeco K40';
-    deviceDot.className = 'pp-device-dot connected';
+    deviceDot.className = 'pp-device-dot disconnected';
+
+    // Same source of truth as the "Live" badge on dtr.html / biometric-devices.html
+    // (api/biometric/status), so this page doesn't claim a connection the
+    // scanner doesn't actually have.
+    function checkDeviceStatus() {
+        if (document.hidden) return;
+        fetch('api/biometric/status')
+            .then(function (response) { return response.ok ? response.json() : null; })
+            .then(function (status) {
+                var connected = !!(status && status.connected);
+                deviceDot.className = 'pp-device-dot ' + (connected ? 'connected' : 'disconnected');
+                deviceDot.title = connected
+                    ? 'Connected to the scanner.'
+                    : 'Cannot reach the scanner right now.';
+                deviceStatusLabel.textContent = connected ? 'Connected device:' : 'Scanner offline —';
+            })
+            .catch(function () {
+                deviceDot.className = 'pp-device-dot disconnected';
+                deviceStatusLabel.textContent = 'Scanner offline —';
+            });
+    }
+
+    checkDeviceStatus();
+    setInterval(checkDeviceStatus, 3000);
 
     function escapeHtml(value) {
         return String(value == null ? '' : value)

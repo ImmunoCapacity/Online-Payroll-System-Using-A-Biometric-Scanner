@@ -650,7 +650,7 @@
                                 : '') + '</td>' +
                         '<td>' + typeBadge(emp.type) + '</td>' +
                         '<td class="col-units">' + emp.hours + ' hrs</td>' +
-                        '<td class="col-money">' + peso(calcGross(emp)) + '</td>' +
+                        '<td class="col-money">' + peso(calcGross(emp) + calcBenefitsTotal(emp.benefits)) + '</td>' +
                         '<td class="col-money">' + peso(calcDeductionsTotal(emp.deductions)) + '</td>' +
                         '<td class="col-money"><strong>' + peso(calcNet(emp)) + '</strong></td>' +
                     '</tr>'

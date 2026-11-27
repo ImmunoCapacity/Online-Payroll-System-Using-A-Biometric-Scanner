@@ -101,6 +101,7 @@ public class PayrollRunService {
 
         List<Integer> ids = jdbc.queryForList("SELECT payroll_run_id FROM payroll_run WHERE pay_period_start = ? AND pay_period_end = ? FOR UPDATE",
                 Integer.class, Date.valueOf(from), Date.valueOf(to));
+        boolean isNew = ids.isEmpty();
         int runId;
         if (ids.isEmpty() && !periods.isPeriod(from, to)) {
             throw Validation.invalid("from", "That is not a payroll period (Maintenance → Payroll Periods).");
@@ -128,11 +129,13 @@ public class PayrollRunService {
             }
             insertRow(runId, from, to, employeeId, s, e);
         }
+        audit.log(userId, "Payroll", isNew ? "Computed payroll" : "Recomputed payroll",
+                label + " · " + list.size() + " employee" + (list.size() == 1 ? "" : "s"));
         return view(runId);
     }
 
     @Transactional
-    public Map<String, Object> review(int runId, String employeeId) {
+    public Map<String, Object> review(int runId, String employeeId, int userId) {
         Run run = run(runId);
         if (RELEASED.equals(run.status())) {
             throw new ApiException(HttpStatus.CONFLICT, "This pay period is already released.");
@@ -143,6 +146,7 @@ public class PayrollRunService {
         if (changed == 0) {
             throw new ApiException(HttpStatus.NOT_FOUND, "This employee isn't in the payroll of this period.");
         }
+        audit.log(userId, "Payroll", "Reviewed", run.label() + " · " + employees.require(employeeId).getFullName());
         return view(runId);
     }
 

@@ -282,8 +282,20 @@
     // Views
     // ---------------------------------------------------------------
 
+    // Attendance Monitoring Staff can only open ?view=schedules (see auth-guard.js);
+    // falling back to "employees" for them just lands on a "no access" wall.
+    function defaultView() {
+        try {
+            var raw = localStorage.getItem('ppUser');
+            var user = raw ? JSON.parse(raw) : null;
+            return user && user.role === 'Attendance Monitoring Staff' ? 'schedules' : 'employees';
+        } catch (e) {
+            return 'employees';
+        }
+    }
+
     function show(view) {
-        if (view !== 'employees' && view !== 'schedules' && !TABLES[view]) view = 'employees';
+        if (view !== 'employees' && view !== 'schedules' && !TABLES[view]) view = defaultView();
         document.querySelectorAll('.pp-archive-sidebar-link').forEach(function (a) {
             a.classList.toggle('active', a.dataset.archive === view);
         });
@@ -321,6 +333,6 @@
     });
 
     PayrollProLayout.loadStaffTypeLabels().then(function () {
-        show(new URLSearchParams(location.search).get('view') || 'employees');
+        show(new URLSearchParams(location.search).get('view') || defaultView());
     });
 })();

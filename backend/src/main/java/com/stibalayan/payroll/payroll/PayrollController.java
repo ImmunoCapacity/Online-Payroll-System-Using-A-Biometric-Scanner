@@ -130,8 +130,8 @@ public class PayrollController {
     }
 
     @PostMapping("/runs/{id}/review")
-    public Map<String, Object> review(@PathVariable int id, @RequestBody ReviewRequest request) {
-        return Map.of("success", true, "run", runs.review(id, request.employeeId()));
+    public Map<String, Object> review(@PathVariable int id, @RequestBody ReviewRequest request, HttpServletRequest http) {
+        return Map.of("success", true, "run", runs.review(id, request.employeeId(), AuthInterceptor.currentUser(http).id()));
     }
 
     @PostMapping("/runs/{id}/review-all")
